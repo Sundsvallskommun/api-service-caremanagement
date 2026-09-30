@@ -59,11 +59,12 @@ tags:
 - name: Namespace config
   description: Namespace configuration operations
 - name: Financial Assistance · SSBTEK
-  description: "Read the applicant's SSBTEK basis live — the answer per responding\
-    \ agency (af/csn/fk/skv/so/tns/miv), forwarded verbatim so a caseworker can see\
-    \ the source behind the classified incomes. Keyed by partyId (resolved to a personnummer\
+  description: "Read the applicant's SSBTEK basis live so a caseworker can see the\
+    \ source behind the classified incomes — the payments per responding agency (fk\
+    \ and so), reduced to the fields the caseworker's payment view needs; identity\
+    \ fields never leave caremanagement. Keyed by partyId (resolved to a personnummer\
     \ via the citizen service); the period defaults to the three rule periods (M−\
-    2 through M). caremanagement only forwards the read and stores nothing."
+    2 through M). caremanagement reads and reduces the answer and stores nothing."
 - name: Process messages
   description: Send BPMN message correlation events to the process instance currently
     running for an errand
@@ -7507,19 +7508,22 @@ paths:
       summary: "Read the SSBTEK basis of an errand's applicant, co-applicant or child"
       description: "The SSBTEK basis of the errand's applicant (or, with person=CO_APPLICANT,\
         \ co-applicant; with person=CHILD and childPartyId, one of the household children\
-        \ named on the application), fetched live via api-service-financial-aid and\
-        \ forwarded verbatim — the answer per responding agency (af, csn, fk, skv,\
-        \ so, tns, miv), so a caseworker can see what the composite service actually\
-        \ said rather than only the classified result. The person is resolved from\
-        \ the errand, never taken from the caller, and the read is recorded in the\
-        \ errand's access log like every other errand-scoped request. No personnummer\
-        \ is accepted, and nothing is stored. The agency answers are forwarded as SSBTEK\
-        \ gave them and can carry personnummer, names and addresses; a caller must pass\
-        \ on only the fields it shows. The period\
-        \ is resolved in whole months and echoed on the response: it defaults to the\
-        \ three SSBTEK rule periods (jämförelseperiod M−2 through ansökningsperiod\
-        \ M), the same window the process asks for. Agency payload shapes are heterogeneous\
-        \ and follow the SSBTEK contract, so they are not modelled here."
+        \ named on the application), fetched live via api-service-financial-aid, so\
+        \ a caseworker can see what the composite service said rather than only the\
+        \ classified result. careM returns only the payment fields the caseworker's\
+        \ payment view needs: the payments Försäkringskassan and Pensionsmyndigheten\
+        \ report (fk) and the a-kassor's payments (so) — förmån, betalningsdag, type,\
+        \ amounts, periods and delförmåner — in the agencies' own shape. Everything\
+        \ else in the agency answers, such as personnummer, names, addresses and the\
+        \ other agencies' answers, is dropped by careM before the answer is returned\
+        \ (dataminimering). The person is resolved from the errand, never taken from\
+        \ the caller, and the read is recorded in the errand's access log like every\
+        \ other errand-scoped request. No personnummer is accepted, and nothing is\
+        \ stored. The period is resolved in whole months and echoed on the response:\
+        \ it defaults to the three SSBTEK rule periods (jämförelseperiod M−2 through\
+        \ ansökningsperiod M), the same window the process asks for. Agency payload\
+        \ shapes are heterogeneous and follow the SSBTEK contract, so they are not\
+        \ modelled here."
       operationId: getBasis
       parameters:
       - name: municipalityId
@@ -14062,7 +14066,8 @@ components:
     SsbtekBasis:
       type: object
       description: "A person's SSBTEK basis for a period, as the composite service\
-        \ answered it."
+        \ answered it, reduced to the payment fields the caseworker's payment view\
+        \ needs."
       properties:
         from:
           type: string
@@ -14081,9 +14086,13 @@ components:
           additionalProperties:
             type: object
             additionalProperties: {}
-          description: "The answer per responding agency (af, csn, fk, skv, so, tns,\
-            \ miv), forwarded verbatim from SSBTEK. Shapes differ per agency and are\
-            \ not modelled; an agency that did not answer may be absent or empty."
+          description: "The answer per responding agency, reduced to the payment fields\
+            \ the caseworker's payment view needs: the payments of fk (Försäkringskassan\
+            \ and Pensionsmyndigheten) and so (the a-kassor), in the agency's own\
+            \ shape. Everything else in the answers — personnummer, names, addresses\
+            \ and the other agencies (af, csn, skv, tns, miv) — is dropped by caremanagement.\
+            \ Shapes differ per agency and are not modelled; an agency that did not\
+            \ answer, or has nothing to show, may be absent or empty."
     LifecareSectionStatus:
       type: object
       description: "Which of the errand's sections Lifecare has as done - the checks\

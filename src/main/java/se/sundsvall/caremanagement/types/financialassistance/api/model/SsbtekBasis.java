@@ -7,15 +7,20 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * One person's SSBTEK basis as the composite service answered it, plus the period the answer covers.
+ * One person's SSBTEK basis as the composite service answered it, reduced to the payment fields the caseworker's
+ * payment
+ * view shows, plus the period the answer covers.
  *
  * <p>
- * {@code agencies} is the untyped per-agency map caremanagement forwards verbatim from api-service-financial-aid
- * (af/csn/fk/skv/so/tns/miv). It is deliberately not modelled: most agencies are a generic XML-to-JSON conversion of
- * the SSBTEK SOAP response so their keys mirror the contract's XML element names, while <b>fk</b> arrives as LEFI JSON
- * with LEFI property names. The shapes are heterogeneous and version with the contract, so typing them here would
- * silently drop whatever we had not modelled — the point of this endpoint is that the caseworker sees what SSBTEK
- * actually said.
+ * {@code agencies} is the untyped per-agency map from api-service-financial-aid, cut down by caremanagement to the
+ * allowlisted fields ({@code SsbtekPaymentViewFields}) before it is returned: the payments of fk (Försäkringskassan and
+ * Pensionsmyndigheten) and so (the a-kassor). The agencies' answers carry personnummer, names and addresses, and those
+ * never leave caremanagement (dataminimering). What is returned keeps the agency's own keys and shape — most agencies
+ * are
+ * a generic XML-to-JSON conversion of the SSBTEK SOAP response so their keys mirror the contract's XML element names,
+ * while <b>fk</b> arrives as LEFI JSON with LEFI property names — and is not modelled here: the shapes are
+ * heterogeneous
+ * and version with the contract.
  * </p>
  *
  * <p>
@@ -24,7 +29,7 @@ import java.util.Optional;
  * rows. This model is the unclassified source view next to it.
  * </p>
  */
-@Schema(description = "A person's SSBTEK basis for a period, as the composite service answered it.")
+@Schema(description = "A person's SSBTEK basis for a period, as the composite service answered it, reduced to the payment fields the caseworker's payment view needs.")
 public class SsbtekBasis {
 
 	@Schema(description = "Inclusive start of the period the basis covers", examples = "2026-07-01")
@@ -33,8 +38,10 @@ public class SsbtekBasis {
 	@Schema(description = "Inclusive end of the period the basis covers", examples = "2026-09-30")
 	private LocalDate to;
 
-	@Schema(description = "The answer per responding agency (af, csn, fk, skv, so, tns, miv), forwarded verbatim from SSBTEK. "
-		+ "Shapes differ per agency and are not modelled; an agency that did not answer may be absent or empty.")
+	@Schema(description = "The answer per responding agency, reduced to the payment fields the caseworker's payment view needs: the payments of "
+		+ "fk (Försäkringskassan and Pensionsmyndigheten) and so (the a-kassor), in the agency's own shape. Everything else in the answers "
+		+ "— personnummer, names, addresses and the other agencies (af, csn, skv, tns, miv) — is dropped by caremanagement. "
+		+ "Shapes differ per agency and are not modelled; an agency that did not answer, or has nothing to show, may be absent or empty.")
 	private Map<String, Map<String, Object>> agencies;
 
 	public static SsbtekBasis create() {
