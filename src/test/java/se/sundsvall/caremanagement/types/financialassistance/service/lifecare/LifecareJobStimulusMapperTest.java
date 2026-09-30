@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJobStimulusMapper.buildJobStimulusAdd;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJobStimulusMapper.buildJobStimulusRemove;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJobStimulusMapper.toJobStimulusPeriods;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentFixtures.json;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentFixtures.serialised;
@@ -47,6 +48,24 @@ class LifecareJobStimulusMapperTest {
 		      { "jobStimulusId": 103, "personId": "19880209T050", "fromDate": "2026-01-01", "toDate": "2027-12-31", "updateTimestamp": "2026-08-21",
 		        "updateSignature": "ebb14eri", "markedForRemoval": false, "personIdFormatted": "880209-T050", "isValid": true, "minDate": "2023-07-07" },
 		      { "personId": "19880209T050", "personIdFormatted": "880209-T050", "fromDate": "2028-01-15", "toDate": "2030-01-14", "markedForRemoval": false }
+		    ],
+		    "personId": "19880209T050", "name": "Testsson, Test", "personIdFormatted": "880209-T050"
+		  },
+		  "coApplicant": { "personId": "", "personIdFormatted": "", "name": "", "periods": [] }
+		}
+		""";
+
+	/**
+	 * Calculation/SaveJobStimulus after the web app's remove (capture 2026-09-30, on the fixture's ids): 102 is left out.
+	 */
+	private static final String REMOVE_CAPTURE = """
+		{
+		  "applicant": {
+		    "periods": [
+		      { "jobStimulusId": 101, "personId": "19880209T050", "fromDate": "2021-01-01", "toDate": "2021-12-31", "updateTimestamp": "2026-08-21",
+		        "updateSignature": "ebb14eri", "markedForRemoval": false, "personIdFormatted": "880209-T050", "isValid": true, "minDate": 0 },
+		      { "jobStimulusId": 103, "personId": "19880209T050", "fromDate": "2026-01-01", "toDate": "2027-12-31", "updateTimestamp": "2026-08-21",
+		        "updateSignature": "ebb14eri", "markedForRemoval": false, "personIdFormatted": "880209-T050", "isValid": true, "minDate": "2021-12-31" }
 		    ],
 		    "personId": "19880209T050", "name": "Testsson, Test", "personIdFormatted": "880209-T050"
 		  },
@@ -105,6 +124,40 @@ class LifecareJobStimulusMapperTest {
 	@Test
 	void refusesAnInsatsWithoutSokande() {
 		assertRefused(json("{ \"applicant\": null, \"coApplicant\": null, \"hasCoApplicant\": false }"), "Sökande finns inte");
+	}
+
+	@Test
+	void leavesTheRemovedPeriodOutAndCountsMinDateAgainLikeTheCapturedSaveBody() {
+		assertThat(serialised(buildJobStimulusRemove(current(), 102))).isEqualTo(serialised(json(REMOVE_CAPTURE)));
+	}
+
+	@Test
+	void removingTheFirstPeriodGivesTheNextMinDateZero() {
+		final var periods = buildJobStimulusRemove(current(), 101).get("applicant").get("periods");
+
+		assertThat(periods.values()).extracting(period -> period.get("jobStimulusId").asInt()).containsExactly(102, 103);
+		assertThat(periods.get(0).get("minDate").asInt()).isZero();
+		assertThat(periods.get(1).get("minDate").asString()).isEqualTo("2023-07-07");
+	}
+
+	@Test
+	void removingTheOnlyPeriodSavesAnEmptySet() {
+		final var single = current();
+		final var only = single.get("applicant").get("periods").get(2);
+		((ObjectNode) single.get("applicant")).putArray("periods").add(only);
+
+		assertThat(buildJobStimulusRemove(single, 103).get("applicant").get("periods").isEmpty()).isTrue();
+	}
+
+	@Test
+	void removeRefusesAHouseholdWithAMedsokande() {
+		final var flagged = current().put("hasCoApplicant", true);
+
+		assertThatThrownBy(() -> buildJobStimulusRemove(flagged, 102))
+			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> {
+				assertThat(problem.getStatus()).isEqualTo(UNPROCESSABLE_CONTENT);
+				assertThat(problem.getDetail()).contains("medsökande");
+			});
 	}
 
 	@Test

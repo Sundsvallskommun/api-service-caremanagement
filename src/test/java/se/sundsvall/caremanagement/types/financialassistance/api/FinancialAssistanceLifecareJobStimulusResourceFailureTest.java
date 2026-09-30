@@ -92,4 +92,38 @@ class FinancialAssistanceLifecareJobStimulusResourceFailureTest {
 
 		verifyNoInteractions(serviceMock);
 	}
+
+	@Test
+	void removeJobStimulusPeriodInvalidPeriodId() {
+		webTestClient.delete()
+			.uri(uri -> uri.path(PATH + "/{periodId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", randomUUID().toString(), "periodId", "0")))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> {
+				final var body = result.getResponseBody();
+				assertThat(body).isNotNull();
+				assertThat(body.getViolations()).extracting(Violation::field, Violation::message)
+					.containsExactly(tuple("removeJobStimulusPeriod.periodId", "must be greater than 0"));
+			});
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void removeJobStimulusPeriodInvalidErrandId() {
+		webTestClient.delete()
+			.uri(uri -> uri.path(PATH + "/{periodId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid", "periodId", "102")))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> {
+				final var body = result.getResponseBody();
+				assertThat(body).isNotNull();
+				assertThat(body.getViolations()).extracting(Violation::field, Violation::message)
+					.containsExactly(tuple("removeJobStimulusPeriod.errandId", "not a valid UUID"));
+			});
+
+		verifyNoInteractions(serviceMock);
+	}
 }

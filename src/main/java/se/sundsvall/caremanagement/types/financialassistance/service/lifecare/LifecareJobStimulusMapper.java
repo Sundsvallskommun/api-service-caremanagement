@@ -1,10 +1,12 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareJobStimulusPeriod;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.NODES;
@@ -17,7 +19,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.text;
 
 /**
- * Maps Lifecare's jobbstimulans answer onto careM's periods, and builds the SaveJobStimulus body that adds one.
+ * Maps Lifecare's jobbstimulans answer onto careM's periods, and builds the SaveJobStimulus bodies that add or remove
+ * one.
  */
 final class LifecareJobStimulusMapper {
 
@@ -32,6 +35,8 @@ final class LifecareJobStimulusMapper {
 	private static final String FIELD_TO_DATE = "toDate";
 	private static final String FIELD_PERSON_ID = "personId";
 	private static final String FIELD_PERSON_ID_FORMATTED = "personIdFormatted";
+	private static final String FIELD_JOB_STIMULUS_ID = "jobStimulusId";
+	private static final String FIELD_MARKED_FOR_REMOVAL = "markedForRemoval";
 
 	private LifecareJobStimulusMapper() {}
 
@@ -64,6 +69,45 @@ final class LifecareJobStimulusMapper {
 	 * @return          the body to post
 	 */
 	static ObjectNode buildJobStimulusAdd(final JsonNode current, final String fromDate, final String toDate) {
+		final var applicant = applicantOf(current);
+		final var periods = inLifecareOrder(array(applicant, FIELD_PERIODS));
+
+		final var added = NODES.objectNode();
+		copyField(applicant, added, FIELD_PERSON_ID);
+		copyField(applicant, added, FIELD_PERSON_ID_FORMATTED);
+		added.put("fromDate", fromDate);
+		added.put(FIELD_TO_DATE, toDate);
+		added.put(FIELD_MARKED_FOR_REMOVAL, false);
+		periods.add(added);
+
+		return saveBody(applicant, periods);
+	}
+
+	/**
+	 * Builds the SaveJobStimulus body that removes one of the sökandes periods, the way Lifecare's web app does (capture
+	 * 2026-09-30).
+	 *
+	 * <p>
+	 * Lifecare has no call of its own for removing: the web app leaves the period out of the set and saves the rest, with
+	 * isValid and minDate counted again over what remains. It never sets markedForRemoval. Lifecare gives every period
+	 * that is saved a new jobStimulusId. A household with a medsökande is refused (422), as for adding.
+	 * </p>
+	 *
+	 * @param  current       Lifecare's GetJobStimulusForService answer
+	 * @param  jobStimulusId the period to remove
+	 * @return               the body to post
+	 */
+	static ObjectNode buildJobStimulusRemove(final JsonNode current, final int jobStimulusId) {
+		final var applicant = applicantOf(current);
+		final var kept = array(applicant, FIELD_PERIODS).stream()
+			.filter(period -> !Objects.equals(integer(period, FIELD_JOB_STIMULUS_ID), jobStimulusId))
+			.toList();
+
+		return saveBody(applicant, inLifecareOrder(kept));
+	}
+
+	/** The sökande on the insats, refusing an insats without one and a household with a medsökande. */
+	private static JsonNode applicantOf(final JsonNode current) {
 		final var applicant = field(current, FIELD_APPLICANT);
 		if (applicant == null || !applicant.isObject()) {
 			throw refuse("Sökande finns inte på insatsen i Lifecare.");
@@ -71,8 +115,11 @@ final class LifecareJobStimulusMapper {
 		if (flag(current, "hasCoApplicant") || field(current, FIELD_CO_APPLICANT) != null) {
 			throw refuse(CO_APPLICANT_REFUSAL);
 		}
+		return applicant;
+	}
 
-		final var existing = array(applicant, FIELD_PERIODS);
+	/** Lifecare's periods as the web app sends them back: each with isValid, and minDate, the end of the one before it. */
+	private static ArrayNode inLifecareOrder(final List<JsonNode> existing) {
 		final var periods = NODES.arrayNode();
 		for (var index = 0; index < existing.size(); index++) {
 			final var period = copyOf(existing.get(index));
@@ -89,14 +136,11 @@ final class LifecareJobStimulusMapper {
 			}
 			periods.add(period);
 		}
-		final var added = NODES.objectNode();
-		copyField(applicant, added, FIELD_PERSON_ID);
-		copyField(applicant, added, FIELD_PERSON_ID_FORMATTED);
-		added.put("fromDate", fromDate);
-		added.put(FIELD_TO_DATE, toDate);
-		added.put("markedForRemoval", false);
-		periods.add(added);
+		return periods;
+	}
 
+	/** The sökandes periods and an empty medsökande, which is the whole body SaveJobStimulus takes. */
+	private static ObjectNode saveBody(final JsonNode applicant, final ArrayNode periods) {
 		final var applicantBody = NODES.objectNode();
 		applicantBody.set(FIELD_PERIODS, periods);
 		copyField(applicant, applicantBody, FIELD_PERSON_ID);
@@ -117,8 +161,8 @@ final class LifecareJobStimulusMapper {
 
 	private static Stream<LifecareJobStimulusPeriod> periods(final JsonNode person, final String role) {
 		return array(person, FIELD_PERIODS).stream()
-			.filter(period -> !flag(period, "markedForRemoval"))
-			.map(period -> new LifecareJobStimulusPeriod(integer(period, "jobStimulusId"), role, emptyToNull(text(period, "fromDate")), emptyToNull(text(period, FIELD_TO_DATE))));
+			.filter(period -> !flag(period, FIELD_MARKED_FOR_REMOVAL))
+			.map(period -> new LifecareJobStimulusPeriod(integer(period, FIELD_JOB_STIMULUS_ID), role, emptyToNull(text(period, "fromDate")), emptyToNull(text(period, FIELD_TO_DATE))));
 	}
 
 	/** Lifecare sends an empty string for a period without an end. */

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -11,8 +12,11 @@ import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.databind.JsonNode;
 
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJobStimulusMapper.APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJobStimulusMapper.CO_APPLICANT_REFUSAL;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJobStimulusMapper.buildJobStimulusAdd;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJobStimulusMapper.buildJobStimulusRemove;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJobStimulusMapper.toJobStimulusPeriods;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.refuse;
 
@@ -24,6 +28,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 public class ErrandLifecareJobStimulusService {
 
 	static final String TARGET = "JOB_STIMULUS";
+	static final String PERIOD_GONE = "Perioden finns inte längre i Lifecare. Läs om listan: Lifecare ger perioderna nya id vid varje sparning.";
 	private static final String READ_DESCRIPTION = "Läste jobbstimulans i Lifecare";
 
 	private final LifecareErrandService errandService;
@@ -75,6 +80,38 @@ public class ErrandLifecareJobStimulusService {
 
 		final var saved = jobStimulusApi.save(buildJobStimulusAdd(current, request.fromDate(), toDate));
 		accessRecorder.written(errand, LifecareAccessEntry.CREATE, TARGET, "Lade till en jobbstimulansperiod i Lifecare (%s – %s)".formatted(request.fromDate(), toDate), null);
+		return toJobStimulusPeriods(saved);
+	}
+
+	/**
+	 * Removes one of the sökandes periods. Lifecare has no remove call: its web app saves the set without the period, and
+	 * so does this. Every period that is saved gets a new id in Lifecare, so the answer carries the ids to use from now
+	 * on. A period that is no longer in Lifecare (404) is usually one whose id an earlier save replaced. Refused (422) for
+	 * a household with a medsökande, as for adding.
+	 *
+	 * @param  municipalityId the municipality
+	 * @param  namespace      the namespace
+	 * @param  errandId       the errand
+	 * @param  periodId       Lifecare's jobStimulusId of the period, as last read
+	 * @return                every period after the save
+	 */
+	public List<LifecareJobStimulusPeriod> removePeriod(final String municipalityId, final String namespace, final String errandId, final int periodId) {
+		final var errand = errandService.load(municipalityId, namespace, errandId);
+		final var serviceId = errand.requireServiceId();
+		if (errandService.coApplicantPresent(errand)) {
+			throw refuse(CO_APPLICANT_REFUSAL);
+		}
+
+		final var current = jobStimulusApi.readForService(serviceId);
+		accessRecorder.read(errand, TARGET, READ_DESCRIPTION);
+		final var removed = toJobStimulusPeriods(current).stream()
+			.filter(period -> APPLICANT.equals(period.role()) && Objects.equals(period.id(), periodId))
+			.findFirst()
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, PERIOD_GONE));
+
+		final var saved = jobStimulusApi.save(buildJobStimulusRemove(current, periodId));
+		accessRecorder.written(errand, LifecareAccessEntry.DELETE, TARGET,
+			"Tog bort en jobbstimulansperiod i Lifecare (%s – %s)".formatted(removed.fromDate(), Objects.requireNonNullElse(removed.toDate(), "tills vidare")), String.valueOf(periodId));
 		return toJobStimulusPeriods(saved);
 	}
 

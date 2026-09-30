@@ -78,4 +78,22 @@ class FinancialAssistanceLifecareJobStimulusResourceTest {
 		verify(serviceMock).addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request);
 		verifyNoMoreInteractions(serviceMock);
 	}
+
+	@Test
+	void removeJobStimulusPeriod() {
+		when(serviceMock.removePeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 102)).thenReturn(PERIODS);
+
+		final var response = webTestClient.delete()
+			.uri(uri -> uri.path(PATH + "/{periodId}").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID, "periodId", "102")))
+			.exchange()
+			.expectStatus().isOk()
+			.expectHeader().contentType(APPLICATION_JSON)
+			.expectBodyList(LifecareJobStimulusPeriod.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isEqualTo(PERIODS);
+		verify(serviceMock).removePeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 102);
+		verifyNoMoreInteractions(serviceMock);
+	}
 }
