@@ -23,8 +23,6 @@ import tools.jackson.databind.JsonNode;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionBodies.ERROR_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionBodies.buildCreate;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionBodies.buildUpdate;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapper.toPrefill;
@@ -157,9 +155,6 @@ public class LifecareDecisionService {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var serviceId = errand.requireServiceId();
 		final var decisionMaker = decisionMaker();
-		if (errandService.coApplicantPresent(errand)) {
-			throw Problem.valueOf(UNPROCESSABLE_CONTENT, ERROR_CO_APPLICANT);
-		}
 
 		final var calculationId = errand.calculation();
 		final var proposal = calculationId.map(id -> lifecare.readProposal(serviceId, id)).orElseGet(() -> lifecare.readProposal(serviceId));
@@ -202,7 +197,7 @@ public class LifecareDecisionService {
 
 	private static LifecareDecisionInput toInput(final LifecareDecisionSaveRequest request, final String decisionMaker) {
 		return new LifecareDecisionInput(request.decisionCode(), request.date(), request.periodFrom(), request.periodTo(), request.amount(),
-			request.reasonCode(), request.decisionMessage(), Boolean.TRUE.equals(request.writeProtect()), decisionMaker);
+			request.reasonCode(), request.decisionMessage(), Boolean.TRUE.equals(request.writeProtect()), decisionMaker, request.coApplicantReasonCode());
 	}
 
 	/**

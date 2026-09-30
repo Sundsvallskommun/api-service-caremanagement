@@ -128,7 +128,6 @@ class ErrandLifecareJobStimulusServiceTest {
 		assertThat(bodyCaptor.getValue().get("coApplicant").get("periods").values()).extracting(period -> period.get("fromDate").asString()).containsExactly("2026-09-01");
 		assertThat(bodyCaptor.getValue().get("applicant").get("periods").size()).isEqualTo(3);
 		verify(accessRecorder).written(ERRAND, "CREATE", "JOB_STIMULUS", "Lade till en jobbstimulansperiod för medsökanden i Lifecare (2026-09-01 – 2028-08-31)", null);
-		verify(errandService, never()).coApplicantPresent(any());
 	}
 
 	@Test

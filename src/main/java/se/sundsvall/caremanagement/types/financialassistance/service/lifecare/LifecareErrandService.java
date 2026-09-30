@@ -91,16 +91,6 @@ public class LifecareErrandService {
 	}
 
 	/**
-	 * Whether the household has a medsökande. Lifecare writes for such households are not built yet and are refused.
-	 *
-	 * @param  errand the errand
-	 * @return        true when there is a medsökande
-	 */
-	public boolean coApplicantPresent(final LifecareErrand errand) {
-		return householdPartyService.coApplicantPresent(errand.municipalityId(), errand.namespace(), errand.errandId());
-	}
-
-	/**
 	 * Links a Lifecare calculation to the errand. Write-once: a different id than the one already linked is a 409.
 	 *
 	 * @param errand        the errand

@@ -32,6 +32,6 @@ record LifecareDecisionPrefill(int calculationId, BigDecimal amount, LocalDate p
 			to = periodTo;
 		}
 		return new LifecareDecisionSaveRequest(request.decisionCode(), request.date(), from, to, Objects.requireNonNullElse(request.amount(), amount), request.reasonCode(),
-			request.decisionMessage(), request.writeProtect());
+			request.decisionMessage(), request.writeProtect(), request.coApplicantReasonCode());
 	}
 }

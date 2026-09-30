@@ -43,7 +43,7 @@ class FinancialAssistanceLifecareDecisionResourceTest {
 	private static final String DECISION_PATH = BASE + "/{errandId}/lifecare/decision";
 	private static final Map<String, String> PATH_VARIABLES = Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID);
 	private static final LifecareDecisionView VIEW = new LifecareDecisionView(98, 153, "BIFALL", "2026-09-23", "2026-09-01", "2026-09-30",
-		new BigDecimal("3000"), 19, "Arbetar deltid ofrivilligt, otillräcklig inkomst", "<p>Beslut</p>", false, "Test Handläggare");
+		new BigDecimal("3000"), 19, "Arbetar deltid ofrivilligt, otillräcklig inkomst", "<p>Beslut</p>", false, "Test Handläggare", null, null);
 
 	@Autowired
 	private WebTestClient webTestClient;
@@ -83,7 +83,7 @@ class FinancialAssistanceLifecareDecisionResourceTest {
 	@Test
 	void saveDecision() {
 		final var request = new LifecareDecisionSaveRequest(153, LocalDate.of(2026, Month.SEPTEMBER, 23), LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
-			new BigDecimal("3000"), 19, "<p>Beslut</p>", true);
+			new BigDecimal("3000"), 19, "<p>Beslut</p>", true, null);
 		when(serviceMock.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request)).thenReturn(VIEW);
 
 		final var response = webTestClient.put()

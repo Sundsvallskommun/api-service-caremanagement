@@ -15,6 +15,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionBodies.buildCreate;
@@ -45,21 +46,21 @@ class LifecareDecisionBodiesTest {
 
 	private static LifecareDecisionInput bifall() {
 		return new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("5"), 16,
-			"<p>test av beslutsmeddelande</p>", false, "RPA_031DEV");
+			"<p>test av beslutsmeddelande</p>", false, "RPA_031DEV", null);
 	}
 
 	private static LifecareDecisionInput withCode(final LifecareDecisionInput input, final int code) {
 		return new LifecareDecisionInput(code, input.date(), input.periodFrom(), input.periodTo(), input.amount(), input.reasonCode(), input.message(),
-			input.writeProtect(), input.decisionMakerId());
+			input.writeProtect(), input.decisionMakerId(), input.coApplicantReasonCode());
 	}
 
 	private static LifecareDecisionInput withMaker(final LifecareDecisionInput input, final String maker) {
 		return new LifecareDecisionInput(input.decisionCode(), input.date(), input.periodFrom(), input.periodTo(), input.amount(), input.reasonCode(),
-			input.message(), input.writeProtect(), maker);
+			input.message(), input.writeProtect(), maker, input.coApplicantReasonCode());
 	}
 
 	private static LifecareDecisionInput avslag() {
-		return new LifecareDecisionInput(152, null, null, null, BigDecimal.ZERO, null, MESSAGE, false, "RPA_031DEV");
+		return new LifecareDecisionInput(152, null, null, null, BigDecimal.ZERO, null, MESSAGE, false, "RPA_031DEV", null);
 	}
 
 	private static void assertRefused(final Runnable call, final String reasonPart) {
@@ -128,22 +129,75 @@ class LifecareDecisionBodiesTest {
 		assertRefused(() -> buildCreate(proposal, withCode(bifall(), 4711)), "Beslutstypen 4711 finns inte");
 	}
 
-	@Test
-	void createRefusesAHouseholdWithACoApplicantRatherThanSendingNoone() {
-		final var proposal = (ObjectNode) fixture("create-proposal.json");
-		final var persons = proposal.withObjectProperty("decision").withArrayProperty("decisionPersons");
+	private static ObjectNode withCoApplicant(final ObjectNode decisionOwner) {
+		final var persons = decisionOwner.withArrayProperty("decisionPersons");
 		final var coApplicant = (ObjectNode) persons.get(0).deepCopy();
 		coApplicant.put("personId", "19850101T222").put("coApplicant", true);
 		persons.add(coApplicant);
+		return decisionOwner;
+	}
 
-		assertRefused(() -> buildCreate(proposal, bifall()), "medsökande");
+	private static LifecareDecisionInput withCoApplicantReason(final LifecareDecisionInput input, final Integer code) {
+		return new LifecareDecisionInput(input.decisionCode(), input.date(), input.periodFrom(), input.periodTo(), input.amount(), input.reasonCode(),
+			input.message(), input.writeProtect(), input.decisionMakerId(), code);
+	}
+
+	@Test
+	void createNamesTheMedsokandeAndTheirOrsakAsTheWebAppDoes() {
+		// Jeppson Test, insats 24 (capture 2026-09-30): coApplicant is the medsökande's personId, never NOONE.
+		final var proposal = (ObjectNode) fixture("create-proposal.json");
+		withCoApplicant(proposal.withObjectProperty("decision"));
+
+		final var body = buildCreate(proposal, withCoApplicantReason(bifall(), 1));
+
+		assertThat(body.path("coApplicant").stringValue()).isEqualTo("19850101T222");
+		assertThat(body.path("reasonCode").intValue()).isEqualTo(16);
+		assertThat(body.path("reasonCodeCoApplicant").intValue()).isEqualTo(1);
+		assertThat(body.path("decisionPersons").values()).extracting(person -> person.path("coApplicant").booleanValue(), person -> person.path("included").booleanValue())
+			.containsExactly(tuple(false, true), tuple(true, true));
+	}
+
+	@Test
+	void createRefusesAMedsokandeWithoutOrsakWhenTheSokandeHasOne() {
+		final var proposal = (ObjectNode) fixture("create-proposal.json");
+		withCoApplicant(proposal.withObjectProperty("decision"));
+
+		assertRefused(() -> buildCreate(proposal, bifall()), "orsak för medsökanden");
+	}
+
+	@Test
+	void createTakesAMedsokandeWithoutOrsakWhenTheBeslutHasNone() {
+		final var proposal = (ObjectNode) fixture("create-proposal.json");
+		withCoApplicant(proposal.withObjectProperty("decision"));
+
+		final var body = buildCreate(proposal, avslag());
+
+		assertThat(body.path("coApplicant").stringValue()).isEqualTo("19850101T222");
+		assertThat(body.path("reasonCodeCoApplicant").stringValue()).isEmpty();
+	}
+
+	@Test
+	void createRefusesAMedsokandeLifecareGivesNoPersonnummer() {
+		final var proposal = (ObjectNode) fixture("create-proposal.json");
+		final var persons = withCoApplicant(proposal.withObjectProperty("decision")).withArrayProperty("decisionPersons");
+		((ObjectNode) persons.get(1)).remove("personId");
+
+		assertRefused(() -> buildCreate(proposal, withCoApplicantReason(bifall(), 1)), "personnummer");
+	}
+
+	@Test
+	void createIgnoresAMedsokandesOrsakWithoutAMedsokande() {
+		final var body = buildCreate(fixture("create-proposal.json"), withCoApplicantReason(bifall(), 1));
+
+		assertThat(body.path("coApplicant").stringValue()).isEqualTo("NOONE");
+		assertThat(body.path("reasonCodeCoApplicant").stringValue()).isEmpty();
 	}
 
 	@Test
 	void createRefusesABifallWithoutThePeriodItsTypeRequiresButTakesAnAvslagWithoutOne() {
-		final var noFrom = new LifecareDecisionInput(153, null, null, LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("5"), 16, null, false, "RPA_031DEV");
-		final var noTo = new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), null, new BigDecimal("5"), 16, null, false, "RPA_031DEV");
-		final var avslagWithoutPeriod = new LifecareDecisionInput(152, null, null, null, BigDecimal.ZERO, null, null, false, "RPA_031DEV");
+		final var noFrom = new LifecareDecisionInput(153, null, null, LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("5"), 16, null, false, "RPA_031DEV", null);
+		final var noTo = new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), null, new BigDecimal("5"), 16, null, false, "RPA_031DEV", null);
+		final var avslagWithoutPeriod = new LifecareDecisionInput(152, null, null, null, BigDecimal.ZERO, null, null, false, "RPA_031DEV", null);
 
 		assertRefused(() -> buildCreate(fixture("create-proposal.json"), noFrom), "saknar period");
 		assertRefused(() -> buildCreate(fixture("create-proposal.json"), noTo), "saknar period");
@@ -158,7 +212,7 @@ class LifecareDecisionBodiesTest {
 	@Test
 	void createCarriesTheDateAFractionalAmountAndWriteProtection() {
 		final var input = new LifecareDecisionInput(153, LocalDate.of(2026, Month.SEPTEMBER, 24), LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
-			new BigDecimal("7900.50"), 16, "<p>x</p>", true, "RPA_031DEV");
+			new BigDecimal("7900.50"), 16, "<p>x</p>", true, "RPA_031DEV", null);
 
 		final var body = buildCreate(fixture("create-proposal.json"), input);
 
@@ -197,7 +251,7 @@ class LifecareDecisionBodiesTest {
 
 	@Test
 	void updateCarriesTheChangedMessageAndNamesTheCaseworkerWhoSavedIt() {
-		final var input = new LifecareDecisionInput(152, null, null, null, BigDecimal.ZERO, null, "<p>Nytt</p>", false, "test");
+		final var input = new LifecareDecisionInput(152, null, null, null, BigDecimal.ZERO, null, "<p>Nytt</p>", false, "test", null);
 
 		final var body = buildUpdate(fixture("update-saved.json"), fixture("update-proposal.json"), input);
 
@@ -218,7 +272,7 @@ class LifecareDecisionBodiesTest {
 	@Test
 	void updateRefusesToChangeTheBeslutstypOfARegisteredBeslut() {
 		final var input = new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), BigDecimal.ZERO, null, MESSAGE, false,
-			"RPA_031DEV");
+			"RPA_031DEV", null);
 
 		assertRefused(() -> buildUpdate(fixture("update-saved.json"), fixture("update-proposal.json"), input), "Beslutstypen kan inte ändras");
 	}

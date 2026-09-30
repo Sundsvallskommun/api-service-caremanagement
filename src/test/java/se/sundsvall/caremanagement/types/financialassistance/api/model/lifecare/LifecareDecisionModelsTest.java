@@ -12,21 +12,22 @@ class LifecareDecisionModelsTest {
 	@Test
 	void decisionView() {
 		final var view = new LifecareDecisionView(98, 153, "BIFALL", "2026-09-23", "2026-09-01", "2026-09-30", BigDecimal.TEN, 19, "orsak", "<p>x</p>", true,
-			"Test Handläggare");
+			"Test Handläggare", 2, "orsak medsökande");
 
 		assertThat(view).hasNoNullFieldsOrProperties();
 		assertThat(view.locked()).isTrue();
 		assertThat(view).isEqualTo(new LifecareDecisionView(98, 153, "BIFALL", "2026-09-23", "2026-09-01", "2026-09-30", BigDecimal.TEN, 19, "orsak",
-			"<p>x</p>", true, "Test Handläggare"));
+			"<p>x</p>", true, "Test Handläggare", 2, "orsak medsökande"));
 	}
 
 	@Test
 	void saveRequest() {
 		final var request = new LifecareDecisionSaveRequest(153, LocalDate.of(2026, Month.SEPTEMBER, 23), LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
-			BigDecimal.TEN, 19, "<p>x</p>", false);
+			BigDecimal.TEN, 19, "<p>x</p>", false, 2);
 
 		assertThat(request).hasNoNullFieldsOrProperties();
 		assertThat(request.decisionCode()).isEqualTo(153);
+		assertThat(request.coApplicantReasonCode()).isEqualTo(2);
 		assertThat(request.writeProtect()).isFalse();
 	}
 

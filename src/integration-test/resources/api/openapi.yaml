@@ -743,13 +743,15 @@ paths:
         \ that differs from it. The beslutsfattare is the caller (X-Sent-By), who\
         \ must be one of Lifecare's beslutsfattare for the insats. Refused with 422,\
         \ worded for the caseworker, when the beslutstyp is not active on the insats\
-        \ or cannot be registered from careM, the household has a medsökande, the\
-        \ caller is not a beslutsfattare, a period the beslutstyp requires is missing,\
-        \ the beslut is locked in Lifecare, or an existing beslut would change beslutstyp;\
-        \ Lifecare's own refusals are 422 with Lifecare's message. 502 when Lifecare\
-        \ did not answer the create (check Lifecare before saving again) or when the\
-        \ beslut was created but could not be linked to the errand (do not save again).\
-        \ Answers with the beslut as it stands in Lifecare after the save."
+        \ or cannot be registered from careM, the household has a medsökande and the\
+        \ beslut an orsak but no orsak for the medsökande (coApplicantReasonCode),\
+        \ the caller is not a beslutsfattare, a period the beslutstyp requires is\
+        \ missing, the beslut is locked in Lifecare, or an existing beslut would change\
+        \ beslutstyp; Lifecare's own refusals are 422 with Lifecare's message. 502\
+        \ when Lifecare did not answer the create (check Lifecare before saving again)\
+        \ or when the beslut was created but could not be linked to the errand (do\
+        \ not save again). Answers with the beslut as it stands in Lifecare after\
+        \ the save."
       operationId: saveDecision
       parameters:
       - name: municipalityId
@@ -9827,6 +9829,15 @@ components:
             \ changed from careM."
           examples:
           - false
+        coApplicantReasonCode:
+          type: integer
+          format: int32
+          description: "Lifecare's code for the medsökande's orsak, from the same\
+            \ orsaker as the sökande's. Required when the household has a medsökande\
+            \ in Lifecare and the beslut carries an orsak; ignored without a medsö\
+            kande."
+          examples:
+          - 1
       required:
       - decisionCode
     LifecareDecisionView:
@@ -9903,6 +9914,19 @@ components:
             \ by signature"
           examples:
           - Test Handläggare
+        coApplicantReasonCode:
+          type: integer
+          format: int32
+          description: Lifecare's code for the medsökande's orsak; absent without
+            a medsökande or orsak
+          examples:
+          - 2
+        coApplicantReason:
+          type: string
+          description: The medsökande's orsak as Lifecare words it; what finalize
+            takes as coApplicantReason
+          examples:
+          - "Arbetslös, väntar på ersättning/stöd"
       readOnly: true
     UserSettings:
       type: object

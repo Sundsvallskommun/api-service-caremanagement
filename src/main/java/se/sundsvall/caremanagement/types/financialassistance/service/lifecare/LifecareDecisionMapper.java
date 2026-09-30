@@ -68,7 +68,9 @@ final class LifecareDecisionMapper {
 			text(saved.path("reason")).orElse(null),
 			text(saved.path("message")).orElse(null),
 			isTrue(saved.path("lockedMessage")),
-			text(saved.path("decisionMakerName")).or(() -> text(saved.path("decisionMaker"))).orElse(""));
+			text(saved.path("decisionMakerName")).or(() -> text(saved.path("decisionMaker"))).orElse(""),
+			integer(saved.path("reasonCodeCoApplicant")).filter(code -> code > 0).orElse(null),
+			text(saved.path("reasonCoApplicant")).orElse(null));
 	}
 
 	/**

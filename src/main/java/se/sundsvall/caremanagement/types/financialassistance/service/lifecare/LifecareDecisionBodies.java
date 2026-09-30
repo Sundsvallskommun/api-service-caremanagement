@@ -27,8 +27,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  *
  * <p>
  * Lifecare accepts a wrong beslut without complaint, so anything that cannot be decided safely is refused with 422
- * instead of sent: a beslutstyp whose category careM does not register yet, a household with a medsökande (sending
- * NOONE for one is accepted and silently leaves them out of the beslut), a beslutsfattare Lifecare does not know (the
+ * instead of sent: a beslutstyp whose category careM does not register yet, a medsökande without an orsak when the
+ * beslut
+ * carries one for the sökande, a beslutsfattare Lifecare does not know (the
  * beslut must name the caseworker, never fall back on the integration account), a period the beslutstyp requires but
  * the beslut lacks, and for a change also a beslut Lifecare has locked and a change of beslutstyp.
  * </p>
@@ -44,7 +45,8 @@ final class LifecareDecisionBodies {
 
 	static final String ERROR_UNKNOWN_TYPE = "Beslutstypen %s finns inte på insatsen i Lifecare.";
 	static final String ERROR_UNREGISTERED_TYPE = "Beslutstypen \"%s\" kan inte registreras från Drakel ännu. Registrera beslutet direkt i Lifecare.";
-	static final String ERROR_CO_APPLICANT = "Hushållet har en medsökande. Sådana beslut kan inte registreras i Lifecare från Drakel ännu.";
+	static final String ERROR_CO_APPLICANT_REASON = "Beslutet saknar orsak för medsökanden.";
+	static final String ERROR_CO_APPLICANT_ID = "Medsökanden saknar personnummer i Lifecare.";
 	static final String ERROR_UNKNOWN_DECISION_MAKER = "Handläggaren %s finns inte som beslutsfattare i Lifecare.";
 	static final String ERROR_MISSING_PERIOD = "Beslutet saknar period, som beslutstypen kräver i Lifecare.";
 	static final String ERROR_LOCKED = "Beslutet är låst i Lifecare och kan inte ändras från Drakel.";
@@ -52,6 +54,7 @@ final class LifecareDecisionBodies {
 	static final String ERROR_NO_BESLUT = "Lifecare answered without a beslut object to fill in";
 
 	private static final String FIELD_DECISION_PERSONS = "decisionPersons";
+	private static final String FIELD_CO_APPLICANT = "coApplicant";
 
 	private LifecareDecisionBodies() {}
 
@@ -107,8 +110,13 @@ final class LifecareDecisionBodies {
 			throw refuse(ERROR_UNREGISTERED_TYPE.formatted(text(decisionType.path("name")).orElse("")));
 		}
 
-		if (elements(base.path(FIELD_DECISION_PERSONS)).stream().anyMatch(person -> isTrue(person.path("coApplicant")))) {
-			throw refuse(ERROR_CO_APPLICANT);
+		// The web app names the medsökande by personId, never NOONE, and asks for their orsak too (capture 2026-09-30).
+		final var coApplicant = elements(base.path(FIELD_DECISION_PERSONS)).stream()
+			.filter(person -> isTrue(person.path(FIELD_CO_APPLICANT)))
+			.findFirst()
+			.map(person -> text(person.path("personId")).orElseThrow(() -> refuse(ERROR_CO_APPLICANT_ID)));
+		if (coApplicant.isPresent() && input.reasonCode() != null && input.coApplicantReasonCode() == null) {
+			throw refuse(ERROR_CO_APPLICANT_REASON);
 		}
 
 		final var signature = Optional.ofNullable(input.decisionMakerId()).orElse("").toLowerCase(Locale.ROOT);
@@ -131,8 +139,12 @@ final class LifecareDecisionBodies {
 		}
 		body.put("fromDate", fromDate);
 		body.put("toDate", toDate);
-		putReasonCode(body, input.reasonCode());
-		body.put("reasonCodeCoApplicant", "");
+		putReasonCode(body, "reasonCode", input.reasonCode());
+		if (coApplicant.isPresent()) {
+			putReasonCode(body, "reasonCodeCoApplicant", input.coApplicantReasonCode());
+		} else {
+			body.put("reasonCodeCoApplicant", "");
+		}
 		setOrRemove(body, "decisionMaker", decisionMaker.path("id"));
 		// A registered beslut names its beslutsfattare; a blank one leaves the name to Lifecare.
 		if (base.path("decisionMakerName").isString()) {
@@ -142,7 +154,7 @@ final class LifecareDecisionBodies {
 		final var persons = body.putArray(FIELD_DECISION_PERSONS);
 		elements(base.path(FIELD_DECISION_PERSONS)).forEach(person -> persons.add(include(person)));
 		putAmount(body, Optional.ofNullable(input.amount()).orElse(BigDecimal.ZERO));
-		body.put("coApplicant", NO_CO_APPLICANT);
+		body.put(FIELD_CO_APPLICANT, coApplicant.orElse(NO_CO_APPLICANT));
 		body.put("message", input.message());
 		if (input.writeProtect()) {
 			body.put("lockedMessage", true);
@@ -172,13 +184,13 @@ final class LifecareDecisionBodies {
 		return Optional.ofNullable(date).map(LocalDate::toString).orElse("");
 	}
 
-	/** The orsak as a number, or the empty string Lifecare's web app sends for none. */
-	private static void putReasonCode(final ObjectNode body, final Integer reasonCode) {
+	/** An orsak as a number, or the empty string Lifecare's web app sends for none. */
+	private static void putReasonCode(final ObjectNode body, final String field, final Integer reasonCode) {
 		if (reasonCode == null) {
-			body.put("reasonCode", "");
+			body.put(field, "");
 			return;
 		}
-		body.put("reasonCode", reasonCode.intValue());
+		body.put(field, reasonCode.intValue());
 	}
 
 	/** A whole amount as an integer, as Lifecare's web app sends it; a fraction as a decimal. */

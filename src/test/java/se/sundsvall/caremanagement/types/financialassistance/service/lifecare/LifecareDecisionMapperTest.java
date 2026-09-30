@@ -9,6 +9,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionView;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
@@ -48,7 +49,19 @@ class LifecareDecisionMapperTest {
 	@Test
 	void showsTheSavedBeslutAsLifecareHasItWithoutThePersonnummer() {
 		assertThat(LifecareDecisionMapper.toView(tree(SAVED))).isEqualTo(new LifecareDecisionView(98, 153, "BIFALL", "2026-09-23", "2026-09-01", "2026-09-30",
-			new BigDecimal("3000"), 19, "Arbetar deltid ofrivilligt, otillräcklig inkomst", "<p>Beslut</p>", false, "Test Handläggare"));
+			new BigDecimal("3000"), 19, "Arbetar deltid ofrivilligt, otillräcklig inkomst", "<p>Beslut</p>", false, "Test Handläggare", null, null));
+	}
+
+	@Test
+	void showsTheMedsokandesOrsak() {
+		final var saved = (ObjectNode) tree(SAVED);
+		saved.put("reasonCodeCoApplicant", 2).put("reasonCoApplicant", "Arbetslös, väntar på ersättning/stöd");
+
+		final var view = LifecareDecisionMapper.toView(saved);
+
+		assertThat(view.coApplicantReasonCode()).isEqualTo(2);
+		assertThat(view.coApplicantReason()).isEqualTo("Arbetslös, väntar på ersättning/stöd");
+		assertThat(LifecareDecisionMapper.toView(tree(SAVED)).coApplicantReasonCode()).isNull();
 	}
 
 	@Test
@@ -57,7 +70,7 @@ class LifecareDecisionMapperTest {
 			{"decisionId": 7, "decisionCode": 161, "decisionType": 9, "date": "", "fromDate": "", "toDate": null,
 			 "reasonCode": 0, "reason": "", "message": null, "decisionMaker": "RPA_031DEV", "decisionMakerName": null, "lockedMessage": true}"""));
 
-		assertThat(view).isEqualTo(new LifecareDecisionView(7, 161, null, "", null, null, BigDecimal.ZERO, null, null, null, true, "RPA_031DEV"));
+		assertThat(view).isEqualTo(new LifecareDecisionView(7, 161, null, "", null, null, BigDecimal.ZERO, null, null, null, true, "RPA_031DEV", null, null));
 		assertThat(LifecareDecisionMapper.toView(tree("{}")).decisionMaker()).isEmpty();
 		assertThat(LifecareDecisionMapper.toView(tree("{\"reasonCode\": \"\"}")).reasonCode()).isNull();
 	}
