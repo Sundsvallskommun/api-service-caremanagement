@@ -65,7 +65,7 @@ class LifecareDecisionServiceTest {
 		}""";
 
 	private static final LifecareDecisionSaveRequest BIFALL = new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
-		new BigDecimal("3000"), 19, "<p>Beslut</p>", null);
+		new BigDecimal("3000"), 19, "<p>Beslut</p>", null, null);
 
 	@Mock
 	private LifecareErrandService errandServiceMock;
@@ -196,7 +196,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.update(eq(98), bodyCaptor.capture())).thenReturn(changed);
 
 		final var view = service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Ändrat</p>", false));
+			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Ändrat</p>", false, null));
 
 		verify(lifecareMock, never()).create(anyInt(), any());
 		assertThat(bodyCaptor.getValue().path("decisionId").asInt()).isEqualTo(98);
@@ -218,7 +218,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.update(eq(98), bodyCaptor.capture())).thenReturn(locked);
 
 		final var view = service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Beslut</p>", true));
+			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Beslut</p>", true, null));
 
 		assertThat(bodyCaptor.getValue().path("lockedMessage").booleanValue()).isTrue();
 		verify(accessRecorderMock).written(errand, "UPDATE", "DECISION", "Ändrade och skrivskyddade beslutet i Lifecare", "98");
@@ -234,7 +234,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, null, true));
+			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, null, true, null));
 
 		verify(accessRecorderMock).written(errand, "CREATE", "DECISION", "Registrerade och skrivskyddade beslutet i Lifecare", "98");
 	}
@@ -249,7 +249,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.readProposal(1)).thenReturn(proposal);
 
 		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			new LifecareDecisionSaveRequest(161, null, null, null, null, null, null, null)))
+			new LifecareDecisionSaveRequest(161, null, null, null, null, null, null, null, null)))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
 			.hasMessageContaining("EK Återkrav");
@@ -257,15 +257,22 @@ class LifecareDecisionServiceTest {
 	}
 
 	@Test
-	void refusesAHouseholdCaremKnowsHasACoApplicantBeforeAskingLifecare() {
+	void savesTheBeslutForAHouseholdWithAMedsokandeWithTheirOrsak() {
 		final var errand = loaded(null);
-		when(errandServiceMock.coApplicantPresent(errand)).thenReturn(true);
+		caseworker();
+		final var proposal = (ObjectNode) tree(PROPOSAL);
+		final var persons = proposal.withObjectProperty("decision").withArrayProperty("decisionPersons");
+		persons.add(((ObjectNode) persons.get(0).deepCopy()).put("personId", "20120505T020").put("coApplicant", true));
+		when(lifecareMock.readProposal(1)).thenReturn(proposal);
+		when(lifecareMock.create(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 134}"));
+		when(lifecareMock.readDecision(134)).thenReturn(tree(SAVED));
 
-		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
-			.hasMessageContaining("medsökande");
-		verifyNoInteractions(lifecareMock);
+		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.OCTOBER, 1), LocalDate.of(2026, Month.OCTOBER, 31),
+			new BigDecimal("100"), 3, "<p>Beslut</p>", null, 1));
+
+		assertThat(bodyCaptor.getValue().path("coApplicant").stringValue()).isEqualTo("20120505T020");
+		assertThat(bodyCaptor.getValue().path("reasonCodeCoApplicant").intValue()).isEqualTo(1);
+		verify(errandServiceMock).linkDecision(errand, 134);
 	}
 
 	@Test
@@ -438,7 +445,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.create(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 133}"));
 		when(lifecareMock.readDecision(133)).thenReturn(tree(SAVED));
 
-		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareDecisionSaveRequest(153, null, null, null, null, 3, "<p>Beslut</p>", null));
+		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareDecisionSaveRequest(153, null, null, null, null, 3, "<p>Beslut</p>", null, null));
 
 		final var body = bodyCaptor.getValue();
 		assertThat(body.path("amount").asInt()).isEqualTo(2068);
@@ -459,7 +466,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.update(eq(133), bodyCaptor.capture())).thenReturn(saved);
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("2000"), 3, "<p>Beslut</p>", false));
+			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("2000"), 3, "<p>Beslut</p>", false, null));
 
 		assertThat(bodyCaptor.getValue().path("amount").asInt()).isEqualTo(2000);
 		verify(accessRecorderMock).written(errand, "UPDATE", "DECISION", "Ändrade beslutet i Lifecare, från normberäkning 25 (belopp 2000 i stället för normberäkningens 2068)", "133");

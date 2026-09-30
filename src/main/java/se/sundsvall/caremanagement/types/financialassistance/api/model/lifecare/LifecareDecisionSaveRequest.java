@@ -13,14 +13,15 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
  * A beslut as the caseworker saves it on the Beslut tab. It is written straight to Lifecare: created the first time,
  * changed after that. Beslutstyp and orsak are Lifecare's own codes, picked from its lists.
  *
- * @param decisionCode    Lifecare's beslutstyp code
- * @param date            the beslutsdatum, Lifecare's proposal (today) when left out
- * @param periodFrom      start of the period
- * @param periodTo        end of the period
- * @param amount          the amount
- * @param reasonCode      Lifecare's orsak code
- * @param decisionMessage the beslutsmeddelande as HTML
- * @param writeProtect    save the beslut write-protected (its meddelande locked)
+ * @param decisionCode          Lifecare's beslutstyp code
+ * @param date                  the beslutsdatum, Lifecare's proposal (today) when left out
+ * @param periodFrom            start of the period
+ * @param periodTo              end of the period
+ * @param amount                the amount
+ * @param reasonCode            Lifecare's orsak code
+ * @param decisionMessage       the beslutsmeddelande as HTML
+ * @param writeProtect          save the beslut write-protected (its meddelande locked)
+ * @param coApplicantReasonCode Lifecare's orsak code for the medsökande
  */
 @Schema(description = "A beslut as the caseworker saves it on the Beslut tab - written straight to Lifecare, created the first time and changed after that.")
 public record LifecareDecisionSaveRequest(
@@ -33,5 +34,8 @@ public record LifecareDecisionSaveRequest(
 	@Schema(description = "The beslutsmeddelande as HTML", examples = "<p>Beslut</p>") @Size(max = 1048576) String decisionMessage,
 	@Schema(description = """
 		Spara och skrivskydda beslut: saves the beslut write-protected in Lifecare (its meddelande locked), after which it \
-		can no longer be changed from careM.""", examples = "false") Boolean writeProtect) {
+		can no longer be changed from careM.""", examples = "false") Boolean writeProtect,
+	@Schema(description = """
+		Lifecare's code for the medsökande's orsak, from the same orsaker as the sökande's. Required when the household has \
+		a medsökande in Lifecare and the beslut carries an orsak; ignored without a medsökande.""", examples = "1") Integer coApplicantReasonCode) {
 }

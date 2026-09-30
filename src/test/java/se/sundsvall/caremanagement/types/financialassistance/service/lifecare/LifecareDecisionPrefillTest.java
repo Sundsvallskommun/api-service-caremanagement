@@ -16,21 +16,21 @@ class LifecareDecisionPrefillTest {
 
 	@Test
 	void fillsInWhatTheCaseworkerLeftOut() {
-		final var request = new LifecareDecisionSaveRequest(153, null, null, null, null, 3, "<p>Beslut</p>", true);
+		final var request = new LifecareDecisionSaveRequest(153, null, null, null, null, 3, "<p>Beslut</p>", true, null);
 
-		assertThat(PREFILL.fillIn(request)).isEqualTo(new LifecareDecisionSaveRequest(153, null, FIRST, LAST, new BigDecimal("2068"), 3, "<p>Beslut</p>", true));
+		assertThat(PREFILL.fillIn(request)).isEqualTo(new LifecareDecisionSaveRequest(153, null, FIRST, LAST, new BigDecimal("2068"), 3, "<p>Beslut</p>", true, null));
 	}
 
 	@Test
 	void keepsWhatTheCaseworkerGave() {
-		final var request = new LifecareDecisionSaveRequest(153, LAST, LocalDate.of(2026, Month.SEPTEMBER, 15), LAST, new BigDecimal("2000"), 3, null, false);
+		final var request = new LifecareDecisionSaveRequest(153, LAST, LocalDate.of(2026, Month.SEPTEMBER, 15), LAST, new BigDecimal("2000"), 3, null, false, null);
 
 		assertThat(PREFILL.fillIn(request)).isEqualTo(request);
 	}
 
 	@Test
 	void takesThePeriodOnlyWhenTheCaseworkerGaveNeitherEnd() {
-		final var request = new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 15), null, null, 3, null, null);
+		final var request = new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 15), null, null, 3, null, null, null);
 
 		final var filled = PREFILL.fillIn(request);
 

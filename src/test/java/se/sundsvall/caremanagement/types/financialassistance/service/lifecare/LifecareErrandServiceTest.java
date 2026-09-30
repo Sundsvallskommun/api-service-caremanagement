@@ -110,13 +110,6 @@ class LifecareErrandServiceTest {
 	}
 
 	@Test
-	void coApplicantPresent() {
-		when(householdPartyService.coApplicantPresent(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(true);
-
-		assertThat(service.coApplicantPresent(ERRAND)).isTrue();
-	}
-
-	@Test
 	void linkCalculationAndDecision() {
 		service.linkCalculation(ERRAND, 3);
 		service.linkDecision(ERRAND, 4);

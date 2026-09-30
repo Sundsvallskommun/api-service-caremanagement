@@ -39,5 +39,7 @@ public record LifecareDecisionView(
 	@Schema(description = "The orsak as Lifecare words it", examples = "Arbetar deltid ofrivilligt, otillräcklig inkomst") String reason,
 	@Schema(description = "The beslutsmeddelande as HTML", examples = "<p>Beslut</p>") String message,
 	@Schema(description = "Lifecare has locked the beslutsmeddelande; the beslut can no longer be changed from careM", examples = "false") boolean locked,
-	@Schema(description = "The beslutsfattare, by name when Lifecare gives one, otherwise by signature", examples = "Test Handläggare") String decisionMaker) {
+	@Schema(description = "The beslutsfattare, by name when Lifecare gives one, otherwise by signature", examples = "Test Handläggare") String decisionMaker,
+	@Schema(description = "Lifecare's code for the medsökande's orsak; absent without a medsökande or orsak", examples = "2") Integer coApplicantReasonCode,
+	@Schema(description = "The medsökande's orsak as Lifecare words it; what finalize takes as coApplicantReason", examples = "Arbetslös, väntar på ersättning/stöd") String coApplicantReason) {
 }

@@ -93,7 +93,8 @@ class FinancialAssistanceLifecareDecisionResource {
 			amount that differs from it. The \
 			beslutsfattare is the caller (X-Sent-By), who must be one of Lifecare's beslutsfattare for the insats. Refused \
 			with 422, worded for the caseworker, when the beslutstyp is not active on the insats or cannot be registered from \
-			careM, the household has a medsökande, the caller is not a beslutsfattare, a period the beslutstyp requires is \
+			careM, the household has a medsökande and the beslut an orsak but no orsak for the medsökande \
+			(coApplicantReasonCode), the caller is not a beslutsfattare, a period the beslutstyp requires is \
 			missing, the beslut is locked in Lifecare, or an existing beslut would change beslutstyp; Lifecare's own refusals \
 			are 422 with Lifecare's message. 502 when Lifecare did not answer the create (check Lifecare before saving again) \
 			or when the beslut was created but could not be linked to the errand (do not save again). Answers with the beslut \
