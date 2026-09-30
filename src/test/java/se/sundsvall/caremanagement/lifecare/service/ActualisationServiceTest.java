@@ -11,7 +11,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsServic
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import java.time.LocalDate;
 import java.util.Optional;
-import java.util.function.Predicate;
+import java.util.function.IntPredicate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +42,7 @@ class ActualisationServiceTest {
 	private static final String APPLICANT = "199001011234";
 	private static final LocalDate DATE = LocalDate.of(2026, JUNE, 1);
 	private static final String RE_APPLICATION_TYPE = "Ek Återansökan Digital Ekonomiskt bistånd";
-	private static final Predicate<Integer> CLAIMED_NOWHERE = id -> false;
+	private static final IntPredicate CLAIMED_NOWHERE = id -> false;
 
 	@Mock
 	private LifecareFamilyCareIntegration lifecareFamilyCareIntegrationMock;

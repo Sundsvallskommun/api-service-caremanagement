@@ -43,8 +43,8 @@ public interface ErrandRepository extends JpaRepository<ErrandEntity, String>, J
 	@Query("""
 		select e from ErrandEntity e
 		where e.municipalityId = :municipalityId and e.namespace = :namespace and e.status = :status
-			and e.typeSlug in :typeSlugs and e.processInstanceId is null
-			and e.created between :createdFrom and :createdTo
+		  and e.typeSlug in :typeSlugs and e.processInstanceId is null
+		  and e.created between :createdFrom and :createdTo
 		order by e.created
 		""")
 	List<ErrandEntity> findWithoutProcessInstance(@Param("municipalityId") String municipalityId, @Param("namespace") String namespace,

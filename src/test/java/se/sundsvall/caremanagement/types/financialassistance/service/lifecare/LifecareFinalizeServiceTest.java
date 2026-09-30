@@ -118,8 +118,9 @@ class LifecareFinalizeServiceTest {
 		final var errand = linkedTo(98);
 		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
 		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Läste beslutet i Lifecare", "98");
+		final var request = withoutDecision();
 
-		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDecision(), DECIDED_BY)).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY)).isInstanceOf(IllegalStateException.class);
 		verifyNoInteractions(finalizeServiceMock);
 	}
 

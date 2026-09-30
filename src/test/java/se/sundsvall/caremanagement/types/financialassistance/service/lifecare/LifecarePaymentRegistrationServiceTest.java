@@ -108,8 +108,9 @@ class LifecarePaymentRegistrationServiceTest {
 	@Test
 	void registersNothingWhenTheUnderlagReadCannotBeLogged() {
 		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
+		final var payment = payment();
 
-		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment)).isInstanceOf(IllegalStateException.class);
 		verify(paymentApi, never()).createPayment(anyInt(), any());
 	}
 

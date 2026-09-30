@@ -10,7 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
+import java.util.function.IntPredicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -107,7 +107,7 @@ public class ActualisationService {
 	 *                                which
 	 */
 	public ActualisationResult createOrAdoptActualisation(final String municipalityId, final String applicantPartyId, final LocalDate date,
-		final boolean newApplication, final Predicate<Integer> claimedByAnotherErrand) {
+		final boolean newApplication, final IntPredicate claimedByAnotherErrand) {
 
 		final var plan = plan(municipalityId, applicantPartyId, date, newApplication);
 		final var earlier = findEarlierAttempt(municipalityId, applicantPartyId, date, plan.typeName(), claimedByAnotherErrand);
@@ -150,7 +150,7 @@ public class ActualisationService {
 	 * used, and not recorded on another errand.
 	 */
 	private Optional<ActualisationSummary> findEarlierAttempt(final String municipalityId, final String applicantPartyId, final LocalDate date,
-		final String typeName, final Predicate<Integer> claimedByAnotherErrand) {
+		final String typeName, final IntPredicate claimedByAnotherErrand) {
 
 		// A type name that is not in the proposal identifies nothing; the write that follows fails on the missing type anyway.
 		if (normalize(typeName).isEmpty()) {

@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Predicate;
+import java.util.function.IntPredicate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -354,8 +354,9 @@ class FinancialAssistanceActualisationServiceTest {
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
 		when(actualisationServiceMock.createActualisation(any(), any(), any(), anyBoolean())).thenReturn(new ActualisationResult(5012, null, null));
 		doThrow(new IllegalStateException("the database went away")).when(decisionServiceMock).create(any(), any(), any(), any());
+		final var request = requestForTheErrand();
 
-		assertThatThrownBy(() -> service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand()))
+		assertThatThrownBy(() -> service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(IllegalStateException.class);
 
 		// Committed before the failure, in its own transaction: rolling the intake back does not take it along.
@@ -450,8 +451,7 @@ class FinancialAssistanceActualisationServiceTest {
 
 		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
 
-		@SuppressWarnings("unchecked")
-		final ArgumentCaptor<Predicate<Integer>> claimed = ArgumentCaptor.forClass(Predicate.class);
+		final ArgumentCaptor<IntPredicate> claimed = ArgumentCaptor.forClass(IntPredicate.class);
 		verify(actualisationServiceMock).createOrAdoptActualisation(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), eq(false), claimed.capture());
 		assertThat(claimed.getValue().test(5011)).isTrue();
 		assertThat(claimed.getValue().test(5012)).isFalse();

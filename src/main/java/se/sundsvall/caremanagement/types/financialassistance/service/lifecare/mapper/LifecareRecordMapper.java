@@ -59,6 +59,7 @@ public final class LifecareRecordMapper {
 	private static final List<String> NO_TEXT_BODY_TYPES = List.of("Form", "Pdf");
 
 	private static final String FIELD_DOCUMENT_MODELS = "documentModels";
+	private static final String FIELD_DOCUMENT_TYPE_NAME = "documentType_Name";
 	private static final String FIELD_TITLE = "title";
 	private static final String FIELD_PROTECTED = "protected";
 	private static final String FIELD_OCCURENCE_TIME = "occurenceTime";
@@ -81,7 +82,7 @@ public final class LifecareRecordMapper {
 		if (typeCode == null) {
 			return Optional.empty();
 		}
-		if (KIND_JOURNAL_NOTE.equals(textOrEmpty(model.path("documentType_Name")))) {
+		if (KIND_JOURNAL_NOTE.equals(textOrEmpty(model.path(FIELD_DOCUMENT_TYPE_NAME)))) {
 			return Optional.of(JOURNAL_NOTE).filter(category -> JOURNAL_NOTE_TYPE_CODES.contains(typeCode));
 		}
 		return Optional.of(DOCUMENT).filter(category -> DOCUMENT_TYPE_CODES.contains(typeCode));
@@ -128,7 +129,7 @@ public final class LifecareRecordMapper {
 	public static List<String> textRecordIds(final JsonNode list, final String category) {
 		return list.path(FIELD_DOCUMENT_MODELS).valueStream()
 			.filter(model -> categoryOf(model).filter(category::equals).isPresent())
-			.filter(model -> !NO_TEXT_BODY_TYPES.contains(textOrEmpty(model.path("documentType_Name"))))
+			.filter(model -> !NO_TEXT_BODY_TYPES.contains(textOrEmpty(model.path(FIELD_DOCUMENT_TYPE_NAME))))
 			.map(model -> idText(model.path("id")))
 			.toList();
 	}
@@ -163,7 +164,7 @@ public final class LifecareRecordMapper {
 			.withModifiedBy(modifiedBy)
 			.withLocked(model.path("locked").asBoolean(false))
 			.withWriteProtected(model.path(FIELD_PROTECTED).asBoolean(false))
-			.withDocumentKind(text(model.path("documentType_Name")));
+			.withDocumentKind(text(model.path(FIELD_DOCUMENT_TYPE_NAME)));
 	}
 
 	/**
