@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -68,6 +69,21 @@ final class LifecareDecisionMapper {
 			text(saved.path("message")).orElse(null),
 			isTrue(saved.path("lockedMessage")),
 			text(saved.path("decisionMakerName")).or(() -> text(saved.path("decisionMaker"))).orElse(""));
+	}
+
+	/**
+	 * What Lifecare filled the blank beslut in with from a normberäkning: its period and amount. Lifecare fills them in
+	 * only for a normberäkning saved as final, so an underlag without a period has nothing to give.
+	 *
+	 * @param  proposal      the underlag, GetProposalForService read with the normberäkning
+	 * @param  calculationId the normberäkning
+	 * @return               the prefill, empty when Lifecare filled nothing in
+	 */
+	static Optional<LifecareDecisionPrefill> toPrefill(final JsonNode proposal, final int calculationId) {
+		final var decision = proposal.path("decision");
+		return text(decision.path("fromDate"))
+			.map(fromDate -> new LifecareDecisionPrefill(calculationId, decimal(decision.path("amount")).orElse(BigDecimal.ZERO), LocalDate.parse(fromDate),
+				text(decision.path("toDate")).map(LocalDate::parse).orElse(null)));
 	}
 
 	/**

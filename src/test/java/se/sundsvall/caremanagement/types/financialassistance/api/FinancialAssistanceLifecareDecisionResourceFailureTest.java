@@ -65,6 +65,13 @@ class FinancialAssistanceLifecareDecisionResourceFailureTest {
 	}
 
 	@Test
+	void readDecisionProposalWithInvalidErrandId() {
+		assertViolation(get(DECISION_PATH + "/proposal", Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-valid-uuid")),
+			"readDecisionProposal.errandId", "not a valid UUID");
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
 	void readDecisionTypesWithInvalidErrandId() {
 		assertViolation(get(DECISION_PATH + "/types", Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-valid-uuid")),
 			"readDecisionTypes.errandId", "not a valid UUID");

@@ -1,6 +1,8 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionReason;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionType;
@@ -22,6 +24,21 @@ class LifecareDecisionMapperTest {
 		  "decisionMakerName": "Test Handläggare", "amount": 3000,
 		  "decisionPersons": [{"personId": "19880209T050", "name": "Testsson, Test", "coApplicant": false, "personIdFormatted": "880209-T050"}],
 		  "type": {"code": 153}, "message": "<p>Beslut</p>", "lockedMessage": false
+		}""";
+
+	/**
+	 * GetProposalForService?amountType=TotalSum&amp;calculationId=25 on a normberäkning saved as final (capture
+	 * 2026-09-30): Lifecare fills in its period and its result without sign. The rest is the blank beslut.
+	 */
+	static final String PROPOSAL_FROM_FINAL_CALCULATION = """
+		{
+		  "decision": {"decisionId": 0, "date": "2026-09-30", "fromDate": "2026-09-01", "toDate": "2026-09-30", "amount": 2068, "amountToBalance": false,
+		    "decisionPersons": [{"personId": "19880209T050", "name": "Testsson, Test", "coApplicant": false, "personIdFormatted": "880209-T050"}],
+		    "sharedCustody": false},
+		  "decisionMakers": [{"id": "TEST", "name": "Test Handläggare", "title": "Testhandläggare"}],
+		  "decisionTypes": [
+		    {"code": 153, "name": "Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", "type": 0, "isActive": true, "requiresFromDate": true, "requiresToDate": true}
+		  ]
 		}""";
 
 	static JsonNode tree(final String json) {
@@ -88,5 +105,24 @@ class LifecareDecisionMapperTest {
 			new LifecareDecisionReason(21, "Djup orsak", "Underrubrik"),
 			new LifecareDecisionReason(22, "Orsak med egen header", "Egen"),
 			new LifecareDecisionReason(23, "Barn", "Egen"));
+	}
+
+	@Test
+	void takesThePeriodAndAmountLifecareFilledInFromAFinalNormberakning() {
+		assertThat(LifecareDecisionMapper.toPrefill(tree(PROPOSAL_FROM_FINAL_CALCULATION), 25))
+			.contains(new LifecareDecisionPrefill(25, new BigDecimal("2068"), LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30)));
+	}
+
+	@Test
+	void hasNothingToTakeWhenLifecareFilledNothingIn() {
+		// A preliminary normberäkning: Lifecare answers with the blank beslut, amount 0 and no period.
+		assertThat(LifecareDecisionMapper.toPrefill(tree("{\"decision\": {\"fromDate\": \"\", \"toDate\": \"\", \"amount\": 0}}"), 26)).isEmpty();
+		assertThat(LifecareDecisionMapper.toPrefill(tree("{}"), 26)).isEmpty();
+	}
+
+	@Test
+	void takesAPrefillWithoutEndOrAmount() {
+		assertThat(LifecareDecisionMapper.toPrefill(tree("{\"decision\": {\"fromDate\": \"2026-10-01\", \"toDate\": \"\"}}"), 8))
+			.contains(new LifecareDecisionPrefill(8, BigDecimal.ZERO, LocalDate.of(2026, Month.OCTOBER, 1), null));
 	}
 }

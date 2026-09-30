@@ -72,4 +72,13 @@ class LifecareDecisionClientTest {
 		assertThat(client.printDecision(98)).isSameAs(pdf);
 		verify(propertiesMock).decisionPrintTemplateId();
 	}
+
+	@Test
+	void readsTheUnderlagFromANormberakningAsLifecaresCalculationViewAsksForIt() {
+		final var answer = JsonNodeFactory.instance.objectNode();
+		when(clientMock.get("api2/Decision/GetProposalForService",
+			Map.of("businessType", "8", "businessId", "22", "amountType", "TotalSum", "calculationId", "25", "proposalId", "0"))).thenReturn(answer);
+
+		assertThat(client.readProposal(22, 25)).isSameAs(answer);
+	}
 }

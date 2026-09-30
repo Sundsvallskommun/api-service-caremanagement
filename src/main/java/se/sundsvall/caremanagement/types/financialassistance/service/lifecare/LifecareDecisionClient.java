@@ -24,6 +24,12 @@ class LifecareDecisionClient {
 	/** Lifecare's businessType for a businessId that is a beslut. */
 	static final String DECISION_BUSINESS_TYPE = "4";
 
+	/**
+	 * The amountType Lifecare's calculation view sends when a beslut is made from a normberäkning: its "Besluta" button
+	 * at Resultat, the only one of the three Sundsvall's configuration shows (capture 2026-09-30).
+	 */
+	static final String AMOUNT_TYPE_TOTAL_SUM = "TotalSum";
+
 	static final String PATH_PROPOSAL = "api2/Decision/GetProposalForService";
 	static final String PATH_REASONS = "api2/Decision/GetMappedDecisionReasons";
 	static final String PATH_DECISION = "api2/Decision/GetDecision";
@@ -49,11 +55,29 @@ class LifecareDecisionClient {
 	 * @return           the underlag
 	 */
 	JsonNode readProposal(final int serviceId) {
+		return readProposal(serviceId, "", 0);
+	}
+
+	/**
+	 * The underlag for a new beslut made from a normberäkning, as Lifecare's calculation view asks for it (capture
+	 * 2026-09-30). When the normberäkning is saved as final, Lifecare fills the blank beslut in with its period and its
+	 * TotalSum amount, without sign; otherwise the answer is the same as {@link #readProposal(int)}. Lifecare keeps no
+	 * link between the beslut and the normberäkning.
+	 *
+	 * @param  serviceId     the insats
+	 * @param  calculationId the normberäkning
+	 * @return               the underlag
+	 */
+	JsonNode readProposal(final int serviceId, final int calculationId) {
+		return readProposal(serviceId, AMOUNT_TYPE_TOTAL_SUM, calculationId);
+	}
+
+	private JsonNode readProposal(final int serviceId, final String amountType, final int calculationId) {
 		final var params = new LinkedHashMap<String, String>();
 		params.put(BUSINESS_TYPE, SERVICE_BUSINESS_TYPE);
 		params.put(BUSINESS_ID, String.valueOf(serviceId));
-		params.put("amountType", "");
-		params.put("calculationId", "0");
+		params.put("amountType", amountType);
+		params.put("calculationId", String.valueOf(calculationId));
 		params.put("proposalId", "0");
 		return client.get(PATH_PROPOSAL, params);
 	}

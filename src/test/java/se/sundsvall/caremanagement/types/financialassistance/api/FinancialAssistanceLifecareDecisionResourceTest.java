@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import se.sundsvall.caremanagement.Application;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionProposal;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionReason;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionSaveRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionType;
@@ -98,6 +99,23 @@ class FinancialAssistanceLifecareDecisionResourceTest {
 
 		assertThat(response).isEqualTo(VIEW);
 		verify(serviceMock).save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request);
+	}
+
+	@Test
+	void readDecisionProposal() {
+		final var proposal = new LifecareDecisionProposal(25, true, new BigDecimal("2068"), "2026-09-01", "2026-09-30");
+		when(serviceMock.proposal(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(proposal);
+
+		final var response = webTestClient.get()
+			.uri(builder -> builder.path(DECISION_PATH + "/proposal").build(PATH_VARIABLES))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(LifecareDecisionProposal.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isEqualTo(proposal);
+		verify(serviceMock).proposal(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 	}
 
 	@Test
