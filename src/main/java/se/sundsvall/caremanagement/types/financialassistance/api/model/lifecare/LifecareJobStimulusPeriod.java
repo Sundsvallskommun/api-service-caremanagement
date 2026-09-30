@@ -8,7 +8,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "A jobbstimulans period on the errand's insats, as Lifecare holds it")
 public record LifecareJobStimulusPeriod(
 
-	@Schema(description = "Lifecare's jobStimulusId", examples = "101") Integer id,
+	@Schema(description = "Lifecare's jobStimulusId. Lifecare gives every period a new one each time the set is saved, so it is only good until the next change",
+		examples = "101") Integer id,
 
 	@Schema(description = "Whose period it is", examples = "APPLICANT", allowableValues = {
 		"APPLICANT", "CO_APPLICANT"

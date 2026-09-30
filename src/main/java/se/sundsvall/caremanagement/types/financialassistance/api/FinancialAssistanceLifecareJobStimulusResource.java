@@ -8,9 +8,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -85,5 +87,25 @@ class FinancialAssistanceLifecareJobStimulusResource {
 		@Valid @RequestBody final LifecareJobStimulusPeriodRequest request) {
 
 		return status(CREATED).body(service.addPeriod(municipalityId, namespace, errandId, request));
+	}
+
+	@DeleteMapping(path = "/{periodId}", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Remove one of the sökandes jobbstimulans periods on the errand's insats in Lifecare",
+		description = """
+			Lifecare has no remove call of its own: its web app saves the set without the period, and so does this. \
+			Lifecare gives every period that is saved a new id, so use the ids in the answer from now on and never a cached one; \
+			an id an earlier save replaced answers 404. Refused (422) for a household with a medsökande. Answers with every \
+			period after the save.""",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "422", description = "Unprocessable Content", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
+	ResponseEntity<List<LifecareJobStimulusPeriod>> removeJobStimulusPeriod(
+		@ValidMunicipalityId @PathVariable final String municipalityId,
+		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@ValidUuid @PathVariable final String errandId,
+		@Positive @PathVariable final int periodId) {
+
+		return ok(service.removePeriod(municipalityId, namespace, errandId, periodId));
 	}
 }

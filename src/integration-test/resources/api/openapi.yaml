@@ -33,13 +33,6 @@ tags:
     \ before the decision; the errand only carries the references (lifecareCalculationId,\
     \ lifecareDecisionId, lifecarePaymentIds). The decision is sent to the applicant\
     \ by the frontend."
-- name: Financial Assistance · Lifecare
-  description: "The applicant's case in Lifecare. The errand-scoped routes under\
-    \ /{errandId}/lifecare read and write Lifecare ProfessionalWeb on the caseworker's\
-    \ behalf: normberäkning, beslut, utbetalningar, betalningsmottagare, bevakningar,\
-    \ journal, dokument and jobbstimulans. careM derives every Lifecare key from\
-    \ the errand, logs each access on the errand and links what it creates back onto\
-    \ it."
 - name: Conversation
   description: Messages between caseworker and applicant on an errand
 - name: Financial Assistance · Household identifiers
@@ -54,10 +47,6 @@ tags:
     purged by a daily background job.
 - name: Status History
   description: Status transition log for an errand
-- name: Metadata
-  description: Metadata (lookup) operations
-- name: Namespace config
-  description: Namespace configuration operations
 - name: Financial Assistance · SSBTEK
   description: "Read the applicant's SSBTEK basis live so a caseworker can see the\
     \ source behind the classified incomes — the payments per responding agency (fk\
@@ -65,6 +54,10 @@ tags:
     \ fields never leave caremanagement. Keyed by partyId (resolved to a personnummer\
     \ via the citizen service); the period defaults to the three rule periods (M−\
     2 through M). caremanagement reads and reduces the answer and stores nothing."
+- name: Metadata
+  description: Metadata (lookup) operations
+- name: Namespace config
+  description: Namespace configuration operations
 - name: Process messages
   description: Send BPMN message correlation events to the process instance currently
     running for an errand
@@ -95,6 +88,12 @@ tags:
 - name: Event Log
   description: "Who/what/when activity log for an errand — every read and write, with\
     \ the acting user"
+- name: Financial Assistance · Lifecare
+  description: "The applicant's case in Lifecare. The errand-scoped routes under /{errandId}/lifecare\
+    \ read and write Lifecare ProfessionalWeb on the caseworker's behalf: normberä\
+    kning, beslut, utbetalningar, betalningsmottagare, bevakningar, journal, dokument\
+    \ and jobbstimulans. careM derives every Lifecare key from the errand, logs each\
+    \ access on the errand and links what it creates back onto it."
 - name: Errand decisions
   description: "Decision audit trail on an errand. Stores both system-generated decisions\
     \ (e.g. DMN-evaluated recommendations from a BPMN process) and human decisions\
@@ -3869,9 +3868,9 @@ paths:
         \ decided calculation is Lifecare's, and the draft read answers 404 from then\
         \ on. Does not send anything to the applicant: the response echoes the communication\
         \ channels for the frontend to act on. Requires the errand in AWAITING_DECISION\
-        \ or SUPPLEMENT_REQUESTED and an identified caller (X-Sent-By); a second finalize is rejected with\
-        \ 409. A process that could not be reached is reported in the response, not\
-        \ as an error."
+        \ or SUPPLEMENT_REQUESTED and an identified caller (X-Sent-By); a second finalize\
+        \ is rejected with 409. A process that could not be reached is reported in\
+        \ the response, not as an error."
       operationId: finalizeErrand
       parameters:
       - name: municipalityId
@@ -9433,6 +9432,89 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/lifecare/job-stimulus-periods/{periodId}:
+    delete:
+      tags:
+      - Financial Assistance · Lifecare
+      summary: Remove one of the sökandes jobbstimulans periods on the errand's insats
+        in Lifecare
+      description: "Lifecare has no remove call of its own: its web app saves the\
+        \ set without the period, and so does this. Lifecare gives every period that\
+        \ is saved a new id, so use the ids in the answer from now on and never a\
+        \ cached one; an id an earlier save replaced answers 404. Refused (422) for\
+        \ a household with a medsökande. Answers with every period after the save."
+      operationId: removeJobStimulusPeriod
+      parameters:
+      - name: municipalityId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "[\\w\\-]+"
+      - name: errandId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: periodId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LifecareJobStimulusPeriod"
+        "422":
+          description: Unprocessable Content
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/Problem"
+                - $ref: "#/components/schemas/ConstraintViolationProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: The errand has no Lifecare insats yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad Gateway
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
 components:
   schemas:
     Problem:
@@ -11815,7 +11897,8 @@ components:
         id:
           type: integer
           format: int32
-          description: Lifecare's jobStimulusId
+          description: "Lifecare's jobStimulusId. Lifecare gives every period a new\
+            \ one each time the set is saved, so it is only good until the next change"
           examples:
           - 101
         role:
