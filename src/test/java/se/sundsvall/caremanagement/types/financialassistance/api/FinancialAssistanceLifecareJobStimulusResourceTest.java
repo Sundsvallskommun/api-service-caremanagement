@@ -61,7 +61,7 @@ class FinancialAssistanceLifecareJobStimulusResourceTest {
 
 	@Test
 	void addJobStimulusPeriod() {
-		final var request = new LifecareJobStimulusPeriodRequest("2028-01-15", null);
+		final var request = new LifecareJobStimulusPeriodRequest("2028-01-15", null, "CO_APPLICANT");
 		when(serviceMock.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request)).thenReturn(PERIODS);
 
 		final var response = webTestClient.post()

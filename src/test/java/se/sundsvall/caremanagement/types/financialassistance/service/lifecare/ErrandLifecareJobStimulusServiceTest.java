@@ -21,7 +21,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -48,6 +47,11 @@ class ErrandLifecareJobStimulusServiceTest {
 
 	@Captor
 	private ArgumentCaptor<JsonNode> bodyCaptor;
+
+	/** The fixture's sökande with a medsökande who has no periods yet, as Lifecare holds such a household. */
+	private static final String WITH_CO_APPLICANT = LifecareJobStimulusMapperTest.CURRENT
+		.replace("\"coApplicant\": null", "\"coApplicant\": { \"periods\": [], \"personId\": \"20120505T020\", \"name\": \"Jeppson, Medsökande\", \"personIdFormatted\": \"120505-T020\" }")
+		.replace("\"hasCoApplicant\": false", "\"hasCoApplicant\": true");
 
 	@Test
 	void periods() {
@@ -76,7 +80,7 @@ class ErrandLifecareJobStimulusServiceTest {
 		when(jobStimulusApi.readToDate("2028-01-15")).thenReturn(json("\"2030-01-14\""));
 		when(jobStimulusApi.save(any())).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT));
 
-		final var periods = service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", null));
+		final var periods = service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", null, null));
 
 		assertThat(periods).hasSize(3);
 		verify(jobStimulusApi).save(bodyCaptor.capture());
@@ -92,7 +96,7 @@ class ErrandLifecareJobStimulusServiceTest {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
 		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT));
 		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
-		final var request = new LifecareJobStimulusPeriodRequest("2028-01-15", "2028-12-31");
+		final var request = new LifecareJobStimulusPeriodRequest("2028-01-15", "2028-12-31", null);
 
 		assertThatThrownBy(() -> service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request))
 			.isInstanceOf(IllegalStateException.class);
@@ -105,7 +109,7 @@ class ErrandLifecareJobStimulusServiceTest {
 		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT));
 		when(jobStimulusApi.save(any())).thenReturn(MissingNode.getInstance());
 
-		assertThat(service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", "2028-12-31"))).isEmpty();
+		assertThat(service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", "2028-12-31", null))).isEmpty();
 
 		verify(jobStimulusApi, never()).readToDate(anyString());
 		verify(jobStimulusApi).save(bodyCaptor.capture());
@@ -113,21 +117,26 @@ class ErrandLifecareJobStimulusServiceTest {
 	}
 
 	@Test
-	void addPeriodRefusedForAHouseholdWithAMedsokandeInCareM() {
+	void addPeriodForTheMedsokandeSendsBothPersonsPeriods() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(errandService.coApplicantPresent(ERRAND)).thenReturn(true);
+		when(jobStimulusApi.readForService(1)).thenReturn(json(WITH_CO_APPLICANT));
+		when(jobStimulusApi.save(any())).thenReturn(json(WITH_CO_APPLICANT));
 
-		assertThatThrownBy(() -> service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", "2028-12-31")))
-			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(UNPROCESSABLE_CONTENT));
-		verifyNoInteractions(jobStimulusApi, accessRecorder);
+		service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2026-09-01", "2028-08-31", "CO_APPLICANT"));
+
+		verify(jobStimulusApi).save(bodyCaptor.capture());
+		assertThat(bodyCaptor.getValue().get("coApplicant").get("periods").values()).extracting(period -> period.get("fromDate").asString()).containsExactly("2026-09-01");
+		assertThat(bodyCaptor.getValue().get("applicant").get("periods").size()).isEqualTo(3);
+		verify(accessRecorder).written(ERRAND, "CREATE", "JOB_STIMULUS", "Lade till en jobbstimulansperiod för medsökanden i Lifecare (2026-09-01 – 2028-08-31)", null);
+		verify(errandService, never()).coApplicantPresent(any());
 	}
 
 	@Test
-	void addPeriodRefusedForAHouseholdWithAMedsokandeInLifecare() {
+	void addPeriodForAMedsokandeTheInsatsDoesNotHaveIsRefused() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT.replace("\"hasCoApplicant\": false", "\"hasCoApplicant\": true")));
+		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT));
 
-		assertThatThrownBy(() -> service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", "2028-12-31")))
+		assertThatThrownBy(() -> service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2026-09-01", "2028-08-31", "CO_APPLICANT")))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(UNPROCESSABLE_CONTENT));
 		verify(jobStimulusApi, never()).save(any());
 	}
@@ -138,7 +147,7 @@ class ErrandLifecareJobStimulusServiceTest {
 		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT));
 		when(jobStimulusApi.readToDate("2028-01-15")).thenReturn(MissingNode.getInstance());
 
-		assertThatThrownBy(() -> service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", null)))
+		assertThatThrownBy(() -> service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", null, null)))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY));
 		verify(jobStimulusApi, never()).save(any());
 	}
@@ -196,23 +205,18 @@ class ErrandLifecareJobStimulusServiceTest {
 	}
 
 	@Test
-	void removePeriodRefusedForAHouseholdWithAMedsokandeInCareM() {
+	void removePeriodOfTheMedsokandeKeepsTheSokandes() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(errandService.coApplicantPresent(ERRAND)).thenReturn(true);
+		when(jobStimulusApi.readForService(1)).thenReturn(json(WITH_CO_APPLICANT.replace("\"periods\": [], \"personId\": \"20120505T020\"",
+			"\"periods\": [{ \"jobStimulusId\": 115, \"personId\": \"20120505T020\", \"fromDate\": \"2026-09-01\", \"toDate\": \"2028-08-31\", \"markedForRemoval\": false }], \"personId\": \"20120505T020\"")));
+		when(jobStimulusApi.save(any())).thenReturn(json(WITH_CO_APPLICANT));
 
-		assertThatThrownBy(() -> service.removePeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 102))
-			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(UNPROCESSABLE_CONTENT));
-		verifyNoInteractions(jobStimulusApi, accessRecorder);
-	}
+		service.removePeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 115);
 
-	@Test
-	void removePeriodRefusedForAHouseholdWithAMedsokandeInLifecare() {
-		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT.replace("\"hasCoApplicant\": false", "\"hasCoApplicant\": true")));
-
-		assertThatThrownBy(() -> service.removePeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 102))
-			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(UNPROCESSABLE_CONTENT));
-		verify(jobStimulusApi, never()).save(any());
+		verify(jobStimulusApi).save(bodyCaptor.capture());
+		assertThat(bodyCaptor.getValue().get("coApplicant").get("periods").isEmpty()).isTrue();
+		assertThat(bodyCaptor.getValue().get("applicant").get("periods").size()).isEqualTo(3);
+		verify(accessRecorder).written(ERRAND, "DELETE", "JOB_STIMULUS", "Tog bort en jobbstimulansperiod för medsökanden i Lifecare (2026-09-01 – 2028-08-31)", "115");
 	}
 
 	@Test

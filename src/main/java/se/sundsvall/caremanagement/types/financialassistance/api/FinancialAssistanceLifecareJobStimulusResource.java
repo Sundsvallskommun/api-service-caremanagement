@@ -71,11 +71,12 @@ class FinancialAssistanceLifecareJobStimulusResource {
 	}
 
 	@PostMapping(consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Add a jobbstimulans period for the sökande on the errand's insats in Lifecare",
+	@Operation(summary = "Add a jobbstimulans period for the sökande or the medsökande on the errand's insats in Lifecare",
 		description = """
-			Lifecare's save replaces every period the person has, so the current set is sent back whole with the new one. \
-			The end defaults to Lifecare's two-year rule. Refused (422) for a household with a medsökande. Answers with every \
-			period after the save.""",
+			Lifecare's save replaces both persons' periods, so the current sets are sent back whole with the new one, as \
+			Lifecare's web app does. role picks whose period it is (the sökande's when left out); a medsökande the insats \
+			does not have in Lifecare is refused (422). The end defaults to Lifecare's two-year rule. Lifecare gives every \
+			period a new id on save. Answers with every period after the save.""",
 		responses = {
 			@ApiResponse(responseCode = "201", description = "Created", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "422", description = "Unprocessable Content", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
@@ -90,12 +91,12 @@ class FinancialAssistanceLifecareJobStimulusResource {
 	}
 
 	@DeleteMapping(path = "/{periodId}", produces = APPLICATION_JSON_VALUE)
-	@Operation(summary = "Remove one of the sökandes jobbstimulans periods on the errand's insats in Lifecare",
+	@Operation(summary = "Remove one of the sökandes or the medsökandes jobbstimulans periods on the errand's insats in Lifecare",
 		description = """
 			Lifecare has no remove call of its own: its web app saves the set without the period, and so does this. \
 			Lifecare gives every period that is saved a new id, so use the ids in the answer from now on and never a cached one; \
-			an id an earlier save replaced answers 404. Refused (422) for a household with a medsökande. Answers with every \
-			period after the save.""",
+			an id an earlier save replaced answers 404. Both persons' periods go back together. Answers with every period \
+			after the save.""",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "422", description = "Unprocessable Content", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
