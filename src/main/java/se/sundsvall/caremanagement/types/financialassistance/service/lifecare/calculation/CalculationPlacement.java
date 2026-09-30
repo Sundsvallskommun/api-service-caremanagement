@@ -135,22 +135,28 @@ final class CalculationPlacement {
 			row.set(GROSS_AMOUNT_APPLICANT, grossOf(row, AMOUNT_APPLICANT));
 			row.set(GROSS_AMOUNT_CO_APPLICANT, grossOf(row, AMOUNT_CO_APPLICANT));
 		});
-		if (!isTrue(calculation, "hasApplicantJobStimuli")) {
-			return calculation;
+		if (isTrue(calculation, "hasApplicantJobStimuli")) {
+			objects(calculation, INCOMES).forEach(row -> countDown(row, types, AMOUNT_APPLICANT, GROSS_AMOUNT_APPLICANT));
 		}
-		objects(calculation, INCOMES).forEach(row -> {
-			final var type = typeOf(types, row.path(INCOME_CODE));
-			final var percent = type.map(found -> number(found, "jobStimulusPercent")).orElse(0.0);
-			final var jobStimulus = type.filter(found -> truthy(found, "isJobStimulus")).isPresent();
-			if (!jobStimulus || percent == 0 || number(row, AMOUNT_APPLICANT) == 0) {
-				return;
-			}
-			final var gross = row.path(AMOUNT_APPLICANT).deepCopy();
-			final var counted = Math.round(gross.doubleValue() * (100 - percent)) / 100.0;
-			row.set(AMOUNT_APPLICANT, numberNode(counted));
-			row.set(GROSS_AMOUNT_APPLICANT, gross);
-		});
+		// The medsökande's side follows the same rule with its own flag (Brutto M, capture 2026-09-30).
+		if (isTrue(calculation, "hasCoApplicantJobStimuli")) {
+			objects(calculation, INCOMES).forEach(row -> countDown(row, types, AMOUNT_CO_APPLICANT, GROSS_AMOUNT_CO_APPLICANT));
+		}
 		return calculation;
+	}
+
+	/** Takes jobbstimulans off one side of an income it applies to: the entered amount becomes the gross. */
+	private static void countDown(final ObjectNode row, final JsonNode types, final String amountField, final String grossField) {
+		final var type = typeOf(types, row.path(INCOME_CODE));
+		final var percent = type.map(found -> number(found, "jobStimulusPercent")).orElse(0.0);
+		final var jobStimulus = type.filter(found -> truthy(found, "isJobStimulus")).isPresent();
+		if (!jobStimulus || percent == 0 || number(row, amountField) == 0) {
+			return;
+		}
+		final var gross = row.path(amountField).deepCopy();
+		final var counted = Math.round(gross.doubleValue() * (100 - percent)) / 100.0;
+		row.set(amountField, numberNode(counted));
+		row.set(grossField, gross);
 	}
 
 	/** A side's amount as its gross; a side without an amount has gross 0. */

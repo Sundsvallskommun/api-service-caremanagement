@@ -211,13 +211,15 @@ class CalculationDraftFillTest {
 	}
 
 	@Test
-	void refusesAHouseholdWithAnIncludedCoApplicant() {
+	void includesAMedsokandeLikeAnyMemberMatchedOnPersonnummer() {
+		// Jeppson Test, insats 24 (capture 2026-09-30): the medsökande is one of the household's members in the underlag.
 		final var draft = draft();
-		draft.getPersons().add(NormPersonRow.create().withRole("CO_APPLICANT").withName("Medsökande").withIncluded(true));
+		draft.getPersons().set(1, NormPersonRow.create().withRole("CO_APPLICANT").withName("Medsökande").withIncluded(true).withPartyId("p2"));
 
-		assertThatThrownBy(() -> fill(draft, APPLICANT_NUMBER))
-			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
-			.hasMessageContaining("medsökande");
+		final var calculation = fill(draft, APPLICANT_NUMBER, CHILD_NUMBER);
+
+		assertThat(objects(calculation, "calculationPersons")).extracting(member -> member.path("personId").stringValue(), member -> member.path("included").booleanValue())
+			.containsExactly(tuple("19880209T050", true), tuple("20141201T010", true));
 	}
 
 	@Test

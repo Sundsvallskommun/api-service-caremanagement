@@ -35,6 +35,7 @@ class NormberakningDraftTest {
 		assertThat(bean.getHasCustomHouseholdSize()).isTrue();
 		assertThat(bean.getFinalized()).isTrue();
 		assertThat(bean.getApplicantJobStimulus()).isTrue();
+		assertThat(bean.getCoapplicantJobStimulus()).isTrue();
 	}
 
 	private static NormberakningDraft buildBean() {
@@ -64,6 +65,7 @@ class NormberakningDraftTest {
 			.withCommonHouseholdCost(BigDecimal.ONE)
 			.withFamilyMembers(1)
 			.withApplicantJobStimulus(true)
+			.withCoapplicantJobStimulus(true)
 			.withNormRows(List.of(NormberakningNormRow.create()));
 	}
 

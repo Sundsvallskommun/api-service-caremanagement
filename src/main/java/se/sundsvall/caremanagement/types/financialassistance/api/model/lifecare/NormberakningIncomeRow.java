@@ -59,6 +59,12 @@ public class NormberakningIncomeRow {
 	@Schema(description = "The date the co-applicant amount is attributed to")
 	private String coapplicantAmountDate;
 
+	@Schema(description = "Whether jobbstimulans applies to the co-applicant side of this income (Lifecare only)")
+	private Boolean coapplicantJobStimulus;
+
+	@Schema(description = "The co-applicant amount Lifecare counts once jobbstimulans is taken off (Lifecare only)")
+	private BigDecimal coapplicantCountedAmount;
+
 	@Schema(description = "Whether the row is soft-deleted (careM draft only)")
 	private Boolean deleted;
 
@@ -264,6 +270,32 @@ public class NormberakningIncomeRow {
 		return this;
 	}
 
+	public Boolean getCoapplicantJobStimulus() {
+		return coapplicantJobStimulus;
+	}
+
+	public void setCoapplicantJobStimulus(final Boolean coapplicantJobStimulus) {
+		this.coapplicantJobStimulus = coapplicantJobStimulus;
+	}
+
+	public NormberakningIncomeRow withCoapplicantJobStimulus(final Boolean coapplicantJobStimulus) {
+		this.coapplicantJobStimulus = coapplicantJobStimulus;
+		return this;
+	}
+
+	public BigDecimal getCoapplicantCountedAmount() {
+		return coapplicantCountedAmount;
+	}
+
+	public void setCoapplicantCountedAmount(final BigDecimal coapplicantCountedAmount) {
+		this.coapplicantCountedAmount = coapplicantCountedAmount;
+	}
+
+	public NormberakningIncomeRow withCoapplicantCountedAmount(final BigDecimal coapplicantCountedAmount) {
+		this.coapplicantCountedAmount = coapplicantCountedAmount;
+		return this;
+	}
+
 	public Boolean getDeleted() {
 		return deleted;
 	}
@@ -299,14 +331,15 @@ public class NormberakningIncomeRow {
 		return Objects.equals(id, that.id) && Objects.equals(position, that.position) && Objects.equals(origin, that.origin) && Objects.equals(typeId, that.typeId) && Objects.equals(typeName, that.typeName) && Objects.equals(applicantProcessAmount,
 			that.applicantProcessAmount) && Objects.equals(applicantCaseworkerAmount, that.applicantCaseworkerAmount) && Objects.equals(applicantEffectiveAmount, that.applicantEffectiveAmount) && Objects.equals(applicantAmountDate,
 				that.applicantAmountDate) && Objects.equals(applicantJobStimulus, that.applicantJobStimulus) && Objects.equals(applicantCountedAmount, that.applicantCountedAmount) && Objects.equals(coapplicantProcessAmount, that.coapplicantProcessAmount)
-			&& Objects.equals(coapplicantCaseworkerAmount, that.coapplicantCaseworkerAmount) && Objects.equals(coapplicantEffectiveAmount, that.coapplicantEffectiveAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate) && Objects
+			&& Objects.equals(coapplicantCaseworkerAmount, that.coapplicantCaseworkerAmount) && Objects.equals(coapplicantEffectiveAmount, that.coapplicantEffectiveAmount) && Objects.equals(coapplicantAmountDate, that.coapplicantAmountDate)
+			&& Objects.equals(coapplicantJobStimulus, that.coapplicantJobStimulus) && Objects.equals(coapplicantCountedAmount, that.coapplicantCountedAmount) && Objects
 				.equals(deleted, that.deleted) && Objects.equals(note, that.note);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, position, origin, typeId, typeName, applicantProcessAmount, applicantCaseworkerAmount, applicantEffectiveAmount, applicantAmountDate, applicantJobStimulus, applicantCountedAmount, coapplicantProcessAmount,
-			coapplicantCaseworkerAmount, coapplicantEffectiveAmount, coapplicantAmountDate, deleted, note);
+			coapplicantCaseworkerAmount, coapplicantEffectiveAmount, coapplicantAmountDate, coapplicantJobStimulus, coapplicantCountedAmount, deleted, note);
 	}
 
 	@Override
@@ -327,6 +360,8 @@ public class NormberakningIncomeRow {
 			", coapplicantCaseworkerAmount=" + coapplicantCaseworkerAmount +
 			", coapplicantEffectiveAmount=" + coapplicantEffectiveAmount +
 			", coapplicantAmountDate='" + coapplicantAmountDate + '\'' +
+			", coapplicantJobStimulus=" + coapplicantJobStimulus +
+			", coapplicantCountedAmount=" + coapplicantCountedAmount +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			'}';

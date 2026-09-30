@@ -42,6 +42,8 @@ class NormberakningIncomeRowTest {
 			.withCoapplicantCaseworkerAmount(BigDecimal.ONE)
 			.withCoapplicantEffectiveAmount(BigDecimal.ONE)
 			.withCoapplicantAmountDate("value")
+			.withCoapplicantJobStimulus(true)
+			.withCoapplicantCountedAmount(BigDecimal.TEN)
 			.withDeleted(true)
 			.withNote("value");
 
@@ -61,6 +63,8 @@ class NormberakningIncomeRowTest {
 		assertThat(bean.getCoapplicantCaseworkerAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getCoapplicantEffectiveAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getCoapplicantAmountDate()).isEqualTo("value");
+		assertThat(bean.getCoapplicantJobStimulus()).isTrue();
+		assertThat(bean.getCoapplicantCountedAmount()).isEqualTo(BigDecimal.TEN);
 		assertThat(bean.getDeleted()).isTrue();
 		assertThat(bean.getNote()).isEqualTo("value");
 	}
