@@ -323,17 +323,29 @@ class FinancialAssistanceFinalizeServiceTest {
 	@Test
 	void wrongStatusYields409() {
 		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.of(grantable()));
-		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("SUPPLEMENT_REQUESTED"));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("UNDER_REVIEW"));
 		final var request = grantingRequest();
 
 		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", CONFLICT)
-			.hasMessage("Conflict: errand must be in status AWAITING_DECISION to be finalized, but is in status 'SUPPLEMENT_REQUESTED'");
+			.hasMessage("Conflict: errand must be in status AWAITING_DECISION or SUPPLEMENT_REQUESTED to be finalized, but is in status 'UNDER_REVIEW'");
 
 		// Only the lock was taken: nothing is written, no decision recorded, no process resumed.
 		verify(repositoryMock, never()).save(any());
 		verifyNoInteractions(decisionServiceMock, processServiceMock);
+	}
+
+	@Test
+	void anErrandBackInSupplementRequestedCanStillBeDecided() {
+		// The daily prepare moved the errand back to SUPPLEMENT_REQUESTED overnight; the handläggare decides regardless.
+		readyErrand(grantable());
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus("SUPPLEMENT_REQUESTED"));
+
+		final var response = service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, grantingRequest(), DECIDED_BY);
+
+		assertThat(response.getDecisionId()).isEqualTo(DECISION_ID);
+		verify(processServiceMock).correlateMessage(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("PaymentDecisionReceived"), eq(ERRAND_ID), any());
 	}
 
 	@Test

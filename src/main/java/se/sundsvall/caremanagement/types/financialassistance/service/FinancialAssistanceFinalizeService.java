@@ -25,6 +25,7 @@ import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_AWAITING_DECISION;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_SUPPLEMENT_REQUESTED;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.outcomeCarriesAmount;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessMessages.MESSAGE_PAYMENT_DECISION_RECEIVED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.event.FinancialAssistanceProcessMessages.PAYMENT_DECISION_APPROVED;
@@ -84,6 +85,7 @@ public class FinancialAssistanceFinalizeService {
 	private static final String ERROR_NO_DECIDER = "a decision can only be recorded by an identified user - the X-Sent-By header is required";
 	private static final String ERROR_NO_DECISION = "the finalize request carries no decision";
 	private static final String REGISTRATION_REGISTERED = "REGISTERED";
+	private static final List<String> DECIDABLE_STATUSES = List.of(STATUS_AWAITING_DECISION, STATUS_SUPPLEMENT_REQUESTED);
 	private static final String ERROR_WRONG_STATUS = "errand must be in status %s to be finalized, but is in status '%s'";
 	private static final String ERROR_ALREADY_FINALIZED = "errand '%s' already carries a %s decision - it has been finalized";
 	private static final String ERROR_NO_LIFECARE_DECISION = "a decision requires the beslut to be saved in Lifecare first - save it and set lifecareDecisionId on errand '%s' (PATCH .../financial-assistance/{errandId}/data) before finalizing";
@@ -176,13 +178,15 @@ public class FinancialAssistanceFinalizeService {
 	}
 
 	/**
-	 * Only {@code AWAITING_DECISION} can be finalized: it is the state the daily prepare leaves a complete errand in, and
-	 * the only one the status machine lets the process move to GRANTED/REJECTED from. {@code SUPPLEMENT_REQUESTED}
-	 * means the SSBTEK picture is still incomplete — the loop has to reach AWAITING_DECISION first.
+	 * {@code AWAITING_DECISION} and {@code SUPPLEMENT_REQUESTED} can be finalized: both are the process waiting in its
+	 * daily loop for the handläggare's decision. The daily prepare moves an errand between them as the SSBTEK picture
+	 * turns complete or incomplete, so an errand the handläggare was about to decide could fall back to
+	 * SUPPLEMENT_REQUESTED overnight and refuse the decision (kvarlistan A3). An incomplete picture is shown as warnings;
+	 * the handläggare decides with them, as they decide everything else.
 	 */
 	private static void requireStatus(final String status) {
-		if (!STATUS_AWAITING_DECISION.equals(status)) {
-			throw Problem.valueOf(CONFLICT, ERROR_WRONG_STATUS.formatted(STATUS_AWAITING_DECISION, status));
+		if (!DECIDABLE_STATUSES.contains(status)) {
+			throw Problem.valueOf(CONFLICT, ERROR_WRONG_STATUS.formatted(String.join(" or ", DECIDABLE_STATUSES), status));
 		}
 	}
 
