@@ -213,7 +213,7 @@ class NormberakningMapperTest {
 			{"calculationId":1,"normId":1,"normText":"Riksnorm 2026","date":"2026-06-18","startDate":"2026-01-01","endDate":"2026-06-30",
 			 "calculationSummary":{"income":12300,"norm":-26436,"balance":-19289,"familyCost":23640},
 			 "calculationPersons":[{"personId":"19880209T050","name":"Testsson, Test","amount":23640,"included":true,"deviationFromDate":"","deviationToDate":"",
-			   "personIdFormatted":"880209-T050"},{"personId":"x","name":"Utanför","included":false}],
+			   "deviationDays":15,"relationType":2,"personIdFormatted":"880209-T050"},{"personId":"x","name":"Utanför","included":false}],
 			 "calculationIncomes":[{"incomeCode":19,"incomeType":"Aktivitetsstöd","amountApplicant":5600,"applicantSearchDate":"2026-06-17","amountCoApplicant":0,
 			   "coApplicantSearchDate":""}],
 			 "calculationExpenses":[{"expenseCode":3,"expenseType":"Boendekostnad","appliedAmount":5000,"approvedAmount":5000,"note":""}],
@@ -236,7 +236,8 @@ class NormberakningMapperTest {
 		assertThat(previous.getBalance()).isEqualByComparingTo("-19289");
 		assertThat(previous.getTotalSum()).isEqualByComparingTo("-20289");
 		assertThat(previous.getIsFinal()).isFalse();
-		assertThat(previous.getPersons()).containsExactly(NormberakningPreviousPerson.create().withName("Testsson, Test").withAmount(new BigDecimal("23640")));
+		assertThat(previous.getPersons()).containsExactly(NormberakningPreviousPerson.create().withName("Testsson, Test").withAmount(new BigDecimal("23640"))
+			.withDeviationDays(15).withRelationType("SINGLE"));
 		assertThat(previous.getIncomes()).singleElement().satisfies(income -> {
 			assertThat(income.getType()).isEqualTo("Aktivitetsstöd");
 			assertThat(income.getApplicantSearchDate()).isEqualTo("2026-06-17");
@@ -347,5 +348,17 @@ class NormberakningMapperTest {
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
 		assertThatThrownBy(() -> NormberakningMapper.toPersonInput(NormberakningRowInput.create().withDeviationFromDate("2026-09-02T00:00:00Z")))
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+	}
+
+	@Test
+	void namesThePreviousMembersRoleAsLifecareRecordedIt() {
+		final var saved = json("""
+			{"calculationId":1,"calculationPersons":[
+			  {"name":"Övrig","included":true,"relationType":0},{"name":"Par","included":true,"relationType":1},
+			  {"name":"Okänd","included":true,"relationType":7},{"name":"Utan","included":true,"deviationDays":null}]}""");
+
+		assertThat(NormberakningMapper.toPreviousCalculation(saved).getPersons())
+			.extracting(NormberakningPreviousPerson::getRelationType, NormberakningPreviousPerson::getDeviationDays)
+			.containsExactly(tuple("OTHER", null), tuple("COUPLE", null), tuple(null, null), tuple(null, null));
 	}
 }

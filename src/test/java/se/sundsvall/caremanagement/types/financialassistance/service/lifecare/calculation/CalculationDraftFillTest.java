@@ -8,8 +8,10 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.Calculati
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeRow;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormPersonRow;
+import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.DraftPerson;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.MissingNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,9 +20,11 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.applyDraft;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.identityKey;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.withDays;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.blank;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.catalogues;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.draft;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.json;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.personsOf;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
 
@@ -255,5 +259,71 @@ class CalculationDraftFillTest {
 	void reducesIdentitiesToWhatTwoSpellingsShare() {
 		assertThat(identityKey("19880209T050")).isEqualTo(identityKey("880209-T050")).isEqualTo("880209T050");
 		assertThat(identityKey(null)).isEmpty();
+	}
+
+	// ---- days carried over from the previous beräkning --------------------------------------------------------------
+
+	private static final String PREVIOUS = """
+		{"calculationId":26,"calculationPersons":[
+		  {"personId":"19880209T050","included":true,"deviationDays":null},
+		  {"personId":"20141201T010","included":true,"deviationDays":15}]}""";
+
+	private static ObjectNode filledWithChild() {
+		final var draft = draft();
+		draft.getPersons().forEach(person -> person.setIncluded(true));
+		return fill(draft, APPLICANT_NUMBER, CHILD_NUMBER);
+	}
+
+	private static List<DraftPerson> personsWithChild(final Integer applicantDays) {
+		final var draft = draft();
+		draft.getPersons().forEach(person -> person.setIncluded(true));
+		draft.getPersons().getFirst().setCaseworkerDays(applicantDays);
+		return personsOf(draft, APPLICANT_NUMBER, CHILD_NUMBER);
+	}
+
+	private static List<JsonNode> days(final ObjectNode calculation) {
+		return objects(calculation, "calculationPersons").stream().map(member -> member.path("deviationDays")).toList();
+	}
+
+	@Test
+	void carriesTheDaysAMemberHadInThePreviousBeräkningOver() {
+		final var calculation = withDays(filledWithChild(), personsWithChild(null), json(PREVIOUS));
+
+		assertThat(days(calculation).getFirst().isNull()).isTrue();
+		assertThat(days(calculation).get(1).intValue()).isEqualTo(15);
+	}
+
+	@Test
+	void letsTheCaseworkersDaysOnTheDraftWin() {
+		final var calculation = withDays(filledWithChild(), personsWithChild(12), json(PREVIOUS));
+
+		assertThat(days(calculation)).extracting(JsonNode::intValue).containsExactly(12, 15);
+	}
+
+	@Test
+	void leavesOutDaysThatDoNotFitTheNewPeriod() {
+		final var tooMany = json(PREVIOUS.replace("\"deviationDays\":15", "\"deviationDays\":31"));
+		final var none = json(PREVIOUS.replace("\"deviationDays\":15", "\"deviationDays\":0"));
+
+		assertThat(days(withDays(filledWithChild(), personsWithChild(null), tooMany)).get(1).isNull()).isTrue();
+		assertThat(days(withDays(filledWithChild(), personsWithChild(null), none)).get(1).isNull()).isTrue();
+	}
+
+	@Test
+	void takesNoDaysFromAMemberWhoWasNotInThePreviousBeräkning() {
+		final var excluded = json(PREVIOUS.replace("\"included\":true,\"deviationDays\":15", "\"included\":false,\"deviationDays\":15"));
+		final var elsewhere = json(PREVIOUS.replace("20141201T010", "20100101T999"));
+
+		assertThat(days(withDays(filledWithChild(), personsWithChild(null), excluded)).get(1).isNull()).isTrue();
+		assertThat(days(withDays(filledWithChild(), personsWithChild(null), elsewhere)).get(1).isNull()).isTrue();
+		assertThat(days(withDays(filledWithChild(), personsWithChild(null), MissingNode.getInstance())).get(1).isNull()).isTrue();
+	}
+
+	@Test
+	void givesNoDaysToAMemberWhoIsNotIncluded() {
+		final var calculation = withDays(fill(draft(), APPLICANT_NUMBER, CHILD_NUMBER), personsOf(draft(), APPLICANT_NUMBER, CHILD_NUMBER), json(PREVIOUS));
+
+		assertThat(objects(calculation, "calculationPersons").get(1).path("included").booleanValue()).isFalse();
+		assertThat(days(calculation).get(1).isNull()).isTrue();
 	}
 }

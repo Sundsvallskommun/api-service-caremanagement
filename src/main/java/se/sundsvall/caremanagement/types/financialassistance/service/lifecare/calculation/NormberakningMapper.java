@@ -96,6 +96,7 @@ final class NormberakningMapper {
 	private static final int ADULT_AGE = 18;
 	private static final Pattern ISO_DATE = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
 	private static final Pattern NAME_WITH_AMOUNT = Pattern.compile("\\d+[.,]\\d{2}$");
+	private static final Map<Integer, String> RELATION_TYPES = Map.of(0, "OTHER", 1, "COUPLE", 2, "SINGLE");
 
 	private NormberakningMapper() {}
 
@@ -406,7 +407,9 @@ final class NormberakningMapper {
 					.withName(text(person, "name"))
 					.withAmount(decimal(person, "amount").orElse(null))
 					.withDeviationFromDate(emptyAsNull(text(person, "deviationFromDate")))
-					.withDeviationToDate(emptyAsNull(text(person, "deviationToDate"))))
+					.withDeviationToDate(emptyAsNull(text(person, "deviationToDate")))
+					.withDeviationDays(integerOrNull(person, "deviationDays"))
+					.withRelationType(relationTypeOf(person)))
 				.toList())
 			.withIncomes(objects(calculation, INCOMES).stream()
 				.map(income -> NormberakningPreviousIncome.create()
@@ -418,6 +421,11 @@ final class NormberakningMapper {
 				.toList())
 			.withExpenses(objects(calculation, EXPENSES).stream().map(NormberakningMapper::toPreviousExpense).toList())
 			.withSpecialExpenses(objects(calculation, SPECIAL_EXPENSES).stream().map(NormberakningMapper::toPreviousExpense).toList());
+	}
+
+	/** Lifecare's relationType (householdMemberRelationTypes: 0 other, 1 cohabiting couple, 2 single) as careM names it. */
+	private static String relationTypeOf(final JsonNode person) {
+		return Optional.ofNullable(integerOrNull(person, "relationType")).map(RELATION_TYPES::get).orElse(null);
 	}
 
 	private static NormberakningPreviousExpense toPreviousExpense(final JsonNode expense) {

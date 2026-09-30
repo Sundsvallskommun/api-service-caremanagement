@@ -30,13 +30,17 @@ class NormberakningPreviousPersonTest {
 			.withName("value")
 			.withAmount(BigDecimal.ONE)
 			.withDeviationFromDate("value")
-			.withDeviationToDate("value");
+			.withDeviationToDate("value")
+			.withDeviationDays(15)
+			.withRelationType("SINGLE");
 
 		assertThat(bean).hasNoNullFieldsOrProperties();
 		assertThat(bean.getName()).isEqualTo("value");
 		assertThat(bean.getAmount()).isEqualTo(BigDecimal.ONE);
 		assertThat(bean.getDeviationFromDate()).isEqualTo("value");
 		assertThat(bean.getDeviationToDate()).isEqualTo("value");
+		assertThat(bean.getDeviationDays()).isEqualTo(15);
+		assertThat(bean.getRelationType()).isEqualTo("SINGLE");
 	}
 
 	@Test

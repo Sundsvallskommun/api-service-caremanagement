@@ -16,6 +16,7 @@ import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.Li
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareErrandService;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.NormberakningDraftReader.DraftWithNumbers;
 import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -98,6 +99,8 @@ class ErrandLifecareCalculationServiceTest {
 		when(client.readJobStimulus(1)).thenReturn(json("{\"applicant\":null,\"coApplicant\":null,\"hasCoApplicant\":false}"));
 		when(client.placePersons(any())).thenReturn(json("{\"calculationPersons\":[" + applicantPerson(true, 2, 3940) + "]}"));
 		when(client.withJobStimuli(any(), any())).thenReturn(json("{\"hasApplicantJobStimuli\":true}"));
+		// No beräkning on the insats before this one unless a test says so.
+		when(client.listForService(1)).thenReturn(tree("[]"));
 	}
 
 	private void errandIs(final LifecareErrand errand) {
@@ -414,5 +417,81 @@ class ErrandLifecareCalculationServiceTest {
 
 		assertThat(service.readPrevious(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEmpty();
 		verifyNoInteractions(client, recorder);
+	}
+
+	// ---- days carried over into a new beräkning (b15) ---------------------------------------------------------------
+
+	private static final String PREVIOUS_WITH_DAYS = """
+		{"calculationId":1,"startDate":"2026-08-01","endDate":"2026-08-31","calculationPersons":[
+		  {"personId":"19880209T050","included":true,"deviationDays":20,"relationType":2}]}""";
+
+	@Test
+	void carriesTheDaysOfThePreviousBeräkningIntoTheNewOne() {
+		errandIs(UNLINKED);
+		when(client.listForService(1)).thenReturn(tree(LISTED));
+		when(client.read(1)).thenReturn(json(PREVIOUS_WITH_DAYS));
+		when(client.create(eq(1), any())).thenReturn(saved());
+
+		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false);
+
+		verify(client).create(eq(1), bodyCaptor.capture());
+		final var applicant = objects(bodyCaptor.getValue(), "calculationPersons").getFirst();
+		assertThat(applicant.path("deviationDays").stringValue()).isEqualTo("20");
+		assertThat(applicant.path("daySubscription").path("da").stringValue()).isEqualTo("20");
+		// The role is today's household's, not the previous beräkning's.
+		assertThat(applicant.path("relationType").intValue()).isZero();
+		verify(recorder).read(UNLINKED, "CALCULATION", "Läste insatsens normberäkningar i Lifecare");
+		verify(recorder).read(UNLINKED, "CALCULATION", "Läste föregående normberäkning i Lifecare", "1");
+	}
+
+	@Test
+	void letsTheCaseworkersDaysOnTheDraftWinOverThePreviousBeräknings() {
+		errandIs(UNLINKED);
+		final var draft = draft();
+		draft.getPersons().getFirst().setCaseworkerDays(12);
+		when(draftReader.read(any())).thenReturn(new DraftWithNumbers(draft, Map.of("p1", "880209-T050")));
+		when(client.listForService(1)).thenReturn(tree(LISTED));
+		when(client.read(1)).thenReturn(json(PREVIOUS_WITH_DAYS));
+		when(client.create(eq(1), any())).thenReturn(saved());
+
+		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false);
+
+		verify(client).create(eq(1), bodyCaptor.capture());
+		assertThat(objects(bodyCaptor.getValue(), "calculationPersons").getFirst().path("deviationDays").stringValue()).isEqualTo("12");
+	}
+
+	@Test
+	void createsTheBeräkningForTheWholePeriodWhenTheInsatsHasNoneBefore() {
+		errandIs(UNLINKED);
+		when(client.create(eq(1), any())).thenReturn(saved());
+
+		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false);
+
+		verify(client).create(eq(1), bodyCaptor.capture());
+		assertThat(objects(bodyCaptor.getValue(), "calculationPersons").getFirst().path("deviationDays").isNull()).isTrue();
+		verify(client, never()).read(anyInt());
+	}
+
+	@Test
+	void createsNothingWhenTheReadOfThePreviousBeräkningCouldNotBeLogged() {
+		errandIs(UNLINKED);
+		when(client.listForService(1)).thenReturn(tree(LISTED));
+		when(client.read(1)).thenReturn(json(PREVIOUS_WITH_DAYS));
+		doThrow(new IllegalStateException("log down")).when(recorder).read(UNLINKED, "CALCULATION", "Läste föregående normberäkning i Lifecare", "1");
+
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false)).isInstanceOf(IllegalStateException.class);
+		verify(client, never()).create(anyInt(), any());
+		verify(errandService, never()).linkCalculation(any(), anyInt());
+	}
+
+	@Test
+	void createsNothingWhenThePreviousBeräkningCannotBeRead() {
+		errandIs(UNLINKED);
+		when(client.listForService(1)).thenReturn(tree(LISTED));
+		when(client.read(1)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
+
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false))
+			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY));
+		verify(client, never()).create(anyInt(), any());
 	}
 }

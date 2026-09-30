@@ -14,12 +14,14 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.PERSONS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.array;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.integer;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.numberNode;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.objects;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.same;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.setOrRemove;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationJson.truthy;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.AMOUNT;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.DEVIATION_DAYS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.INCLUDED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.NORM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.NORM_ID;
@@ -168,6 +170,21 @@ class LifecareCalculationEditService {
 		final var marked = client.withJobStimuli(calculation.deepCopy(), jobStimulus);
 		setOrRemove(calculation, "hasApplicantJobStimuli", marked.path("hasApplicantJobStimuli"));
 		setOrRemove(calculation, "hasCoApplicantJobStimuli", marked.path("hasCoApplicantJobStimuli"));
+		return calculation;
+	}
+
+	/**
+	 * Has Lifecare count the amount of every placed member of a new beräkning that is in the household for only some days
+	 * of the period, as the web app asks GetAmount when the days are set.
+	 *
+	 * @param  calculation the placed beräkning, changed in place
+	 * @return             the beräkning
+	 */
+	ObjectNode withCountedDays(final ObjectNode calculation) {
+		objects(calculation, PERSONS).stream()
+			.filter(member -> truthy(member, INCLUDED) && integer(member, NORM_ROW_ID) > 0 && integer(member, DEVIATION_DAYS) > 0)
+			.forEach(member -> normRow(calculation, member.path(NORM_ROW_ID)).ifPresent(row -> setOrRemove(member, AMOUNT,
+				client.amountFor(member.deepCopy(), row.deepCopy(), calculation.path(START_DATE), calculation.path(END_DATE)))));
 		return calculation;
 	}
 

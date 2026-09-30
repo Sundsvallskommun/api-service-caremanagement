@@ -15141,6 +15141,23 @@ components:
         deviationToDate:
           type: string
           description: The end of the deviation
+        deviationDays:
+          type: integer
+          format: int32
+          description: The member's days in the household; absent for the whole period
+          examples:
+          - 15
+        relationType:
+          type: string
+          description: "The member's place in the household as Lifecare recorded it\
+            \ for this beräkning: SINGLE (ensamstående), COUPLE (sammanboende par)\
+            \ or OTHER; absent when Lifecare gave none"
+          enum:
+          - SINGLE
+          - COUPLE
+          - OTHER
+          examples:
+          - SINGLE
     LifecareRecordBody:
       type: object
       description: "A record's body, shown in the list without opening the record."
