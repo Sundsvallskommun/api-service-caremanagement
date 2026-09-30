@@ -21,11 +21,13 @@ import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRe
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.json.JsonMapper;
 
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
  * Operaton glue — generic. Type modules call into this when they need to kick off, correlate,
@@ -36,6 +38,13 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 public class ProcessService {
 
 	private static final String NO_DEFINITION_FOUND_MESSAGE = "No Operaton process definition found with name '%s'";
+
+	/**
+	 * The message that ends an errand's process when the errand is withdrawn. Every errand type that runs a process of its
+	 * own listens for it in an interrupting event subprocess, so correlating it by business key (the errandId) ends the
+	 * instance wherever it waits. Nothing else is written by the process: the status is the errand module's.
+	 */
+	public static final String MESSAGE_ERRAND_WITHDRAWN = "ErrandWithdrawn";
 
 	/** A queued message waits this long before its first retry. */
 	static final long FIRST_RETRY_DELAY_MINUTES = 1;
@@ -115,6 +124,24 @@ public class ProcessService {
 			.messageName(messageName)
 			.businessKey(businessKey)
 			.processVariables(ofNullable(variables).orElseGet(Map::of)));
+	}
+
+	/**
+	 * Whether a failed correlation only says that there is no process to end. True for a message that ends a process
+	 * ({@link #MESSAGE_ERRAND_WITHDRAWN}) when the engine answered {@code 404}, which is what it does when no instance
+	 * waits for the message: the process already ended, or never ran (an errand frozen for manual review has none). An
+	 * errand deleted in the meantime answers {@code 404} from {@link #correlateMessage} itself and is the same case. What
+	 * the message asks for already holds, and no retry can change that.
+	 *
+	 * <p>
+	 * Any other failure says nothing about the process — an engine that is down, a {@code 5xx}, a timeout — and stays a
+	 * failure to retry. So does a {@code 404} for any other message: for those it also means that the process has not
+	 * reached its catch event yet, which passes with time.
+	 */
+	public static boolean isNothingToEnd(final String messageName, final Throwable failure) {
+		return MESSAGE_ERRAND_WITHDRAWN.equals(messageName)
+			&& failure instanceof final ThrowableProblem problem
+			&& NOT_FOUND.equals(problem.getStatus());
 	}
 
 	/**

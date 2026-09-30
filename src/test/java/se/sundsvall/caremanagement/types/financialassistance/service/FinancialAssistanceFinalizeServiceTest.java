@@ -336,6 +336,25 @@ class FinancialAssistanceFinalizeServiceTest {
 		verifyNoInteractions(decisionServiceMock, processServiceMock);
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = {
+		"WITHDRAWN", "REJECTED", "CLOSED"
+	})
+	void anErrandThatHasEndedCannotBeFinalized(final String status) {
+		// A withdrawn errand's process is gone: a decision recorded on it would pay out on an application nobody stands behind.
+		when(repositoryMock.findByErrandIdForUpdate(ERRAND_ID)).thenReturn(Optional.of(grantable()));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withId(ERRAND_ID).withStatus(status));
+		final var request = grantingRequest();
+
+		assertThatThrownBy(() -> service.finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, DECIDED_BY))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessage("Conflict: errand must be in status AWAITING_DECISION or SUPPLEMENT_REQUESTED to be finalized, but is in status '" + status + "'");
+
+		verify(repositoryMock, never()).save(any());
+		verifyNoInteractions(decisionServiceMock, processServiceMock);
+	}
+
 	@Test
 	void anErrandBackInSupplementRequestedCanStillBeDecided() {
 		// The daily prepare moved the errand back to SUPPLEMENT_REQUESTED overnight; the handläggare decides regardless.

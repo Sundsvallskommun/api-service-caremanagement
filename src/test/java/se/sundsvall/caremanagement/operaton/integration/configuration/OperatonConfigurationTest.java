@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.operaton.integration.configuration;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -64,6 +65,8 @@ class OperatonConfigurationTest {
 			verify(feignMultiCustomizerSpy).composeCustomizersToOne();
 
 			assertThat(errorDecoderCaptor.getValue()).hasFieldOrPropertyWithValue("integrationName", CLIENT_ID);
+			// The engine's "no process instance is waiting" stays a 404 instead of becoming a 502.
+			assertThat(errorDecoderCaptor.getValue()).hasFieldOrPropertyWithValue("bypassResponseCodes", List.of(404));
 			assertThat(customizer).isSameAs(feignBuilderCustomizerMock);
 		}
 	}

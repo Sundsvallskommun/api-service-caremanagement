@@ -12,16 +12,20 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import se.sundsvall.caremanagement.operaton.integration.OperatonClient;
 import se.sundsvall.caremanagement.operaton.integration.db.ProcessMessageRetryRepository;
 import se.sundsvall.caremanagement.operaton.integration.db.model.ProcessMessageRetryEntity;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionRequest;
 import se.sundsvall.caremanagement.operaton.integration.model.EvaluateDecisionResponse;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.time.temporal.ChronoUnit.SECONDS;
@@ -35,6 +39,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
 class ProcessServiceTest {
@@ -157,6 +162,31 @@ class ProcessServiceTest {
 		final ArgumentCaptor<EvaluateDecisionRequest> captor = ArgumentCaptor.forClass(EvaluateDecisionRequest.class);
 		verify(operatonClientMock).evaluateDecision(eq(MUNICIPALITY_ID), eq("Decision_x"), captor.capture());
 		assertThat(captor.getValue().variables()).isEmpty();
+	}
+
+	@Test
+	void anEngineAnswerOfNothingWaitingIsNothingToEndForTheWithdrawalMessage() {
+		assertThat(ProcessService.isNothingToEnd(ProcessService.MESSAGE_ERRAND_WITHDRAWN, Problem.valueOf(NOT_FOUND, "No process instance is waiting"))).isTrue();
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = HttpStatus.class, names = {
+		"BAD_GATEWAY", "SERVICE_UNAVAILABLE", "BAD_REQUEST", "INTERNAL_SERVER_ERROR"
+	})
+	void anyOtherEngineFailureIsStillAFailureForTheWithdrawalMessage(final HttpStatus status) {
+		assertThat(ProcessService.isNothingToEnd(ProcessService.MESSAGE_ERRAND_WITHDRAWN, Problem.valueOf(status, "engine"))).isFalse();
+	}
+
+	@Test
+	void aFailureThatIsNoProblemAtAllIsStillAFailureForTheWithdrawalMessage() {
+		assertThat(ProcessService.isNothingToEnd(ProcessService.MESSAGE_ERRAND_WITHDRAWN, new IllegalStateException("connection reset"))).isFalse();
+		assertThat(ProcessService.isNothingToEnd(ProcessService.MESSAGE_ERRAND_WITHDRAWN, null)).isFalse();
+	}
+
+	@Test
+	void aNotFoundForAnyOtherMessageIsStillAFailureBecauseTheProcessMayNotHaveGotThereYet() {
+		assertThat(ProcessService.isNothingToEnd("PaymentDecisionReceived", Problem.valueOf(NOT_FOUND, "No process instance is waiting"))).isFalse();
+		assertThat(ProcessService.isNothingToEnd(null, Problem.valueOf(NOT_FOUND, "No process instance is waiting"))).isFalse();
 	}
 
 	@Test

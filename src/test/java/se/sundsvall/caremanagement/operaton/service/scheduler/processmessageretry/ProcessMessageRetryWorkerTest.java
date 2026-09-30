@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.operaton.integration.db.ProcessMessageRetryRepository;
 import se.sundsvall.caremanagement.operaton.integration.db.model.ProcessMessageRetryEntity;
 import se.sundsvall.caremanagement.operaton.service.ProcessService;
+import se.sundsvall.dept44.problem.Problem;
 
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,6 +27,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @ExtendWith(MockitoExtension.class)
 class ProcessMessageRetryWorkerTest {
@@ -51,6 +54,12 @@ class ProcessMessageRetryWorkerTest {
 			.withAttempts(attempts)
 			.withCreated(created)
 			.withNextAttempt(created);
+	}
+
+	private static ProcessMessageRetryEntity pendingWithdrawal(final String errandId, final int attempts, final OffsetDateTime created) {
+		return pending(errandId, attempts, created)
+			.withMessageName("ErrandWithdrawn")
+			.withVariables("{}");
 	}
 
 	@Test
@@ -115,6 +124,79 @@ class ProcessMessageRetryWorkerTest {
 		assertThat(retry.getStatus()).isEqualTo("GAVE_UP");
 		assertThat(retry.getAttempts()).isEqualTo(81);
 		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(1, 0, 1));
+	}
+
+	@Test
+	void aWithdrawalTheEngineHasNoProcessToEndIsSettledAndRemoved() {
+		final var retry = pendingWithdrawal("e1", 1, OffsetDateTime.now().minusMinutes(2));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
+		doThrow(Problem.valueOf(NOT_FOUND, "No process instance is waiting for message 'ErrandWithdrawn'")).when(processServiceMock)
+			.correlateMessage("2281", "FINANCIAL_ASSISTANCE", "ErrandWithdrawn", "e1", Map.of());
+
+		final var result = worker.retryDue();
+
+		// Only the claim was saved; the row is removed instead of backing off, and is never marked as given up.
+		verify(repositoryMock).save(retry);
+		verify(repositoryMock).delete(retry);
+		assertThat(retry.getStatus()).isEqualTo("PENDING");
+		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(1, 1, 0));
+	}
+
+	@Test
+	void aWithdrawalOlderThanThreeDaysThatHasNoProcessToEndIsNotGivenUpOn() {
+		// Would have been GAVE_UP and logged as an error, had it been any other message.
+		final var retry = pendingWithdrawal("e1", 80, OffsetDateTime.now().minusDays(3).minusMinutes(1));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
+		doThrow(Problem.valueOf(NOT_FOUND, "No process instance is waiting")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), any());
+
+		final var result = worker.retryDue();
+
+		verify(repositoryMock).delete(retry);
+		assertThat(retry.getStatus()).isEqualTo("PENDING");
+		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(1, 1, 0));
+	}
+
+	@Test
+	void aWithdrawalTheEngineCouldNotTakeIsRetriedLikeAnyOtherMessage() {
+		final var retry = pendingWithdrawal("e1", 2, OffsetDateTime.now().minusHours(1));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
+		doThrow(Problem.valueOf(BAD_GATEWAY, "engine restarting")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), any());
+
+		final var result = worker.retryDue();
+
+		verify(repositoryMock, never()).delete(retry);
+		verify(repositoryMock, times(2)).save(retry); // the claim, then the failure
+		assertThat(retry.getStatus()).isEqualTo("PENDING");
+		assertThat(retry.getAttempts()).isEqualTo(3);
+		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(1, 0, 0));
+	}
+
+	@Test
+	void aNotFoundForTheDecisionMessageStillMeansTheProcessHasNotGotThereYet() {
+		final var retry = pending("e1", 2, OffsetDateTime.now().minusHours(1));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
+		doThrow(Problem.valueOf(NOT_FOUND, "No process instance is waiting")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), any());
+
+		final var result = worker.retryDue();
+
+		verify(repositoryMock, never()).delete(retry);
+		assertThat(retry.getAttempts()).isEqualTo(3);
+		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(1, 0, 0));
+	}
+
+	@Test
+	void aSettledWithdrawalThatCannotBeRemovedIsLeftForTheNextRunAndDoesNotStopTheBatch() {
+		final var settled = pendingWithdrawal("e1", 1, OffsetDateTime.now().minusMinutes(2));
+		final var delivering = pending("e2", 1, OffsetDateTime.now().minusMinutes(2));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(settled, delivering));
+		doThrow(Problem.valueOf(NOT_FOUND, "No process instance is waiting")).when(processServiceMock).correlateMessage(any(), any(), any(), eq("e1"), any());
+		doThrow(new IllegalStateException("db down")).when(repositoryMock).delete(settled);
+
+		final var result = worker.retryDue();
+
+		verify(repositoryMock).delete(delivering);
+		assertThat(settled.getStatus()).isEqualTo("PENDING");
+		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(2, 1, 0));
 	}
 
 	@Test

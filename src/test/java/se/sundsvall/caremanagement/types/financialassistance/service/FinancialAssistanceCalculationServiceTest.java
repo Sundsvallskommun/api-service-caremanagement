@@ -129,6 +129,9 @@ class FinancialAssistanceCalculationServiceTest {
 	@Mock
 	private CalculationSyncService calculationSyncServiceMock;
 
+	@Mock
+	private EndedErrandGate endedErrandGateMock;
+
 	@InjectMocks
 	private FinancialAssistanceCalculationService service;
 
@@ -825,6 +828,44 @@ class FinancialAssistanceCalculationServiceTest {
 		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
 
 		verify(decisionServiceMock, never()).create(any(), any(), any(), any());
+		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
+	}
+
+	@ParameterizedTest
+	@CsvSource({
+		"WITHDRAWN, false", "WITHDRAWN, true", "REJECTED, false", "CLOSED, true"
+	})
+	void prepareOnAnErrandThatHasEndedTouchesNothingAndAnswersCleanly(final String status, final boolean ssbtekError) {
+		when(endedErrandGateMock.endedStatus(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Optional.of(status));
+		final var request = CalculationRequest.create().withApplicant(APPLICANT_PARTY_ID).withApplicationMonth("2026-06").withErrandId(ERRAND_ID)
+			.withClassifiedIncomes("[]").withSsbtekError(ssbtekError);
+
+		final var response = service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, request);
+
+		// No Lifecare read or write (the insats lookup included), no citizen lookup, no status, warning, decision or draft
+		// write, and not even the errand read: the answer is "nothing checked", which the process's task completes on.
+		verifyNoInteractions(errandServiceMock, repositoryMock, citizenServiceMock, calculationServiceMock, lifecareCaseServiceMock, decisionServiceMock,
+			warningServiceMock, draftServiceMock, calculationFeederMock, applicationRuleFeederMock, periodRuleFeederMock, incomeChangeFeederMock,
+			lateTransferFeederMock, untransferableIncomeFeederMock, paymentWarningServiceMock, lifecareServiceIdServiceMock, calculationSyncServiceMock);
+		assertThat(response.isInformationComplete()).isFalse();
+		assertThat(response.getUnhandledIncomes()).isEmpty();
+		assertThat(response.getChangeWarnings()).isEmpty();
+		assertThat(response.getMissingIncomeTypes()).isEmpty();
+		assertThat(response.getCalculationId()).isNull();
+	}
+
+	@ParameterizedTest
+	@CsvSource({
+		"WITHDRAWN", "REJECTED", "CLOSED"
+	})
+	void prepareNeverMovesAnErrandOutOfATerminalStatus(final String status) {
+		// The run began before the errand ended (the gate saw nothing), so it gets as far as the completeness status — and
+		// finds the errand ended there. Complete would otherwise be AWAITING_DECISION.
+		completeRun(YearMonth.of(2026, JUNE));
+		when(errandServiceMock.readErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(Errand.create().withStatus(status));
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
+
 		verify(errandServiceMock, never()).updateErrand(any(), any(), any(), any());
 	}
 

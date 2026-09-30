@@ -4471,7 +4471,10 @@ paths:
         \ retried by the next run, and Draken may create the calculation itself meanwhile).\
         \ Once lifecareCalculationId is set, the draft is no longer refreshed and\
         \ its warnings stay as they were; the SSBTEK warnings, recommendation and\
-        \ status still update. The financial assistance process calls this each daily\
+        \ status still update. An errand that has ended (WITHDRAWN, REJECTED or CLOSED)\
+        \ is left untouched: nothing is read from or written to Lifecare, no status\
+        \ or warning is written, and the answer is 200 with informationComplete=false\
+        \ and empty lists. The financial assistance process calls this each daily\
         \ loop."
       operationId: prepareCalculation
       parameters:

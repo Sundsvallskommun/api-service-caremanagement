@@ -46,6 +46,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_AWAITING_DECISION;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.STATUS_SUPPLEMENT_REQUESTED;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.TERMINAL_STATUSES;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
@@ -88,12 +89,14 @@ public class FinancialAssistanceCalculationService {
 	private final PaymentWarningService paymentWarningService;
 	private final LifecareServiceIdService lifecareServiceIdService;
 	private final CalculationSyncService calculationSyncService;
+	private final EndedErrandGate endedErrandGate;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
 		final IncomeChangeFeeder incomeChangeFeeder, final LateTransferFeeder lateTransferFeeder, final UntransferableIncomeFeeder untransferableIncomeFeeder,
-		final PaymentWarningService paymentWarningService, final LifecareServiceIdService lifecareServiceIdService, final CalculationSyncService calculationSyncService) {
+		final PaymentWarningService paymentWarningService, final LifecareServiceIdService lifecareServiceIdService, final CalculationSyncService calculationSyncService,
+		final EndedErrandGate endedErrandGate) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -111,6 +114,7 @@ public class FinancialAssistanceCalculationService {
 		this.paymentWarningService = paymentWarningService;
 		this.lifecareServiceIdService = lifecareServiceIdService;
 		this.calculationSyncService = calculationSyncService;
+		this.endedErrandGate = endedErrandGate;
 	}
 
 	/**
@@ -146,8 +150,21 @@ public class FinancialAssistanceCalculationService {
 	 * {@code SSBTEK_CALCULATION_DIFF} warning per disagreement. The changes are written into the calculation through
 	 * ProfessionalWeb on the caseworker's action in Draken — FamilyCare cannot change one — see
 	 * {@link CalculationSyncService}.
+	 *
+	 * <p>
+	 * <strong>An errand that has ended is left alone</strong> ({@code TERMINAL_STATUSES}: withdrawn, rejected, closed).
+	 * Withdrawing an errand ends its process by message, which takes a moment, and a run that is already on its way must
+	 * not read Lifecare for it, write to it, move its status back to {@code AWAITING_DECISION} or
+	 * {@code SUPPLEMENT_REQUESTED}, or raise warnings on it. The answer is the same "nothing checked" as after a read
+	 * failure — not complete, nothing listed — so the process's task completes cleanly and the instance is left to end on
+	 * the message.
 	 */
 	public CalculationResponse prepareCalculation(final String municipalityId, final String namespace, final CalculationRequest request) {
+		// Before anything else, and outside this transaction — see EndedErrandGate.
+		final var ended = endedErrandGate.endedStatus(municipalityId, namespace, request.getErrandId());
+		if (ended.isPresent()) {
+			return prepareEndedErrand(request.getErrandId(), ended.get());
+		}
 		if (TRUE.equals(request.getSsbtekError())) {
 			return prepareAfterReadFailure(municipalityId, namespace, request);
 		}
@@ -183,6 +200,19 @@ public class FinancialAssistanceCalculationService {
 		applyCompletenessStatus(municipalityId, namespace, input.errandId(), response.isInformationComplete());
 		stampDailyRun(input.errand());
 		return response;
+	}
+
+	/**
+	 * The run for an errand that has ended: nothing is read, written or raised. Not complete, because a month that was
+	 * never checked must not report itself as checked and done.
+	 */
+	private CalculationResponse prepareEndedErrand(final String errandId, final String status) {
+		LOG.info("Errand {} is {} - the prepare run leaves it untouched", sanitizeForLogging(errandId), sanitizeForLogging(status));
+		return CalculationResponse.create()
+			.withUnhandledIncomes(List.of())
+			.withChangeWarnings(List.of())
+			.withInformationComplete(false)
+			.withMissingIncomeTypes(List.of());
 	}
 
 	/**
@@ -719,7 +749,9 @@ public class FinancialAssistanceCalculationService {
 	/**
 	 * Reflect SSBTEK completeness in the errand status — {@code SUPPLEMENT_REQUESTED} while incomplete, {@code
 	 * AWAITING_DECISION} when complete — writing only when it actually changes (the daily loop re-runs prepare, so an
-	 * unchanged status is a no-op).
+	 * unchanged status is a no-op). An errand that has ended is never moved out of its terminal status, whatever the
+	 * completeness. {@link #prepareCalculation} already answers for an errand that had ended when the run began; this
+	 * covers the status read here, so that no path through the run can undo a withdrawal.
 	 */
 	private void applyCompletenessStatus(final String municipalityId, final String namespace, final String errandId, final boolean informationComplete) {
 		final String target;
@@ -729,6 +761,9 @@ public class FinancialAssistanceCalculationService {
 			target = STATUS_SUPPLEMENT_REQUESTED;
 		}
 		final var current = errandService.readErrand(municipalityId, namespace, errandId).getStatus();
+		if (current != null && TERMINAL_STATUSES.contains(current)) {
+			return;
+		}
 		if (!target.equals(current)) {
 			errandService.updateErrand(municipalityId, namespace, errandId, PatchErrand.create().withStatus(target));
 		}
