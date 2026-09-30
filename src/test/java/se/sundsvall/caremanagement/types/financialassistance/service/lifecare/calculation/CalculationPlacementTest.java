@@ -145,4 +145,32 @@ class CalculationPlacementTest {
 		assertThat(householdSizeOfSaved(json("{\"hasCustomHouseholdSize\":false,\"householdSize\":5,\"calculationPersons\":[]}")))
 			.isEqualTo(new HouseholdSize(false, 0, 0));
 	}
+
+	@Test
+	void countsTheMedsokandesSideWithItsOwnJobbstimulansAsTheWebAppDoes() {
+		// Jeppson Test, insats 24 (capture 2026-09-30): Brutto S 2000 and Brutto M 5000 on Lön efter skatt, 25 %.
+		final var calculation = json("""
+			{"hasApplicantJobStimuli":true,"hasCoApplicantJobStimuli":true,"calculationIncomes":[
+			  {"incomeCode":1,"amountApplicant":2000,"amountCoApplicant":5000},
+			  {"incomeCode":19,"amountApplicant":0,"amountCoApplicant":800}]}""");
+
+		final var rows = objects(withJobStimulusIncomes(calculation, tree(TYPES)), "calculationIncomes");
+
+		assertThat(rows.get(0)).isEqualTo(json("""
+			{"incomeCode":1,"amountApplicant":1500,"amountCoApplicant":3750,"grossAmountApplicant":2000,"grossAmountCoApplicant":5000}"""));
+		assertThat(rows.get(1).path("amountCoApplicant").intValue()).isEqualTo(800);
+		assertThat(rows.get(1).path("grossAmountCoApplicant").intValue()).isEqualTo(800);
+	}
+
+	@Test
+	void countsOnlyTheSideThatHasJobbstimulans() {
+		final var calculation = json("""
+			{"hasApplicantJobStimuli":false,"hasCoApplicantJobStimuli":true,"calculationIncomes":[
+			  {"incomeCode":1,"amountApplicant":2000,"amountCoApplicant":5000}]}""");
+
+		final var row = objects(withJobStimulusIncomes(calculation, tree(TYPES)), "calculationIncomes").getFirst();
+
+		assertThat(row.path("amountApplicant").intValue()).isEqualTo(2000);
+		assertThat(row.path("amountCoApplicant").intValue()).isEqualTo(3750);
+	}
 }

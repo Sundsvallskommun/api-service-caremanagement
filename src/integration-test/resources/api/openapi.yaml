@@ -14722,6 +14722,10 @@ components:
           type: boolean
           description: Whether the applicant has jobbstimulans in the period (Lifecare
             only)
+        coapplicantJobStimulus:
+          type: boolean
+          description: Whether the co-applicant (medsökande) has jobbstimulans in
+            the period (Lifecare only)
         normRows:
           type: array
           items:
@@ -14856,6 +14860,14 @@ components:
         coapplicantAmountDate:
           type: string
           description: The date the co-applicant amount is attributed to
+        coapplicantJobStimulus:
+          type: boolean
+          description: Whether jobbstimulans applies to the co-applicant side of this
+            income (Lifecare only)
+        coapplicantCountedAmount:
+          type: number
+          description: The co-applicant amount Lifecare counts once jobbstimulans
+            is taken off (Lifecare only)
         deleted:
           type: boolean
           description: Whether the row is soft-deleted (careM draft only)

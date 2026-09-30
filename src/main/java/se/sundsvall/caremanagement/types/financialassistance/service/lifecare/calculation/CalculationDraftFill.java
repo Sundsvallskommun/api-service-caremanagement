@@ -47,9 +47,9 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  * rest itself.
  *
  * <p>
- * Refused with 422: a draft without a period, a household with an included co-applicant (how Lifecare takes the
- * co-applicant's amounts is not captured), no one included, and a row whose type Lifecare's catalogue does not have;
- * sending the beräkning without that row would quietly lack it.
+ * Refused with 422: a draft without a period, no one included, and a row whose type Lifecare's catalogue does not
+ * have; sending the beräkning without that row would quietly lack it. A medsökande is included like any member,
+ * matched on personnummer, with the incomes' medsökande side (capture of Jeppson Test, insats 24, 2026-09-30).
  * </p>
  */
 final class CalculationDraftFill {
@@ -97,9 +97,6 @@ final class CalculationDraftFill {
 			throw refuse("Normberäkningen saknar period. Fyll i Från och Till.");
 		}
 		final var draftPersons = persons.stream().filter(person -> !person.row().isDeleted()).toList();
-		if (draftPersons.stream().anyMatch(person -> ROLE_CO_APPLICANT.equals(person.row().getRole()) && person.row().isIncluded())) {
-			throw refuse("Hushållet har en medsökande. Sådana normberäkningar kan inte sparas i Lifecare från Drakel ännu.");
-		}
 
 		final var calculation = base.deepCopy();
 		final var members = householdOf(calculation, household);

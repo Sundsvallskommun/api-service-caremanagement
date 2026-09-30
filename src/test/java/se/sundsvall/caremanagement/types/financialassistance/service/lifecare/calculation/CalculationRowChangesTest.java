@@ -11,6 +11,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.json;
@@ -109,6 +110,18 @@ class CalculationRowChangesTest {
 		assertThat(row.path("applicantSearchDate").stringValue()).isEqualTo("2026-09-02");
 		assertThat(row.path("applicantNote").stringValue()).isEqualTo("Enligt beslut");
 		assertThat(row.path("coApplicantSearchDate").stringValue()).isEmpty();
+	}
+
+	@Test
+	void setsTheMedsokandesAmountAsItsGrossToo() {
+		final var changed = changeIncome(calculation(), "19", NormberakningRowInput.create()
+			.withCoapplicantCaseworkerAmount(BigDecimal.valueOf(5000))
+			.withCoapplicantAmountDate("2026-09-03"));
+
+		final var row = objects(changed, "calculationIncomes").getFirst();
+		assertThat(row.path("amountCoApplicant").intValue()).isEqualTo(5000);
+		assertThat(row.path("grossAmountCoApplicant").intValue()).isEqualTo(5000);
+		assertThat(row.path("coApplicantSearchDate").stringValue()).isEqualTo("2026-09-03");
 	}
 
 	@Test
@@ -304,6 +317,19 @@ class CalculationRowChangesTest {
 		final var entered = objects(withEnteredIncomes(saved, forEdit().path("incomeTypes")), "calculationIncomes");
 
 		assertThat(entered).extracting(row -> row.path("amountApplicant").intValue()).containsExactly(5000, 800, 10);
+	}
+
+	@Test
+	void putsTheMedsokandesGrossBackToo() {
+		final var saved = calculation("""
+			{"incomeCode":1,"amountApplicant":1500,"grossAmountApplicant":2000,"amountCoApplicant":3750,"grossAmountCoApplicant":5000},
+			{"incomeCode":19,"amountApplicant":0,"amountCoApplicant":800,"grossAmountCoApplicant":900},{"incomeCode":1,"amountApplicant":0,"amountCoApplicant":10,"grossAmountCoApplicant":0}""",
+			EXPENSE.formatted(1, 1));
+
+		final var entered = objects(withEnteredIncomes(saved, forEdit().path("incomeTypes")), "calculationIncomes");
+
+		assertThat(entered).extracting(row -> row.path("amountApplicant").intValue(), row -> row.path("amountCoApplicant").intValue())
+			.containsExactly(tuple(2000, 5000), tuple(0, 800), tuple(0, 10));
 	}
 
 	@Test

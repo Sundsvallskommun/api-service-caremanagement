@@ -65,6 +65,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.typeOf;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationRowChanges.BUCKET_EXPENSE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationRowChanges.enteredApplicantAmount;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationRowChanges.enteredCoApplicantAmount;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationRowChanges.expenseRowIds;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationRowChanges.keepsExpense;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationRowChanges.personRowId;
@@ -96,7 +97,8 @@ final class NormberakningMapper {
 	private static final int ADULT_AGE = 18;
 	private static final Pattern ISO_DATE = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
 	private static final Pattern NAME_WITH_AMOUNT = Pattern.compile("\\d+[.,]\\d{2}$");
-	private static final Map<Integer, String> RELATION_TYPES = Map.of(0, "OTHER", 1, "COUPLE", 2, "SINGLE");
+	private static final int RELATION_TYPE_COUPLE = 1;
+	private static final Map<Integer, String> RELATION_TYPES = Map.of(0, "OTHER", RELATION_TYPE_COUPLE, "COUPLE", 2, "SINGLE");
 
 	private NormberakningMapper() {}
 
@@ -205,6 +207,7 @@ final class NormberakningMapper {
 		final var calculation = forEdit.path("calculation");
 		final var incomeTypes = forEdit.path("incomeTypes");
 		final var jobStimulus = isTrue(calculation, "hasApplicantJobStimuli");
+		final var coApplicantJobStimulus = isTrue(calculation, "hasCoApplicantJobStimuli");
 		final var periodStart = textOrEmpty(calculation, FIELD_START_DATE);
 		final var persons = objects(calculation, PERSONS);
 		final var incomes = objects(calculation, INCOMES).stream().filter(CalculationRowChanges::keepsIncome).toList();
@@ -222,7 +225,9 @@ final class NormberakningMapper {
 			.withHouseholdSize(integerOrNull(calculation, "householdSize"))
 			.withPersons(IntStream.range(0, persons.size()).mapToObj(index -> toLifecarePersonRow(persons.get(index), index, periodStart)).toList())
 			.withApplicantJobStimulus(jobStimulus)
-			.withIncomes(IntStream.range(0, incomes.size()).mapToObj(index -> toLifecareIncomeRow(incomes.get(index), index, incomeTypes, jobStimulus)).toList())
+			.withCoapplicantJobStimulus(coApplicantJobStimulus)
+			.withIncomes(IntStream.range(0, incomes.size()).mapToObj(index -> toLifecareIncomeRow(incomes.get(index), index, incomeTypes, jobStimulus, coApplicantJobStimulus))
+				.toList())
 			.withExpenses(toLifecareExpenseRows(objects(calculation, EXPENSES), BUCKET_EXPENSE))
 			.withSpecialExpenses(toLifecareExpenseRows(objects(calculation, SPECIAL_EXPENSES), BUCKET_SPECIAL_EXPENSE))
 			.withNormRows(objects(calculation.path("norm"), "rows").stream()
@@ -264,11 +269,16 @@ final class NormberakningMapper {
 
 	/**
 	 * The member's role the way careM's draft names it. Lifecare has no roles on a beräkning: the first member is the
-	 * applicant, a bonusbarn counts as an umgängesbarn, and anyone else under 18 at the start of the period as a barn.
+	 * applicant, another member Lifecare has as half of the couple (relationType 1, which it gives the medsökande on save,
+	 * capture 2026-09-30) the medsökande, a bonusbarn counts as an umgängesbarn, and anyone else under 18 at the start of
+	 * the period as a barn.
 	 */
 	static String roleOf(final JsonNode person, final int index, final String periodStart) {
 		if (index == 0) {
 			return CalculationDraftFill.ROLE_APPLICANT;
+		}
+		if (integer(person, "relationType") == RELATION_TYPE_COUPLE) {
+			return CalculationDraftFill.ROLE_CO_APPLICANT;
 		}
 		if (isTrue(person, "isBonusChild")) {
 			return ROLE_VISITATION_CHILD;
@@ -299,11 +309,15 @@ final class NormberakningMapper {
 
 	/**
 	 * An income as the tab shows it. When the applicant has jobbstimulans in the period, an income it applies to is
-	 * entered as a gross (Brutto S) and Lifecare counts the amount (Belopp S) from it.
+	 * entered as a gross (Brutto S) and Lifecare counts the amount (Belopp S) from it; the same for the medsökande (Brutto
+	 * M, Belopp M) with the medsökande's own jobbstimulans.
 	 */
-	private static NormberakningIncomeRow toLifecareIncomeRow(final ObjectNode row, final int index, final JsonNode types, final boolean applicantHasJobStimulus) {
+	private static NormberakningIncomeRow toLifecareIncomeRow(final ObjectNode row, final int index, final JsonNode types, final boolean applicantHasJobStimulus,
+		final boolean coApplicantHasJobStimulus) {
 		final var applicant = decimalOf(enteredApplicantAmount(row, types));
-		final var jobStimulusApplies = applicantHasJobStimulus && typeOf(types, row.path(INCOME_CODE)).filter(type -> isTrue(type, "isJobStimulus")).isPresent();
+		final var coApplicant = decimalOf(enteredCoApplicantAmount(row, types));
+		final var jobStimulusType = typeOf(types, row.path(INCOME_CODE)).filter(type -> isTrue(type, "isJobStimulus")).isPresent();
+		final var jobStimulusApplies = applicantHasJobStimulus && jobStimulusType;
 		final var view = NormberakningIncomeRow.create()
 			.withId(idOf(row.path(INCOME_CODE)))
 			.withPosition(index)
@@ -313,12 +327,15 @@ final class NormberakningMapper {
 			.withApplicantCaseworkerAmount(applicant)
 			.withApplicantEffectiveAmount(applicant)
 			.withApplicantAmountDate(textOrNull(row, "applicantSearchDate"))
-			.withCoapplicantCaseworkerAmount(decimal(row, AMOUNT_CO_APPLICANT).orElse(null))
-			.withCoapplicantEffectiveAmount(decimal(row, AMOUNT_CO_APPLICANT).orElse(null))
+			.withCoapplicantCaseworkerAmount(coApplicant)
+			.withCoapplicantEffectiveAmount(coApplicant)
 			.withCoapplicantAmountDate(textOrNull(row, "coApplicantSearchDate"))
 			.withNote(textOrNull(row, "applicantNote"));
 		if (jobStimulusApplies) {
 			view.withApplicantJobStimulus(true).withApplicantCountedAmount(decimal(row, "amountApplicant").orElse(null));
+		}
+		if (coApplicantHasJobStimulus && jobStimulusType) {
+			view.withCoapplicantJobStimulus(true).withCoapplicantCountedAmount(decimal(row, AMOUNT_CO_APPLICANT).orElse(null));
 		}
 		return view;
 	}

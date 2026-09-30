@@ -133,6 +133,26 @@ class NormberakningMapperTest {
 		assertThat(view.getIncomes().get(0).getApplicantCountedAmount()).isEqualByComparingTo("3750");
 		assertThat(view.getIncomes().get(0).getNote()).isEqualTo("lön");
 		assertThat(view.getIncomes().get(1).getApplicantJobStimulus()).isNull();
+		assertThat(view.getCoapplicantJobStimulus()).isFalse();
+		assertThat(view.getIncomes().get(0).getCoapplicantJobStimulus()).isNull();
+	}
+
+	@Test
+	void showsTheMedsokandesGrossAndCountedAmount() {
+		// Beräkning 51 on Jeppson Test, insats 24, as GetCalculationForEdit gave it back (capture 2026-09-30).
+		final var saved = calculation(",\"hasApplicantJobStimuli\":true,\"hasCoApplicantJobStimuli\":true");
+		saved.set("calculationIncomes", tree("""
+			[{"incomeCode":1,"incomeType":"Lön efter skatt","amountApplicant":1500,"grossAmountApplicant":2000,"amountCoApplicant":3750,"grossAmountCoApplicant":5000}]"""));
+
+		final var view = NormberakningMapper.toLifecareDraftView(forEdit(saved), null);
+
+		assertThat(view.getCoapplicantJobStimulus()).isTrue();
+		final var income = view.getIncomes().getFirst();
+		assertThat(income.getCoapplicantCaseworkerAmount()).isEqualByComparingTo("5000");
+		assertThat(income.getCoapplicantEffectiveAmount()).isEqualByComparingTo("5000");
+		assertThat(income.getCoapplicantJobStimulus()).isTrue();
+		assertThat(income.getCoapplicantCountedAmount()).isEqualByComparingTo("3750");
+		assertThat(income.getApplicantCountedAmount()).isEqualByComparingTo("1500");
 	}
 
 	@Test
@@ -169,6 +189,14 @@ class NormberakningMapperTest {
 		assertThat(persons.getFirst().getCaseworkerDays()).isEqualTo(10);
 		assertThat(persons.getFirst().getEffectiveDays()).isEqualTo(10);
 		assertThat(NormberakningMapper.roleOf(json("{\"birthDate\":\"2014-12-01\"}"), 1, "")).isNull();
+	}
+
+	@Test
+	void namesTheOtherHalfOfTheCoupleTheMedsokande() {
+		// Lifecare gives the medsökande relationType 1 on save, like the sökande (beräkning 51, capture 2026-09-30).
+		assertThat(NormberakningMapper.roleOf(json("{\"relationType\":1,\"birthDate\":\"2012-05-05\"}"), 1, "2026-10-01")).isEqualTo("CO_APPLICANT");
+		assertThat(NormberakningMapper.roleOf(json("{\"relationType\":1}"), 0, "")).isEqualTo("APPLICANT");
+		assertThat(NormberakningMapper.roleOf(json("{\"relationType\":0}"), 1, "")).isNull();
 	}
 
 	@Test

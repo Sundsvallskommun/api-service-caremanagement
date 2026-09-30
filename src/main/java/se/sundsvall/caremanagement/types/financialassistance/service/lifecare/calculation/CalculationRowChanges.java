@@ -38,6 +38,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.AMOUNT_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.DEVIATION_DAYS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.GROSS_AMOUNT_APPLICANT;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.GROSS_AMOUNT_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.HAS_CUSTOM_HOUSEHOLD_SIZE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.HOUSEHOLD_SIZE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationPlacement.INCLUDED;
@@ -115,11 +116,27 @@ final class CalculationRowChanges {
 	}
 
 	/**
-	 * Puts the gross back as the applicant's amount on every income jobbstimulans applies to, so a change starts from what
-	 * the caseworker entered and jobbstimulans is not taken off twice.
+	 * The co-applicant's amount as the caseworker entered it (Brutto M), as {@link #enteredApplicantAmount} for the
+	 * applicant.
+	 */
+	static JsonNode enteredCoApplicantAmount(final JsonNode row, final JsonNode types) {
+		final var gross = number(row, GROSS_AMOUNT_CO_APPLICANT);
+		final var jobStimulus = typeOf(types, row.path(INCOME_CODE)).filter(type -> truthy(type, "isJobStimulus")).isPresent();
+		if (jobStimulus && gross > 0) {
+			return row.path(GROSS_AMOUNT_CO_APPLICANT);
+		}
+		return row.path(AMOUNT_CO_APPLICANT);
+	}
+
+	/**
+	 * Puts the gross back as each side's amount on every income jobbstimulans applies to, so a change starts from what the
+	 * caseworker entered and jobbstimulans is not taken off twice.
 	 */
 	static ObjectNode withEnteredIncomes(final ObjectNode calculation, final JsonNode types) {
-		objects(calculation, INCOMES).forEach(row -> CalculationJson.setOrRemove(row, AMOUNT_APPLICANT, enteredApplicantAmount(row, types).deepCopy()));
+		objects(calculation, INCOMES).forEach(row -> {
+			CalculationJson.setOrRemove(row, AMOUNT_APPLICANT, enteredApplicantAmount(row, types).deepCopy());
+			CalculationJson.setOrRemove(row, AMOUNT_CO_APPLICANT, enteredCoApplicantAmount(row, types).deepCopy());
+		});
 		return calculation;
 	}
 
@@ -176,14 +193,15 @@ final class CalculationRowChanges {
 	}
 
 	/**
-	 * The income fields the caseworker sets. The tab always sends the whole row, so a field left out is empty. The
-	 * applicant's amount goes as both counted and gross; jobbstimulans counts it down afterwards.
+	 * The income fields the caseworker sets. The tab always sends the whole row, so a field left out is empty. Each side's
+	 * amount goes as both counted and gross; jobbstimulans counts it down afterwards.
 	 */
 	private static void applyIncomeFields(final ObjectNode row, final NormberakningRowInput input) {
 		row.set(AMOUNT_APPLICANT, amountNode(input.getApplicantCaseworkerAmount()));
 		row.set(GROSS_AMOUNT_APPLICANT, amountNode(input.getApplicantCaseworkerAmount()));
 		row.put("applicantSearchDate", lifecareDay(input.getApplicantAmountDate()));
 		row.set(AMOUNT_CO_APPLICANT, amountNode(input.getCoapplicantCaseworkerAmount()));
+		row.set(GROSS_AMOUNT_CO_APPLICANT, amountNode(input.getCoapplicantCaseworkerAmount()));
 		row.put("coApplicantSearchDate", lifecareDay(input.getCoapplicantAmountDate()));
 		row.put("applicantNote", input.getNote());
 	}

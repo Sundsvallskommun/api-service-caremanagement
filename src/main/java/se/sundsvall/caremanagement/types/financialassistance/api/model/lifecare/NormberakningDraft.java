@@ -90,6 +90,9 @@ public class NormberakningDraft {
 	@Schema(description = "Whether the applicant has jobbstimulans in the period (Lifecare only)")
 	private Boolean applicantJobStimulus;
 
+	@Schema(description = "Whether the co-applicant (medsökande) has jobbstimulans in the period (Lifecare only)")
+	private Boolean coapplicantJobStimulus;
+
 	@ArraySchema(schema = @Schema(description = "The norm rows a member can be placed on (Lifecare only)"))
 	private List<NormberakningNormRow> normRows;
 
@@ -422,6 +425,19 @@ public class NormberakningDraft {
 		return this;
 	}
 
+	public Boolean getCoapplicantJobStimulus() {
+		return coapplicantJobStimulus;
+	}
+
+	public void setCoapplicantJobStimulus(final Boolean coapplicantJobStimulus) {
+		this.coapplicantJobStimulus = coapplicantJobStimulus;
+	}
+
+	public NormberakningDraft withCoapplicantJobStimulus(final Boolean coapplicantJobStimulus) {
+		this.coapplicantJobStimulus = coapplicantJobStimulus;
+		return this;
+	}
+
 	public List<NormberakningNormRow> getNormRows() {
 		return normRows;
 	}
@@ -446,13 +462,14 @@ public class NormberakningDraft {
 				hasCustomHouseholdSize, that.hasCustomHouseholdSize) && Objects.equals(householdSize, that.householdSize) && Objects.equals(persons, that.persons) && Objects.equals(incomes, that.incomes) && Objects.equals(expenses, that.expenses)
 			&& Objects.equals(specialExpenses, that.specialExpenses) && Objects.equals(incomeSum, that.incomeSum) && Objects.equals(expenseSum, that.expenseSum) && Objects.equals(specialExpenseSum, that.specialExpenseSum) && Objects.equals(created,
 				that.created) && Objects.equals(updated, that.updated) && Objects.equals(source, that.source) && Objects.equals(finalized, that.finalized) && Objects.equals(amountForHouseholdSize, that.amountForHouseholdSize) && Objects.equals(
-					commonHouseholdCost, that.commonHouseholdCost) && Objects.equals(familyMembers, that.familyMembers) && Objects.equals(applicantJobStimulus, that.applicantJobStimulus) && Objects.equals(normRows, that.normRows);
+					commonHouseholdCost, that.commonHouseholdCost) && Objects.equals(familyMembers, that.familyMembers) && Objects.equals(applicantJobStimulus, that.applicantJobStimulus)
+			&& Objects.equals(coapplicantJobStimulus, that.coapplicantJobStimulus) && Objects.equals(normRows, that.normRows);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(errandId, applicationMonth, normId, normType, normTypeDisplayNames, calculationFromDate, calculationToDate, calculationDate, hasCustomHouseholdSize, householdSize, persons, incomes, expenses, specialExpenses, incomeSum,
-			expenseSum, specialExpenseSum, created, updated, source, finalized, amountForHouseholdSize, commonHouseholdCost, familyMembers, applicantJobStimulus, normRows);
+			expenseSum, specialExpenseSum, created, updated, source, finalized, amountForHouseholdSize, commonHouseholdCost, familyMembers, applicantJobStimulus, coapplicantJobStimulus, normRows);
 	}
 
 	@Override
@@ -483,6 +500,7 @@ public class NormberakningDraft {
 			", commonHouseholdCost=" + commonHouseholdCost +
 			", familyMembers=" + familyMembers +
 			", applicantJobStimulus=" + applicantJobStimulus +
+			", coapplicantJobStimulus=" + coapplicantJobStimulus +
 			", normRows=" + normRows +
 			'}';
 	}
