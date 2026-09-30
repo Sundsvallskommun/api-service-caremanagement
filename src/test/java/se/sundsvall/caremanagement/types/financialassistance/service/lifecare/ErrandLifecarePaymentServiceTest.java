@@ -198,8 +198,9 @@ class ErrandLifecarePaymentServiceTest {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
 		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
 		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
+		final var payee = new LifecarePayeeRequest("Kontoinnehavare B", null, 14, null, "22222222");
 
-		assertThatThrownBy(() -> service.createPayee(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecarePayeeRequest("Kontoinnehavare B", null, 14, null, "22222222")))
+		assertThatThrownBy(() -> service.createPayee(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payee))
 			.isInstanceOf(IllegalStateException.class);
 		verify(paymentApi, never()).createPayee(any());
 	}

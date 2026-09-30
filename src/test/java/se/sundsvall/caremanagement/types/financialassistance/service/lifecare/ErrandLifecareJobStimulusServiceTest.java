@@ -90,8 +90,9 @@ class ErrandLifecareJobStimulusServiceTest {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
 		when(jobStimulusApi.readForService(1)).thenReturn(json(LifecareJobStimulusMapperTest.CURRENT));
 		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
+		final var request = new LifecareJobStimulusPeriodRequest("2028-01-15", "2028-12-31");
 
-		assertThatThrownBy(() -> service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareJobStimulusPeriodRequest("2028-01-15", "2028-12-31")))
+		assertThatThrownBy(() -> service.addPeriod(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request))
 			.isInstanceOf(IllegalStateException.class);
 		verify(jobStimulusApi, never()).save(any());
 	}

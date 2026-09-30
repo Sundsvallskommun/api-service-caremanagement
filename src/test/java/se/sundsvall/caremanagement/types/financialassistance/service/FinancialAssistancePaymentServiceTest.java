@@ -217,7 +217,7 @@ class FinancialAssistancePaymentServiceTest {
 
 	@Test
 	void paymentsOnTheErrandsInsatsAreFoundInLifecareAndLinkedOncePaid() {
-		final var entity = unlinkedErrand(LocalDate.of(2026, SEPTEMBER, 21));
+		unlinkedErrand(LocalDate.of(2026, SEPTEMBER, 21));
 		when(paymentStatusServiceMock.registeredPayments(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, MAY, 1), LocalDate.of(2026, OCTOBER, 23))).thenReturn(List.of(
 			new LifecarePayment("101", 7700, "2026-06", "2026-06-25"),
 			new LifecarePayment("102", 7700, "2026-06, 2026-07", "2026-06-26"),
@@ -316,7 +316,7 @@ class FinancialAssistancePaymentServiceTest {
 
 	@Test
 	void paymentsOnTheInsatsAreReadUpToTheEndOfAnApplicationMonthLaterThanTheWindow() {
-		final var entity = unlinkedErrand(LocalDate.of(2026, SEPTEMBER, 21));
+		unlinkedErrand(LocalDate.of(2026, SEPTEMBER, 21));
 		final var request = errandRequest().withApplicationMonth("2026-12");
 		when(paymentStatusServiceMock.registeredPayments(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, NOVEMBER, 1), LocalDate.of(2026, DECEMBER, 31)))
 			.thenReturn(List.of(new LifecarePayment("101", 7700, "2026-12", "2026-11-25")));

@@ -37,6 +37,9 @@ public final class SsbtekPaymentViewFields {
 	/** A period as either agency writes it. */
 	private static final List<String> PERIOD = List.of("fran", "till", "from", "tom");
 
+	private static final String NETTOBELOPP = "nettobelopp";
+	private static final String BRUTTOBELOPP = "bruttobelopp";
+
 	/**
 	 * A delförmån of one of Försäkringskassan's payments (ssbtek-fk-payments.ts, toPart): its förmån and beloppstyp, its
 	 * period, extent as a fraction, hours and days, and its amounts.
@@ -46,8 +49,8 @@ public final class SsbtekPaymentViewFields {
 		described("forman"),
 		described("beloppstyp"),
 		List.of("omfattning.taljare", "omfattning.namnare", "timmar", "dagar"),
-		amount("nettobelopp"),
-		amount("bruttobelopp"),
+		amount(NETTOBELOPP),
+		amount(BRUTTOBELOPP),
 		amount("avdragsbelopp"),
 		amount("skattebelopp"));
 
@@ -60,8 +63,8 @@ public final class SsbtekPaymentViewFields {
 		described("typ"),
 		described("formansfamilj"),
 		under("period", PERIOD),
-		amount("nettobelopp"),
-		amount("bruttobelopp"),
+		amount(NETTOBELOPP),
+		amount(BRUTTOBELOPP),
 		amount("avdragsbelopp"),
 		amount("skattebelopp"),
 		under("utbetalningsdetalj", FK_DETAIL));
@@ -73,7 +76,7 @@ public final class SsbtekPaymentViewFields {
 	 * names the paying agency.
 	 */
 	private static final List<String> PM_PAYMENT = concat(
-		List.of("utbetalningsdatum", "nettobelopp", "bruttobelopp"),
+		List.of("utbetalningsdatum", NETTOBELOPP, BRUTTOBELOPP),
 		under("utbetalningsperiod", PERIOD),
 		under("avdrag", concat(List.of("belopp", "avdragstyp.kod"), described("avdragstyp"))),
 		under("utbetalningsrader", concat(
@@ -90,7 +93,7 @@ public final class SsbtekPaymentViewFields {
 	 * payments (both under {@code fk}), and the a-kassor's payments (under {@code so}). Add a screen's paths as a new
 	 * group here.
 	 */
-	public static final List<String> PATHS = concat(
+	static final List<String> PATHS = concat(
 		under("fk.formansinformation.utbetalningsuppgift", FK_PAYMENT),
 		under("fk.formansinformation.preliminarautbetalningar", FK_PAYMENT),
 		under("fk.utbetalningar", PM_PAYMENT),
