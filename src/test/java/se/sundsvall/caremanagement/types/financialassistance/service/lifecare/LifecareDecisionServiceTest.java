@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionProposal;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionReason;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionSaveRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionType;
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -36,6 +38,7 @@ import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapperTest.PROPOSAL_FROM_FINAL_CALCULATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapperTest.SAVED;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapperTest.tree;
 
@@ -84,6 +87,12 @@ class LifecareDecisionServiceTest {
 
 	private static LifecareErrand errand(final Integer decisionId) {
 		return new LifecareErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 1, null, decisionId, null, 2026, 9);
+	}
+
+	private LifecareErrand loadedWithCalculation(final Integer decisionId) {
+		final var errand = new LifecareErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 1, 25, decisionId, null, 2026, 9);
+		when(errandServiceMock.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(errand);
+		return errand;
 	}
 
 	private LifecareErrand loaded(final Integer decisionId) {
@@ -384,5 +393,89 @@ class LifecareDecisionServiceTest {
 		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Hämtade beslutet som PDF från Lifecare", "98");
 
 		assertThatThrownBy(() -> service.pdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void proposesNothingWithoutANormberakningAndAsksLifecareNothing() {
+		loaded(null);
+
+		assertThat(service.proposal(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareDecisionProposal(null, false, null, null, null));
+		verifyNoInteractions(lifecareMock, accessRecorderMock);
+	}
+
+	@Test
+	void proposesThePeriodAndAmountOfAFinalNormberakningAndLogsTheRead() {
+		final var errand = loadedWithCalculation(null);
+		when(lifecareMock.readProposal(1, 25)).thenReturn(tree(PROPOSAL_FROM_FINAL_CALCULATION));
+
+		assertThat(service.proposal(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.isEqualTo(new LifecareDecisionProposal(25, true, new BigDecimal("2068"), "2026-09-01", "2026-09-30"));
+		verify(accessRecorderMock).read(errand, "DECISION", "Läste beslutsunderlag från normberäkningen i Lifecare", "25");
+	}
+
+	@Test
+	void proposesNoAmountFromAPreliminaryNormberakning() {
+		loadedWithCalculation(null);
+		when(lifecareMock.readProposal(1, 25)).thenReturn(tree(PROPOSAL));
+
+		assertThat(service.proposal(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareDecisionProposal(25, false, null, null, null));
+	}
+
+	@Test
+	void servesNoProposalWhoseReadCouldNotBeLogged() {
+		loadedWithCalculation(null);
+		when(lifecareMock.readProposal(1, 25)).thenReturn(tree(PROPOSAL_FROM_FINAL_CALCULATION));
+		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(any(), anyString(), anyString(), anyString());
+
+		assertThatThrownBy(() -> service.proposal(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void createsTheBeslutFromTheNormberakningWhenTheCaseworkerLeavesAmountAndPeriodOut() {
+		final var errand = loadedWithCalculation(null);
+		caseworker();
+		when(lifecareMock.readProposal(1, 25)).thenReturn(tree(PROPOSAL_FROM_FINAL_CALCULATION));
+		when(lifecareMock.create(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 133}"));
+		when(lifecareMock.readDecision(133)).thenReturn(tree(SAVED));
+
+		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareDecisionSaveRequest(153, null, null, null, null, 3, "<p>Beslut</p>", null));
+
+		final var body = bodyCaptor.getValue();
+		assertThat(body.path("amount").asInt()).isEqualTo(2068);
+		assertThat(body.path("fromDate").stringValue()).isEqualTo("2026-09-01");
+		assertThat(body.path("toDate").stringValue()).isEqualTo("2026-09-30");
+		verify(lifecareMock, never()).readProposal(anyInt());
+		verify(accessRecorderMock).written(errand, "CREATE", "DECISION", "Registrerade beslutet i Lifecare, från normberäkning 25", "133");
+	}
+
+	@Test
+	void keepsTheCaseworkersAmountAndLogsThatItDiffersFromTheNormberakning() {
+		final var errand = loadedWithCalculation(133);
+		caseworker();
+		final var saved = (ObjectNode) tree(SAVED);
+		saved.put("decisionId", 133).put("amount", 2068);
+		when(lifecareMock.readProposal(1, 25)).thenReturn(tree(PROPOSAL_FROM_FINAL_CALCULATION));
+		when(lifecareMock.readDecision(133)).thenReturn(saved);
+		when(lifecareMock.update(eq(133), bodyCaptor.capture())).thenReturn(saved);
+
+		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
+			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("2000"), 3, "<p>Beslut</p>", false));
+
+		assertThat(bodyCaptor.getValue().path("amount").asInt()).isEqualTo(2000);
+		verify(accessRecorderMock).written(errand, "UPDATE", "DECISION", "Ändrade beslutet i Lifecare, från normberäkning 25 (belopp 2000 i stället för normberäkningens 2068)", "133");
+	}
+
+	@Test
+	void savesAsBeforeWhenTheNormberakningIsNotFinal() {
+		final var errand = loadedWithCalculation(null);
+		caseworker();
+		when(lifecareMock.readProposal(1, 25)).thenReturn(tree(PROPOSAL));
+		when(lifecareMock.create(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 98}"));
+		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
+
+		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL);
+
+		assertThat(bodyCaptor.getValue().path("amount").asInt()).isEqualTo(3000);
+		verify(accessRecorderMock).written(errand, "CREATE", "DECISION", "Registrerade beslutet i Lifecare", "98");
 	}
 }

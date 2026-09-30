@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionProposal;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionReason;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionSaveRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionType;
@@ -86,7 +87,10 @@ class FinancialAssistanceLifecareDecisionResource {
 	@Operation(summary = "Save the errand's beslut in Lifecare - created the first time, changed after that",
 		description = """
 			Writes the beslut to Lifecare: Decision/Create the first time, after which the errand is linked to it \
-			(lifecareDecisionId) in the same call, and Decision/Update of that same beslut every time after. The \
+			(lifecareDecisionId) in the same call, and Decision/Update of that same beslut every time after. With a \
+			normberäkning linked (lifecareCalculationId) the underlag is read with it, and an amount or period left out comes \
+			from it when it is saved as final (see the proposal route); the access log records the normberäkning and an \
+			amount that differs from it. The \
 			beslutsfattare is the caller (X-Sent-By), who must be one of Lifecare's beslutsfattare for the insats. Refused \
 			with 422, worded for the caseworker, when the beslutstyp is not active on the insats or cannot be registered from \
 			careM, the household has a medsökande, the caller is not a beslutsfattare, a period the beslutstyp requires is \
@@ -115,6 +119,32 @@ class FinancialAssistanceLifecareDecisionResource {
 		@Valid @NotNull @RequestBody final LifecareDecisionSaveRequest request) {
 
 		return ok(service.save(municipalityId, namespace, errandId, request));
+	}
+
+	@GetMapping(path = "/{errandId}/lifecare/decision/proposal", produces = APPLICATION_JSON_VALUE)
+	@Operation(summary = "Read what a new beslut gets from the errand's normberäkning in Lifecare",
+		description = """
+			Lifecare's underlag for a new beslut read with the errand's normberäkning (lifecareCalculationId), as Lifecare's \
+			calculation view reads it for Besluta: the normberäkning's result (TotalSum, without sign) as amount, and its \
+			period. Lifecare fills them in only when the normberäkning is saved as final (prefilled). Saving the beslut with \
+			amount or period left out takes them from here; a value the caseworker gives wins. Lifecare keeps no link \
+			between the beslut and the normberäkning, so compare the amounts here. Without a linked normberäkning nothing is \
+			read from Lifecare and calculationId is absent. The read is logged in the errand's Lifecare access log.""",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
+			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),
+			@ApiResponse(responseCode = "409",
+				description = "Conflict - the errand has no Lifecare insats yet",
+				content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(
+						implementation = Problem.class)))
+		})
+	ResponseEntity<LifecareDecisionProposal> readDecisionProposal(
+		@Parameter(name = "municipalityId", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
+		@Parameter(name = "namespace", example = "FINANCIAL_ASSISTANCE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Parameter(name = "errandId") @ValidUuid @PathVariable final String errandId) {
+
+		return ok(service.proposal(municipalityId, namespace, errandId));
 	}
 
 	@GetMapping(path = "/{errandId}/lifecare/decision/types", produces = APPLICATION_JSON_VALUE)

@@ -1,5 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -9,6 +11,7 @@ import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebErrors;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionProposal;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionReason;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionSaveRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionType;
@@ -24,6 +27,7 @@ import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionBodies.ERROR_CO_APPLICANT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionBodies.buildCreate;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionBodies.buildUpdate;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapper.toPrefill;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapper.toReasons;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapper.toTypes;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionMapper.toView;
@@ -98,6 +102,30 @@ public class LifecareDecisionService {
 	}
 
 	/**
+	 * What a new beslut gets from the errand's normberäkning: Lifecare's own underlag read with it, as its calculation
+	 * view reads it for "Besluta". Amount and period are there only when the normberäkning is saved as final. Lifecare
+	 * keeps no link between a beslut and a normberäkning, so this is how Drakel shows the amount before Spara and whether
+	 * the caseworker's differs.
+	 *
+	 * @param  municipalityId the municipality
+	 * @param  namespace      the namespace
+	 * @param  errandId       the errand
+	 * @return                the proposal; without calculationId when the errand has no normberäkning linked
+	 */
+	public LifecareDecisionProposal proposal(final String municipalityId, final String namespace, final String errandId) {
+		final var errand = errandService.load(municipalityId, namespace, errandId);
+		final var serviceId = errand.requireServiceId();
+		return errand.calculation().map(calculationId -> {
+			final var proposal = lifecare.readProposal(serviceId, calculationId);
+			accessRecorder.read(errand, TARGET_DECISION, "Läste beslutsunderlag från normberäkningen i Lifecare", String.valueOf(calculationId));
+			return toPrefill(proposal, calculationId)
+				.map(prefill -> new LifecareDecisionProposal(calculationId, true, prefill.amount(), prefill.periodFrom().toString(), Optional.ofNullable(prefill.periodTo()).map(
+					LocalDate::toString).orElse(null)))
+				.orElseGet(() -> new LifecareDecisionProposal(calculationId, false, null, null, null));
+		}).orElseGet(() -> new LifecareDecisionProposal(null, false, null, null, null));
+	}
+
+	/**
 	 * The orsaker a beslut of the beslutstyp can carry: Lifecare's catalogue, which belongs to the type, not a person.
 	 *
 	 * @param  decisionCode the beslutstyp
@@ -111,6 +139,14 @@ public class LifecareDecisionService {
 	 * Saves the beslut in Lifecare: creates it the first time and links the errand to it, changes the same beslut every
 	 * time after. The beslutsfattare is the caseworker saving it (X-Sent-By), or the configured test decision maker.
 	 *
+	 * <p>
+	 * With a normberäkning linked to the errand the underlag is read with it, as Lifecare's calculation view reads it.
+	 * An amount or period the caseworker leaves out then comes from the normberäkning (when it is saved as final); one
+	 * the caseworker gives always wins, since Lifecare lets the beslut differ from the normberäkning. Lifecare keeps no
+	 * link between the two, so the access log records which normberäkning the beslut was made from and any amount that
+	 * differs from it.
+	 * </p>
+	 *
 	 * @param  municipalityId the municipality
 	 * @param  namespace      the namespace
 	 * @param  errandId       the errand
@@ -120,26 +156,30 @@ public class LifecareDecisionService {
 	public LifecareDecisionView save(final String municipalityId, final String namespace, final String errandId, final LifecareDecisionSaveRequest request) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var serviceId = errand.requireServiceId();
-		final var input = toInput(request);
+		final var decisionMaker = decisionMaker();
 		if (errandService.coApplicantPresent(errand)) {
 			throw Problem.valueOf(UNPROCESSABLE_CONTENT, ERROR_CO_APPLICANT);
 		}
 
-		final var proposal = lifecare.readProposal(serviceId);
+		final var calculationId = errand.calculation();
+		final var proposal = calculationId.map(id -> lifecare.readProposal(serviceId, id)).orElseGet(() -> lifecare.readProposal(serviceId));
 		final var saved = errand.decision().map(lifecare::readDecision);
 		accessRecorder.read(errand, TARGET_DECISION, "Läste beslutsunderlag i Lifecare");
+		final var prefill = calculationId.flatMap(id -> toPrefill(proposal, id));
+		final var input = toInput(prefill.map(basis -> basis.fillIn(request)).orElse(request), decisionMaker);
+		final var basisDescription = prefill.map(basis -> describeBasis(basis, input)).orElse("");
 
 		if (saved.isPresent()) {
 			final var decisionId = errand.decisionId();
 			final var updated = lifecare.update(decisionId, buildUpdate(saved.get(), proposal, input));
 			accessRecorder.written(errand, LifecareAccessEntry.UPDATE, TARGET_DECISION, describeWrite(input, "Ändrade och skrivskyddade beslutet i Lifecare",
-				"Ändrade beslutet i Lifecare"), String.valueOf(decisionId));
+				"Ändrade beslutet i Lifecare") + basisDescription, String.valueOf(decisionId));
 			return toView(updated);
 		}
 
 		final var created = createInLifecare(serviceId, buildCreate(proposal, input));
 		accessRecorder.written(errand, LifecareAccessEntry.CREATE, TARGET_DECISION, describeWrite(input, "Registrerade och skrivskyddade beslutet i Lifecare",
-			"Registrerade beslutet i Lifecare"), String.valueOf(created));
+			"Registrerade beslutet i Lifecare") + basisDescription, String.valueOf(created));
 		link(errand, created);
 		return toView(lifecare.readDecision(created));
 	}
@@ -160,9 +200,22 @@ public class LifecareDecisionService {
 		return pdf;
 	}
 
-	private LifecareDecisionInput toInput(final LifecareDecisionSaveRequest request) {
+	private static LifecareDecisionInput toInput(final LifecareDecisionSaveRequest request, final String decisionMaker) {
 		return new LifecareDecisionInput(request.decisionCode(), request.date(), request.periodFrom(), request.periodTo(), request.amount(),
-			request.reasonCode(), request.decisionMessage(), Boolean.TRUE.equals(request.writeProtect()), decisionMaker());
+			request.reasonCode(), request.decisionMessage(), Boolean.TRUE.equals(request.writeProtect()), decisionMaker);
+	}
+
+	/**
+	 * Which normberäkning the beslut was made from, and the amount when the caseworker's differs from it. Lifecare keeps
+	 * neither, so the access log does.
+	 */
+	private static String describeBasis(final LifecareDecisionPrefill basis, final LifecareDecisionInput input) {
+		final var from = ", från normberäkning %d".formatted(basis.calculationId());
+		final var amount = Optional.ofNullable(input.amount()).orElse(BigDecimal.ZERO);
+		if (amount.compareTo(basis.amount()) == 0) {
+			return from;
+		}
+		return from + " (belopp %s i stället för normberäkningens %s)".formatted(amount.toPlainString(), basis.amount().toPlainString());
 	}
 
 	/** The configured test decision maker when there is one, otherwise the caseworker saving the beslut. */
