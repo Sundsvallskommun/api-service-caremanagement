@@ -68,7 +68,7 @@ class FinancialAssistanceFinalizeResource {
 			payments (lifecarePaymentIds) is refused with 409. A decision on a normberäkning linked as lifecareCalculationId \
 			purges careM's calculation draft: the decided calculation is Lifecare's, and the draft read answers 404 from then \
 			on. Does not send anything to the applicant: the response echoes the communication channels for the frontend to \
-			act on. Requires the errand in AWAITING_DECISION and an identified caller (X-Sent-By); a second finalize is \
+			act on. Requires the errand in AWAITING_DECISION or SUPPLEMENT_REQUESTED and an identified caller (X-Sent-By); a second finalize is \
 			rejected with 409. A process that could not be reached is reported in the response, not as an error.""",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
