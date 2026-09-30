@@ -27,6 +27,8 @@ final class ParameterQueryForm {
 	static final String FORM_ID = "myForm";
 	static final String TOKEN_FIELD = "X-LEGACY-TOKEN";
 
+	private static final String VALUE = "value";
+
 	private static final List<String> IGNORED_TYPES = List.of("submit", "button", "reset", "image", "file");
 	private static final List<String> CHECKABLE_TYPES = List.of("checkbox", "radio");
 
@@ -88,21 +90,21 @@ final class ParameterQueryForm {
 		if (CHECKABLE_TYPES.contains(type)) {
 			return Optional.of(element).filter(checkable -> checkable.hasAttr("checked")).map(ParameterQueryForm::checkedValue);
 		}
-		return Optional.of(element.attr("value"));
+		return Optional.of(element.attr(VALUE));
 	}
 
 	/** An option without a value is submitted with its text. */
 	private static String optionValue(final Element option) {
-		if (option.hasAttr("value")) {
-			return option.attr("value");
+		if (option.hasAttr(VALUE)) {
+			return option.attr(VALUE);
 		}
 		return option.text();
 	}
 
 	/** A checked box without a value is submitted as on. */
 	private static String checkedValue(final Element checkable) {
-		if (checkable.hasAttr("value")) {
-			return checkable.attr("value");
+		if (checkable.hasAttr(VALUE)) {
+			return checkable.attr(VALUE);
 		}
 		return "on";
 	}
