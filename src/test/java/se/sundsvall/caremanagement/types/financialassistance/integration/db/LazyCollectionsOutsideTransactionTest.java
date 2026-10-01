@@ -63,10 +63,10 @@ class LazyCollectionsOutsideTransactionTest {
 
 	@Test
 	void aPlainLookupLeavesTheCollectionsUnreadableOnceItsOwnTransactionHasEnded() {
-		final var entity = repository.findByErrandId(ERRAND_ID).orElseThrow();
+		final var paymentIds = repository.findByErrandId(ERRAND_ID).orElseThrow().getLifecarePaymentIds();
 
-		assertThat(Hibernate.isInitialized(entity.getLifecarePaymentIds())).isFalse();
-		assertThatThrownBy(() -> entity.getLifecarePaymentIds().size()).isInstanceOf(LazyInitializationException.class);
+		assertThat(Hibernate.isInitialized(paymentIds)).isFalse();
+		assertThatThrownBy(paymentIds::size).isInstanceOf(LazyInitializationException.class);
 	}
 
 	@Test
