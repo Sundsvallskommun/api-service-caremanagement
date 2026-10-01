@@ -38,6 +38,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -279,5 +280,30 @@ class ProcessServiceTest {
 			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
 			.hasMessage("Bad Request: No Operaton process definition found with name 'Unknown'");
 		verify(operatonClientMock, never()).getProcessInstances(any());
+	}
+
+	@Test
+	void hasRunningProcessForAnyDefinition() {
+		when(operatonClientMock.getProcessInstances(MUNICIPALITY_ID)).thenReturn(new ProcessInstancesResponse().processInstances(List.of(
+			new ProcessInstanceResponse().id("pi-1").processDefinitionId("the-key:3:abc").businessKey("errand-1"),
+			new ProcessInstanceResponse().id("pi-2").processDefinitionId("another-key:1:def"))));
+
+		assertThat(service.hasRunningProcess(MUNICIPALITY_ID, "errand-1")).isTrue();
+		assertThat(service.hasRunningProcess(MUNICIPALITY_ID, "errand-2")).isFalse();
+	}
+
+	@Test
+	void hasNoRunningProcessWhenTheEngineAnswersNothing() {
+		when(operatonClientMock.getProcessInstances(MUNICIPALITY_ID)).thenReturn(null);
+
+		assertThat(service.hasRunningProcess(MUNICIPALITY_ID, "errand-1")).isFalse();
+	}
+
+	@Test
+	void isNotFoundOnlyForA404() {
+		assertThat(ProcessService.isNotFound(Problem.valueOf(NOT_FOUND, "No process instance is waiting"))).isTrue();
+		assertThat(ProcessService.isNotFound(Problem.valueOf(BAD_GATEWAY, "engine"))).isFalse();
+		assertThat(ProcessService.isNotFound(new IllegalStateException("connection reset"))).isFalse();
+		assertThat(ProcessService.isNotFound(null)).isFalse();
 	}
 }

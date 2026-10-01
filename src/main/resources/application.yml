@@ -82,6 +82,17 @@ spring:
           lifecare-integrator:
             token-uri: ${INTEGRATION_LIFECARE_INTEGRATOR_TOKEN_URI:http://localhost/token}
 #========================================
+# Circuit breakers
+#========================================
+resilience4j:
+  circuitbreaker:
+    instances:
+      operaton:
+        base-config: default
+        # The engine's 404 ("no process instance is waiting") is an answer about one errand, not a failing engine.
+        record-failure-predicate: se.sundsvall.caremanagement.operaton.integration.configuration.OperatonCircuitBreakerFailures
+
+#========================================
 # Integration settings
 #========================================
 integration:

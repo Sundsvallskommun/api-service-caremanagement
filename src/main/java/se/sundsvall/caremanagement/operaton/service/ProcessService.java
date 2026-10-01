@@ -139,9 +139,33 @@ public class ProcessService {
 	 * reached its catch event yet, which passes with time.
 	 */
 	public static boolean isNothingToEnd(final String messageName, final Throwable failure) {
-		return MESSAGE_ERRAND_WITHDRAWN.equals(messageName)
-			&& failure instanceof final ThrowableProblem problem
-			&& NOT_FOUND.equals(problem.getStatus());
+		return MESSAGE_ERRAND_WITHDRAWN.equals(messageName) && isNotFound(failure);
+	}
+
+	/**
+	 * Whether a failed call was answered {@code 404}: for a correlation, that no instance waits for the message.
+	 *
+	 * @param  failure what the call threw
+	 * @return         true for a {@code 404}
+	 */
+	public static boolean isNotFound(final Throwable failure) {
+		return failure instanceof final ThrowableProblem problem && NOT_FOUND.equals(problem.getStatus());
+	}
+
+	/**
+	 * Whether any process instance runs for the errand, whatever its definition. Built on the same list of active
+	 * instances as {@link #activeBusinessKeys}, so a suspended or ended instance does not count. Throws whatever the
+	 * client throws when the engine cannot be reached; the caller must then treat the answer as unknown.
+	 *
+	 * @param  municipalityId the municipality
+	 * @param  businessKey    the errandId
+	 * @return                true when an instance runs for the errand
+	 */
+	public boolean hasRunningProcess(final String municipalityId, final String businessKey) {
+		return ofNullable(operatonClient.getProcessInstances(municipalityId))
+			.map(ProcessInstancesResponse::getProcessInstances)
+			.orElseGet(List::of).stream()
+			.anyMatch(instance -> businessKey.equals(instance.getBusinessKey()));
 	}
 
 	/**
