@@ -48,6 +48,16 @@ public final class FinancialAssistanceMapper {
 
 	private FinancialAssistanceMapper() {}
 
+	/**
+	 * A plain copy of one of the entity's string collections. They are lazy: handed on as they are, they would be read
+	 * only when the response is written, after the transaction that loaded them has ended.
+	 */
+	private static List<String> copyOf(final List<String> source) {
+		return ofNullable(source)
+			.map(ArrayList::new)
+			.orElse(null);
+	}
+
 	private static <S, T> List<T> mapList(final List<S> source, final Function<S, T> mapper) {
 		return ofNullable(source)
 			.map(list -> list.stream()
@@ -151,7 +161,7 @@ public final class FinancialAssistanceMapper {
 				.withPeriodMonth(e.getPeriodMonth())
 				.withPeriodYear(e.getPeriodYear())
 				.withPeriodChoice(e.getPeriodChoice())
-				.withNormType(e.getNormType())
+				.withNormType(copyOf(e.getNormType()))
 				.withOtherBenefitDescription(e.getOtherBenefitDescription())
 				.withLivelihoodDescription(e.getLivelihoodDescription())
 				.withHasChildrenUnder21(e.getHasChildrenUnder21())
@@ -172,7 +182,7 @@ public final class FinancialAssistanceMapper {
 				.withAttestedAt(e.getAttestedAt())
 				.withLifecareDecisionId(e.getLifecareDecisionId())
 				.withLifecareCalculationId(e.getLifecareCalculationId())
-				.withLifecarePaymentIds(e.getLifecarePaymentIds())
+				.withLifecarePaymentIds(copyOf(e.getLifecarePaymentIds()))
 				.withChildren(mapList(e.getChildren(), FinancialAssistanceMapper::toChild))
 				.withCosts(mapList(e.getCosts(), FinancialAssistanceMapper::toCost))
 				.withIncomes(mapList(e.getIncomes(), FinancialAssistanceMapper::toIncome))

@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -356,6 +357,28 @@ class FinancialAssistanceMapperTest {
 		assertThat(FinancialAssistanceMapper.toCommunicationChannels(FinancialAssistanceEntity.create())).isNull();
 		assertThat(FinancialAssistanceMapper.toCommunicationChannels(FinancialAssistanceEntity.create().withNotifyLetter(false)))
 			.isEqualTo(CommunicationChannels.create().withLetter(false));
+	}
+
+	@Test
+	void toDataCopiesTheLazyStringCollectionsInsteadOfHandingThemOn() {
+		final var normTypes = new ArrayList<>(List.of("NATIONAL_NORM"));
+		final var paymentIds = new ArrayList<>(List.of("p1", "p2"));
+		final var entity = FinancialAssistanceEntity.create().withNormType(normTypes).withLifecarePaymentIds(paymentIds);
+
+		final var data = FinancialAssistanceMapper.toData(entity);
+
+		// Handed on as they are, the entity's collections would only be read when the response is written, after the
+		// transaction that loaded them has ended.
+		assertThat(data.getNormType()).isEqualTo(normTypes).isNotSameAs(normTypes);
+		assertThat(data.getLifecarePaymentIds()).isEqualTo(paymentIds).isNotSameAs(paymentIds);
+	}
+
+	@Test
+	void toDataKeepsAbsentStringCollectionsAbsent() {
+		final var data = FinancialAssistanceMapper.toData(FinancialAssistanceEntity.create());
+
+		assertThat(data.getNormType()).isNull();
+		assertThat(data.getLifecarePaymentIds()).isNull();
 	}
 
 	@Test

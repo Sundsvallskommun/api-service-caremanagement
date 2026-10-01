@@ -55,7 +55,9 @@ public class LifecareErrandService {
 	 */
 	public LifecareErrand load(final String municipalityId, final String namespace, final String errandId) {
 		errandService.readErrand(municipalityId, namespace, errandId);
-		final var entity = financialAssistanceRepository.findByErrandId(errandId);
+		// The payment ids are read here, outside any transaction (the Lifecare calls that follow take seconds): fetched with
+		// the row.
+		final var entity = financialAssistanceRepository.findWithLifecarePaymentIdsByErrandId(errandId);
 		final var serviceId = lifecareServiceIdService.currentOrResolve(municipalityId, namespace, errandId);
 		return new LifecareErrand(municipalityId, namespace, errandId, serviceId,
 			entity.map(FinancialAssistanceEntity::getLifecareCalculationId).orElse(null),

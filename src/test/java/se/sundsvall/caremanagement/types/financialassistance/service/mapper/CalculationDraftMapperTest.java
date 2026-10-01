@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
@@ -112,6 +113,17 @@ class CalculationDraftMapperTest {
 
 		assertThat(CalculationDraftMapper.toExpenseRow(expense).getCostTypeDisplayName()).isEqualTo("Boendekostnad");
 		assertThat(CalculationDraftMapper.toPersonRow(person).getRoleDisplayName()).isEqualTo("Medsökande");
+	}
+
+	@Test
+	void theDraftCopiesTheLazyNormTypeCollectionInsteadOfHandingItOn() {
+		final var normTypes = new ArrayList<>(List.of("NATIONAL_NORM"));
+		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormType(normTypes);
+
+		// Handed on as it is, the entity's collection would only be read when the response is written, after the
+		// transaction that loaded it has ended.
+		assertThat(CalculationDraftMapper.toCalculationDraft(header, List.of(), List.of(), List.of()).getNormType()).isEqualTo(normTypes).isNotSameAs(normTypes);
+		assertThat(CalculationDraftMapper.toCalculationDraft(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID), List.of(), List.of(), List.of()).getNormType()).isNull();
 	}
 
 	@Test

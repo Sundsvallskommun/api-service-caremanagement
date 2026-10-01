@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -58,11 +59,12 @@ public final class CalculationDraftMapper {
 		final var persons = personEntities.stream().filter(Objects::nonNull)
 			.sorted(comparing(FaNormPersonEntity::getPosition, nullsLast(naturalOrder()))).map(CalculationDraftMapper::toPersonRow).toList();
 
+		// A copy, not the entity's lazy collection: the draft is written out after the transaction has ended.
 		return CalculationDraft.create()
 			.withErrandId(header.getErrandId())
 			.withApplicationMonth(header.getApplicationMonth())
 			.withNormId(header.getNormId())
-			.withNormType(header.getNormType())
+			.withNormType(ofNullable(header.getNormType()).map(ArrayList::new).orElse(null))
 			.withNormTypeDisplayNames(normTypeDisplayNames(header.getNormType()))
 			.withCalculationFromDate(header.getCalculationFromDate())
 			.withCalculationToDate(header.getCalculationToDate())

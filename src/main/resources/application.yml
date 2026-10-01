@@ -24,6 +24,9 @@ spring:
   flyway:
     enabled: false
   jpa:
+    # No EntityManager held open for the whole request: a lazy association is read inside the service transaction that
+    # maps it, never while the response is rendered.
+    open-in-view: false
     properties:
       hibernate:
         type:
