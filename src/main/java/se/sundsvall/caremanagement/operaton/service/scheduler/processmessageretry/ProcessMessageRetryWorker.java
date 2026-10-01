@@ -36,6 +36,13 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * retrying for days and ending as an error for an errand nothing was wrong with; see
  * {@link ProcessService#isNothingToEnd}.
  * </p>
+ *
+ * <p>
+ * Likewise a {@code 404} for an errand the engine runs no process for at all: no catch event will ever wait for the
+ * message, so it has nowhere to go. That is an errand whose process ended, or one that never had one (EB-26090038, a
+ * pre-process errand, got a payment decision on 2026-09-30 and was retried hourly). Only a running process can still be
+ * on its way to the catch event; an engine that cannot say leaves the row to be retried as before.
+ * </p>
  */
 @Component
 class ProcessMessageRetryWorker {
@@ -85,7 +92,7 @@ class ProcessMessageRetryWorker {
 				retry.getAttempts() + 1);
 			return true;
 		} catch (final RuntimeException e) {
-			if (ProcessService.isNothingToEnd(retry.getMessageName(), e)) {
+			if (ProcessService.isNothingToEnd(retry.getMessageName(), e) || hasNowhereToGo(retry, e)) {
 				return settleWithoutDelivery(retry);
 			}
 			try {
@@ -98,8 +105,20 @@ class ProcessMessageRetryWorker {
 		}
 	}
 
+	/** A {@code 404} while no process runs for the errand. Unknown (the engine did not answer) counts as no. */
+	private boolean hasNowhereToGo(final ProcessMessageRetryEntity retry, final RuntimeException failure) {
+		if (!ProcessService.isNotFound(failure)) {
+			return false;
+		}
+		try {
+			return !processService.hasRunningProcess(retry.getMunicipalityId(), retry.getErrandId());
+		} catch (final RuntimeException unknown) {
+			return false;
+		}
+	}
+
 	/**
-	 * The message asked for a process to end and there is none: the row is done. A failure to remove it leaves it to the
+	 * There is no process for the message to reach: the row is done. A failure to remove it leaves it to the
 	 * next run, which is then answered the same way.
 	 */
 	private boolean settleWithoutDelivery(final ProcessMessageRetryEntity retry) {
@@ -110,7 +129,7 @@ class ProcessMessageRetryWorker {
 				deleteFailure.getClass().getSimpleName());
 			return false;
 		}
-		LOG.info("No process is running for errand {}; {} has nothing to end and is dropped after {} attempt(s)", sanitizeForLogging(retry.getErrandId()),
+		LOG.info("No process is running for errand {}; {} has nowhere to go and is dropped after {} attempt(s)", sanitizeForLogging(retry.getErrandId()),
 			sanitizeForLogging(retry.getMessageName()), retry.getAttempts() + 1);
 		return true;
 	}

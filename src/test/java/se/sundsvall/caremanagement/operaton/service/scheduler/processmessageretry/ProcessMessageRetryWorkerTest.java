@@ -176,6 +176,7 @@ class ProcessMessageRetryWorkerTest {
 		final var retry = pending("e1", 2, OffsetDateTime.now().minusHours(1));
 		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
 		doThrow(Problem.valueOf(NOT_FOUND, "No process instance is waiting")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), any());
+		when(processServiceMock.hasRunningProcess("2281", "e1")).thenReturn(true);
 
 		final var result = worker.retryDue();
 
@@ -212,5 +213,47 @@ class ProcessMessageRetryWorkerTest {
 	})
 	void backoffDoublesUpToAnHour(final int attempts, final long minutes) {
 		assertThat(ProcessMessageRetryWorker.backoff(attempts)).isEqualTo(Duration.ofMinutes(minutes));
+	}
+
+	@Test
+	void aNotFoundForAnErrandWithoutAnyRunningProcessIsSettledAndRemoved() {
+		// EB-26090038: a payment decision on an errand that never had a process, retried hourly until this.
+		final var retry = pending("e1", 2, OffsetDateTime.now().minusHours(1));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
+		doThrow(Problem.valueOf(NOT_FOUND, "No process instance is waiting")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), any());
+		when(processServiceMock.hasRunningProcess("2281", "e1")).thenReturn(false);
+
+		final var result = worker.retryDue();
+
+		verify(repositoryMock).delete(retry);
+		assertThat(retry.getStatus()).isEqualTo("PENDING");
+		assertThat(retry.getAttempts()).isEqualTo(2);
+		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(1, 1, 0));
+	}
+
+	@Test
+	void aNotFoundIsRetriedWhenTheEngineCannotSayWhetherAProcessRuns() {
+		final var retry = pending("e1", 2, OffsetDateTime.now().minusHours(1));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
+		doThrow(Problem.valueOf(NOT_FOUND, "No process instance is waiting")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), any());
+		when(processServiceMock.hasRunningProcess("2281", "e1")).thenThrow(Problem.valueOf(BAD_GATEWAY, "engine down"));
+
+		final var result = worker.retryDue();
+
+		verify(repositoryMock, never()).delete(retry);
+		assertThat(retry.getAttempts()).isEqualTo(3);
+		assertThat(result).isEqualTo(new ProcessMessageRetryWorker.Result(1, 0, 0));
+	}
+
+	@Test
+	void anotherFailureNeverAsksWhetherAProcessRuns() {
+		final var retry = pending("e1", 2, OffsetDateTime.now().minusHours(1));
+		when(repositoryMock.findTop5ByStatusAndNextAttemptBeforeOrderByNextAttempt(eq("PENDING"), any())).thenReturn(List.of(retry));
+		doThrow(Problem.valueOf(BAD_GATEWAY, "engine restarting")).when(processServiceMock).correlateMessage(any(), any(), any(), any(), any());
+
+		worker.retryDue();
+
+		verify(processServiceMock, never()).hasRunningProcess(any(), any());
+		verify(repositoryMock, never()).delete(retry);
 	}
 }
