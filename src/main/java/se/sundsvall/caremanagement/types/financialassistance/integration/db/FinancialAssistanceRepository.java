@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -20,6 +21,14 @@ import static org.springframework.transaction.annotation.Propagation.REQUIRES_NE
 public interface FinancialAssistanceRepository extends JpaRepository<FinancialAssistanceEntity, String> {
 
 	Optional<FinancialAssistanceEntity> findByErrandId(String errandId);
+
+	/**
+	 * Same lookup as {@link #findByErrandId(String)}, with the linked Lifecare payment ids fetched along. For a caller that
+	 * reads them outside a transaction: the lookup's own transaction ends with the call, and a lazy collection read after
+	 * that has no session left to load from.
+	 */
+	@EntityGraph(attributePaths = "lifecarePaymentIds")
+	Optional<FinancialAssistanceEntity> findWithLifecarePaymentIdsByErrandId(String errandId);
 
 	/**
 	 * Same lookup as {@link #findByErrandId(String)}, but with a pessimistic write lock on the errand's row. Used by

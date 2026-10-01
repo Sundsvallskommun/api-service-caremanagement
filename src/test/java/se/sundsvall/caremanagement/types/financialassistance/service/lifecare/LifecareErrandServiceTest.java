@@ -58,7 +58,7 @@ class LifecareErrandServiceTest {
 		final var entity = FinancialAssistanceEntity.create().withErrandId(ERRAND_ID).withLifecareCalculationId(3).withLifecareDecisionId(4)
 			.withPeriodYear(2026).withPeriodMonth(9);
 		entity.setLifecarePaymentIds(List.of("p1"));
-		when(financialAssistanceRepository.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
+		when(financialAssistanceRepository.findWithLifecarePaymentIdsByErrandId(ERRAND_ID)).thenReturn(Optional.of(entity));
 		when(lifecareServiceIdService.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(24);
 
 		final var errand = service.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
@@ -69,7 +69,7 @@ class LifecareErrandServiceTest {
 
 	@Test
 	void loadWithoutData() {
-		when(financialAssistanceRepository.findByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
+		when(financialAssistanceRepository.findWithLifecarePaymentIdsByErrandId(ERRAND_ID)).thenReturn(Optional.empty());
 		when(lifecareServiceIdService.currentOrResolve(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(null);
 
 		assertThat(service.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
