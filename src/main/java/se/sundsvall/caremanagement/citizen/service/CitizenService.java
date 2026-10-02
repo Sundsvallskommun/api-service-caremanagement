@@ -15,6 +15,8 @@ import static org.springframework.util.StringUtils.hasText;
 @Service
 public class CitizenService {
 
+	private static final String FLAG_NOT_SET = "N";
+
 	private final CitizenClient citizenClient;
 
 	CitizenService(final CitizenClient citizenClient) {
@@ -47,17 +49,27 @@ public class CitizenService {
 
 	/**
 	 * Whether the citizen has skyddad identitet in folkbokföring — a sekretessmarkering ({@code protectedNR}) or skyddad
-	 * folkbokföring/classification ({@code classified}). The lookup asks for classified data ({@code ShowClassified=true})
-	 * since otherwise the citizen service filters protected persons out entirely; the flags only surface that way.
+	 * folkbokföring/classification ({@code classified}). Citizen v3 answers both flags for every person, {@code "N"} when
+	 * the flag is not set, so a flag counts only when it holds something other than {@code "N"} (the reading Open
+	 * ePlatform's SMEX person provider uses).
+	 * <p>
+	 * The lookup does not ask for classified data ({@code ShowClassified=false}). The flags come back without it, and the
+	 * citizen service leaves a classified person out of such an answer instead, so an empty answer is not a clearance.
+	 * {@code ShowClassified=true} would only add the protected person's addresses, which this check does not need, and
+	 * Citizen v3 answers it with 500 in the test environment.
 	 *
 	 * @param  municipalityId the id of the municipality
 	 * @param  partyId        the citizen's partyId (personId GUID)
-	 * @return                {@code true} when either protection flag is set; {@code false} when neither is set or the
-	 *                        citizen service has no record (204 No Content)
+	 * @return                {@code true} when either protection flag is set or the citizen service returns no record
+	 *                        (204 No Content); {@code false} when both flags are {@code "N"} or absent
 	 */
 	public boolean hasProtectedIdentity(final String municipalityId, final String partyId) {
-		return Optional.ofNullable(citizenClient.getCitizen(municipalityId, partyId, true))
-			.map(citizen -> hasText(citizen.getClassified()) || hasText(citizen.getProtectedNR()))
-			.orElse(false);
+		return Optional.ofNullable(citizenClient.getCitizen(municipalityId, partyId, false))
+			.map(citizen -> isSet(citizen.getClassified()) || isSet(citizen.getProtectedNR()))
+			.orElse(true);
+	}
+
+	private static boolean isSet(final String flag) {
+		return hasText(flag) && !FLAG_NOT_SET.equalsIgnoreCase(flag.strip());
 	}
 }
