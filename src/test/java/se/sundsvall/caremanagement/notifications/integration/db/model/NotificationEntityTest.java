@@ -52,6 +52,7 @@ class NotificationEntityTest {
 			.withDescription("desc")
 			.withContent("content")
 			.withAcknowledged(true)
+			.withHandled(true)
 			.withExpires(expires)
 			.withCreated(created)
 			.withModified(modified);
@@ -68,6 +69,7 @@ class NotificationEntityTest {
 		assertThat(entity.getDescription()).isEqualTo("desc");
 		assertThat(entity.getContent()).isEqualTo("content");
 		assertThat(entity.isAcknowledged()).isTrue();
+		assertThat(entity.isHandled()).isTrue();
 		assertThat(entity.getExpires()).isEqualTo(expires);
 		assertThat(entity.getCreated()).isEqualTo(created);
 		assertThat(entity.getModified()).isEqualTo(modified);
@@ -78,5 +80,6 @@ class NotificationEntityTest {
 		final var entity = NotificationEntity.create();
 		assertThat(entity.getId()).isNull();
 		assertThat(entity.isAcknowledged()).isFalse();
+		assertThat(entity.isHandled()).isFalse();
 	}
 }

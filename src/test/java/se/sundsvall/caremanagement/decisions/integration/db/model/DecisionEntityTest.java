@@ -35,7 +35,7 @@ class DecisionEntityTest {
 			hasValidGettersAndSetters(),
 			hasValidBeanHashCode(),
 			hasValidBeanEquals(),
-			hasValidBeanToStringExcluding("description", "decisionMessage")));
+			hasValidBeanToStringExcluding("description", "decisionMessage", "coApplicantReason")));
 	}
 
 	@Test
@@ -53,10 +53,13 @@ class DecisionEntityTest {
 			.withDescription("desc")
 			.withAmount(amount)
 			.withDecisionMessage("message")
+			.withCoApplicantReason("Beviljad")
 			.withDecisionDate(decisionDate)
 			.withPeriodFrom(periodFrom)
 			.withPeriodTo(periodTo)
 			.withCreatedBy("user")
+			.withLifecareStatus("SYNCED")
+			.withLifecareId("88123")
 			.withCreated(created);
 
 		assertThat(entity).hasNoNullFieldsOrProperties();

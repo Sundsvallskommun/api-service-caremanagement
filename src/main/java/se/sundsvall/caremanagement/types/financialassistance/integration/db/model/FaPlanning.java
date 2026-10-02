@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.integration.db.mod
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import java.time.LocalDate;
 import java.util.Objects;
 
 import static org.hibernate.Length.LONG32;
@@ -23,6 +24,12 @@ public class FaPlanning {
 
 	@Column(name = "sick_leave_level")
 	private String sickLeaveLevel;
+
+	@Column(name = "sick_leave_from")
+	private LocalDate sickLeaveFrom;
+
+	@Column(name = "sick_leave_to")
+	private LocalDate sickLeaveTo;
 
 	@Column(name = "sfi_study_path")
 	private String sfiStudyPath;
@@ -51,6 +58,32 @@ public class FaPlanning {
 
 	public String getWorkDescription() {
 		return workDescription;
+	}
+
+	public LocalDate getSickLeaveFrom() {
+		return sickLeaveFrom;
+	}
+
+	public void setSickLeaveFrom(final LocalDate sickLeaveFrom) {
+		this.sickLeaveFrom = sickLeaveFrom;
+	}
+
+	public FaPlanning withSickLeaveFrom(final LocalDate sickLeaveFrom) {
+		this.sickLeaveFrom = sickLeaveFrom;
+		return this;
+	}
+
+	public LocalDate getSickLeaveTo() {
+		return sickLeaveTo;
+	}
+
+	public void setSickLeaveTo(final LocalDate sickLeaveTo) {
+		this.sickLeaveTo = sickLeaveTo;
+	}
+
+	public FaPlanning withSickLeaveTo(final LocalDate sickLeaveTo) {
+		this.sickLeaveTo = sickLeaveTo;
+		return this;
 	}
 
 	public String getSickLeaveLevel() {
@@ -150,20 +183,22 @@ public class FaPlanning {
 		final FaPlanning that = (FaPlanning) o;
 		return Objects.equals(person, that.person) && Objects.equals(planningType, that.planningType)
 			&& Objects.equals(workExtent, that.workExtent)
-			&& Objects.equals(sickLeaveLevel, that.sickLeaveLevel) && Objects.equals(sfiStudyPath, that.sfiStudyPath)
+			&& Objects.equals(sickLeaveLevel, that.sickLeaveLevel) && Objects.equals(sickLeaveFrom, that.sickLeaveFrom)
+			&& Objects.equals(sickLeaveTo, that.sickLeaveTo) && Objects.equals(sfiStudyPath, that.sfiStudyPath)
 			&& Objects.equals(sfiCourse, that.sfiCourse);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(person, planningType, workExtent, sickLeaveLevel,
+		return Objects.hash(person, planningType, workExtent, sickLeaveLevel, sickLeaveFrom, sickLeaveTo,
 			sfiStudyPath, sfiCourse);
 	}
 
 	@Override
 	public String toString() {
 		return "FaPlanning{person='" + person + "', planningType='" + planningType + "', workExtent='" + workExtent
-			+ "', sickLeaveLevel='" + sickLeaveLevel + "', sfiStudyPath='" + sfiStudyPath
+			+ "', sickLeaveLevel='" + sickLeaveLevel + "', sickLeaveFrom=" + sickLeaveFrom + ", sickLeaveTo=" + sickLeaveTo
+			+ ", sfiStudyPath='" + sfiStudyPath
 			+ "', sfiCourse='" + sfiCourse + "'}";
 	}
 }

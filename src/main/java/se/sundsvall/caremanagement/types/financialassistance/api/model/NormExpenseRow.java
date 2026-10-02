@@ -34,8 +34,11 @@ public class NormExpenseRow {
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String bucket;
 
-	@Schema(description = "The cost type", accessMode = Schema.AccessMode.READ_ONLY)
+	@Schema(description = "The cost type (machine code; use costTypeDisplayName for the label)", examples = "RENT", accessMode = Schema.AccessMode.READ_ONLY)
 	private String costType;
+
+	@Schema(description = "Swedish display name for the cost type — the Lifecare label from the type catalogue", examples = "Boendekostnad", accessMode = Schema.AccessMode.READ_ONLY)
+	private String costTypeDisplayName;
 
 	@Schema(description = "The other sub-type (when the cost type is 'other')", accessMode = Schema.AccessMode.READ_ONLY)
 	private String otherSubType;
@@ -135,6 +138,19 @@ public class NormExpenseRow {
 
 	public NormExpenseRow withCostType(final String costType) {
 		this.costType = costType;
+		return this;
+	}
+
+	public String getCostTypeDisplayName() {
+		return costTypeDisplayName;
+	}
+
+	public void setCostTypeDisplayName(final String costTypeDisplayName) {
+		this.costTypeDisplayName = costTypeDisplayName;
+	}
+
+	public NormExpenseRow withCostTypeDisplayName(final String costTypeDisplayName) {
+		this.costTypeDisplayName = costTypeDisplayName;
 		return this;
 	}
 
@@ -275,7 +291,8 @@ public class NormExpenseRow {
 		final NormExpenseRow that = (NormExpenseRow) o;
 		return deleted == that.deleted && Objects.equals(id, that.id) && Objects.equals(origin, that.origin) && Objects.equals(position, that.position)
 			&& Objects.equals(bucket, that.bucket)
-			&& Objects.equals(costType, that.costType) && Objects.equals(otherSubType, that.otherSubType) && Objects.equals(specification, that.specification)
+			&& Objects.equals(costType, that.costType) && Objects.equals(costTypeDisplayName, that.costTypeDisplayName)
+			&& Objects.equals(otherSubType, that.otherSubType) && Objects.equals(specification, that.specification)
 			&& Objects.equals(appliedAmount, that.appliedAmount)
 			&& Objects.equals(processAmount, that.processAmount) && Objects.equals(caseworkerAmount, that.caseworkerAmount)
 			&& Objects.equals(effectiveAmount, that.effectiveAmount) && Objects.equals(note, that.note) && Objects.equals(created, that.created)
@@ -284,7 +301,7 @@ public class NormExpenseRow {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, position, bucket, costType, otherSubType, specification, appliedAmount, processAmount, caseworkerAmount, effectiveAmount, deleted,
+		return Objects.hash(id, origin, position, bucket, costType, costTypeDisplayName, otherSubType, specification, appliedAmount, processAmount, caseworkerAmount, effectiveAmount, deleted,
 			note, created, updated);
 	}
 
@@ -296,6 +313,7 @@ public class NormExpenseRow {
 			", position=" + position +
 			", bucket='" + bucket + '\'' +
 			", costType='" + costType + '\'' +
+			", costTypeDisplayName='" + costTypeDisplayName + '\'' +
 			", otherSubType='" + otherSubType + '\'' +
 			", specification='" + specification + '\'' +
 			", appliedAmount=" + appliedAmount +

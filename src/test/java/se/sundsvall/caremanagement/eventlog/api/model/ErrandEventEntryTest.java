@@ -14,7 +14,7 @@ class ErrandEventEntryTest {
 			"id", "errand-1", "2281", "FINANCIAL_ASSISTANCE", "HTTP",
 			"UPDATE", "financial-assistance/calculation/draft/incomes",
 			"UPDATE financial-assistance/calculation/draft/incomes",
-			"PATCH", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/errand-1/calculation/draft/incomes/row-1",
+			"PATCH", "/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/errand-1/calculation/draft/incomes/row-1", "4711",
 			"edwmol", "adAccount", "req-1", 200, FIXED_TIMESTAMP);
 
 		assertThat(event.id()).isEqualTo("id");
@@ -27,6 +27,7 @@ class ErrandEventEntryTest {
 		assertThat(event.description()).isEqualTo("UPDATE financial-assistance/calculation/draft/incomes");
 		assertThat(event.httpMethod()).isEqualTo("PATCH");
 		assertThat(event.requestPath()).isEqualTo("/2281/FINANCIAL_ASSISTANCE/errands/financial-assistance/errand-1/calculation/draft/incomes/row-1");
+		assertThat(event.lifecareId()).isEqualTo("4711");
 		assertThat(event.actor()).isEqualTo("edwmol");
 		assertThat(event.actorType()).isEqualTo("adAccount");
 		assertThat(event.requestId()).isEqualTo("req-1");

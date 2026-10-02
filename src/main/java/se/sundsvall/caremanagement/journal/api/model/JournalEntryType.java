@@ -5,9 +5,9 @@ import java.util.Objects;
 
 /**
  * One selectable journal entry type — a machine {@code code} paired with the Swedish Lifecare label the frontend shows
- * and that an RPA flow selects in the Lifecare "Typ" dropdown. Journal types are municipality-configured in Lifecare,
- * so
- * the served catalogue is provisional and {@code JournalEntry.type} is not validated against it.
+ * and that is selected in the Lifecare "Typ" dropdown when the entry is written there. Journal types are
+ * municipality-configured in Lifecare, so the served catalogue is provisional and {@code JournalEntry.type} is not
+ * validated against it.
  */
 @Schema(description = "A selectable journal entry type — the code and the Swedish Lifecare label.")
 public class JournalEntryType {

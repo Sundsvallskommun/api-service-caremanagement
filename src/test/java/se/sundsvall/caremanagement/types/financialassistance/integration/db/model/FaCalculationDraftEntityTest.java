@@ -24,6 +24,8 @@ class FaCalculationDraftEntityTest {
 	@BeforeAll
 	static void setup() {
 		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+		// Registered here too: without it the test only passed when another class in the same JVM had registered one first.
+		BeanMatchers.registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(3650)), LocalDate.class);
 	}
 
 	@Test
@@ -46,6 +48,7 @@ class FaCalculationDraftEntityTest {
 			.withErrandId("errand")
 			.withApplicationMonth("2026-06")
 			.withNormId(7)
+			.withNormSetByCaseworker(true)
 			.withNormType(List.of("NATIONAL_NORM"))
 			.withCalculationFromDate(calculationFromDate)
 			.withCalculationToDate(calculationToDate)
@@ -58,6 +61,7 @@ class FaCalculationDraftEntityTest {
 		assertThat(entity).hasNoNullFieldsOrProperties();
 		assertThat(entity.getErrandId()).isEqualTo("errand");
 		assertThat(entity.getNormId()).isEqualTo(7);
+		assertThat(entity.getNormSetByCaseworker()).isTrue();
 		assertThat(entity.getCalculationFromDate()).isEqualTo(calculationFromDate);
 		assertThat(entity.getCalculationToDate()).isEqualTo(calculationToDate);
 		assertThat(entity.getCalculationDate()).isEqualTo(calculationDate);

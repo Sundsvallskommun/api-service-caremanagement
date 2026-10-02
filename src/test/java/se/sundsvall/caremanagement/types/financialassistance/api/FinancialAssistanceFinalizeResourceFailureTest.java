@@ -1,0 +1,172 @@
+package se.sundsvall.caremanagement.types.financialassistance.api;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Month;
+import java.util.Map;
+import org.assertj.core.groups.Tuple;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import se.sundsvall.caremanagement.Application;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
+import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareFinalizeService;
+import se.sundsvall.dept44.problem.Problem;
+import se.sundsvall.dept44.problem.violations.ConstraintViolationProblem;
+import se.sundsvall.dept44.problem.violations.Violation;
+import se.sundsvall.dept44.support.Identifier;
+
+import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+
+@SpringBootTest(classes = Application.class, webEnvironment = RANDOM_PORT)
+@AutoConfigureWebTestClient
+@ActiveProfiles("junit")
+class FinancialAssistanceFinalizeResourceFailureTest {
+
+	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "my-namespace";
+	private static final String ERRAND_ID = randomUUID().toString();
+	private static final String PATH = "/{municipalityId}/{namespace}/errands/financial-assistance/{errandId}/finalize";
+
+	@Autowired
+	private WebTestClient webTestClient;
+
+	@MockitoBean
+	private LifecareFinalizeService finalizeServiceMock;
+
+	private static FinalizeRequest validRequest() {
+		return FinalizeRequest.create()
+			.withDecision(FinalizeDecision.create()
+				.withOutcome("BIFALL")
+				.withPeriodFrom(LocalDate.of(2026, Month.JUNE, 1))
+				.withPeriodTo(LocalDate.of(2026, Month.JUNE, 30))
+				.withAmount(new BigDecimal("7900.00")))
+			.withCommunication(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false))
+			.withHouseholdSizeChanged(false);
+	}
+
+	private static void assertConstraintViolation(final ConstraintViolationProblem response, final Tuple... violations) {
+		assertThat(response).isNotNull();
+		assertThat(response.getTitle()).isEqualTo("Constraint Violation");
+		assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
+		assertThat(response.getViolations())
+			.extracting(Violation::field, Violation::message)
+			.containsExactlyInAnyOrder(violations);
+	}
+
+	private ConstraintViolationProblem post(final String municipalityId, final String errandId, final FinalizeRequest request) {
+		return webTestClient.post()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", municipalityId, "namespace", NAMESPACE, "errandId", errandId)))
+			.header(Identifier.HEADER_NAME, "jane02doe; type=adAccount")
+			.contentType(APPLICATION_JSON)
+			.bodyValue(request)
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.returnResult()
+			.getResponseBody();
+	}
+
+	@Test
+	void invalidMunicipalityId() {
+		assertConstraintViolation(post("x", ERRAND_ID, validRequest()),
+			tuple("finalizeErrand.municipalityId", "not a valid municipality ID"));
+		verifyNoInteractions(finalizeServiceMock);
+	}
+
+	@Test
+	void invalidErrandId() {
+		assertConstraintViolation(post(MUNICIPALITY_ID, "not-a-uuid", validRequest()),
+			tuple("finalizeErrand.errandId", "not a valid UUID"));
+		verifyNoInteractions(finalizeServiceMock);
+	}
+
+	@Test
+	void missingCommunication() {
+		// The decision may be left out - careM then reads it from Lifecare - but the channels may not.
+		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, FinalizeRequest.create()),
+			tuple("communication", "must not be null"));
+		verifyNoInteractions(finalizeServiceMock);
+	}
+
+	@Test
+	void invalidOutcomeAndNegativeAmount() {
+		final var request = validRequest();
+		request.getDecision().withOutcome("BEVILJAD").withAmount(new BigDecimal("-1"));
+
+		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
+			tuple("decision.outcome", "must be one of: [BIFALL, DELAVSLAG, AVSLAG]"),
+			tuple("decision.amount", "must be greater than or equal to 0"));
+		verifyNoInteractions(finalizeServiceMock);
+	}
+
+	@Test
+	void grantingOutcomeWithoutAmount() {
+		final var request = validRequest();
+		request.getDecision().withAmount(null);
+
+		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
+			tuple("decision.amount", "must be given when the outcome carries an amount (BIFALL/DELAVSLAG)"));
+		verifyNoInteractions(finalizeServiceMock);
+	}
+
+	@Test
+	void periodEndingBeforeStart() {
+		final var request = validRequest();
+		request.getDecision().withPeriodFrom(LocalDate.of(2026, Month.JUNE, 30)).withPeriodTo(LocalDate.of(2026, Month.JUNE, 1));
+
+		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
+			tuple("decision.periodTo", "must not be before periodFrom"));
+		verifyNoInteractions(finalizeServiceMock);
+	}
+
+	@Test
+	void missingCommunicationChannelFlags() {
+		final var request = validRequest().withCommunication(CommunicationChannels.create());
+
+		assertConstraintViolation(post(MUNICIPALITY_ID, ERRAND_ID, request),
+			tuple("communication.minaSidor", "must not be null"),
+			tuple("communication.digitalMailbox", "must not be null"),
+			tuple("communication.letter", "must not be null"));
+		verifyNoInteractions(finalizeServiceMock);
+	}
+
+	@Test
+	void serviceConflictIsPassedThrough() {
+		final var request = validRequest();
+		when(finalizeServiceMock.finalizeErrand(any(), any(), any(), any(), any()))
+			.thenThrow(Problem.valueOf(CONFLICT, "errand must be in status AWAITING_DECISION to be finalized, but is in status 'UNDER_REVIEW'"));
+
+		final var response = webTestClient.post()
+			.uri(uri -> uri.path(PATH).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "jane02doe; type=adAccount")
+			.contentType(APPLICATION_JSON)
+			.bodyValue(request)
+			.exchange()
+			.expectStatus().isEqualTo(CONFLICT)
+			.expectBody(Problem.class)
+			.returnResult()
+			.getResponseBody();
+
+		assertThat(response).isNotNull();
+		assertThat(response.getStatus()).isEqualTo(CONFLICT);
+		assertThat(response.getDetail()).contains("AWAITING_DECISION");
+		verify(finalizeServiceMock).finalizeErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request, "jane02doe");
+	}
+}

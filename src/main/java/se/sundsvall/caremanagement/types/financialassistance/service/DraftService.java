@@ -3,8 +3,11 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -29,7 +32,11 @@ import se.sundsvall.caremanagement.types.financialassistance.service.model.Draft
 import se.sundsvall.dept44.problem.Problem;
 
 import static java.util.Optional.ofNullable;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 
 /**
  * The editable draft calculation across its sections — persons, incomes, expenses and other living costs (the expense
@@ -51,6 +58,10 @@ public class DraftService {
 	private final FaNormPersonRepository personRepository;
 	private final SectionReconciler sectionReconciler;
 
+	/** How a duplicate-income warning names its type — read back by {@link SavedCalculationWarnings}. */
+	static final String DUPLICATE_MESSAGE_PREFIX = "Möjlig dubbelföring: ";
+	static final String DUPLICATE_MESSAGE_INFIX = " finns både";
+
 	DraftService(final FaCalculationDraftRepository calculationDraftRepository, final FaNormIncomeRepository incomeRepository,
 		final FaNormExpenseRepository expenseRepository, final FaNormPersonRepository personRepository, final SectionReconciler sectionReconciler) {
 		this.calculationDraftRepository = calculationDraftRepository;
@@ -69,18 +80,74 @@ public class DraftService {
 	 * Refresh the draft from the freshly computed process rows. Upserts the header (application month, selected norm and
 	 * the calculation date window derived from the month) and reconciles each section, returning what changed so the
 	 * caller can raise warnings.
+	 * <p>
+	 * The first refresh builds the draft and reports no changes: "added" is measured against the previous run's draft,
+	 * and with no previous draft every row would read as new — which the caseworker takes to mean new since the previous
+	 * normberäkning.
 	 */
 	@Transactional
 	public DraftChanges refresh(final String errandId, final String applicationMonth, final Integer normId, final List<String> normType,
 		final List<FaNormPersonEntity> freshPersons, final List<FaNormIncomeEntity> freshIncomes, final List<FaNormExpenseEntity> freshExpenses) {
 
+		final var firstBuild = !calculationDraftRepository.existsById(errandId);
 		upsertHeader(errandId, applicationMonth, normId, normType);
 
 		final var persons = sectionReconciler.reconcilePersons(errandId, freshPersons);
 		final var incomes = sectionReconciler.reconcileIncomes(errandId, freshIncomes);
 		final var expenses = sectionReconciler.reconcileExpenses(errandId, freshExpenses);
 
+		if (firstBuild) {
+			return new DraftChanges(List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+		}
 		return new DraftChanges(incomes.added(), incomes.dropped(), expenses.added(), expenses.dropped(), persons.added(), persons.dropped());
+	}
+
+	/**
+	 * The regelverk requires every SSBTEK income to be checked against the calculation so it has not been entered twice:
+	 * "Alla inkomster från SSBTEK måste jämföras i normberäkningen så dom inte blivit dubbelt."
+	 * <p>
+	 * An income type carried by both a {@code SYSTEM} row (the SSBTEK/process feed) and a {@code CASEWORKER} row (added
+	 * by hand in Draken) is summed twice into the norm, which understates the benefit without anything failing. Both
+	 * rows are legitimate on their own, so this warns rather than merges - only the caseworker can tell whether the two
+	 * are the same money or genuinely separate incomes of the same type.
+	 * <p>
+	 * Soft-deleted rows are ignored: removing one side of the pair is exactly how a caseworker resolves this, and the
+	 * warning auto-closes on the next run because its source key stops being produced.
+	 */
+	@Transactional(readOnly = true)
+	public List<WarningService.WarningInput> duplicateIncomeWarnings(final String errandId) {
+		final var byType = incomeRepository.findByErrandId(errandId).stream()
+			.filter(row -> !row.isDeleted())
+			.filter(row -> row.getTypeId() != null)
+			.collect(Collectors.groupingBy(FaNormIncomeEntity::getTypeId, LinkedHashMap::new, Collectors.toList()));
+
+		return byType.values().stream()
+			.filter(DraftService::hasBothOrigins)
+			.map(rows -> {
+				final var label = ofNullable(rows.getFirst().getTypeName()).filter(StringUtils::hasText).orElse("Inkomst");
+				return new WarningService.WarningInput(WarningService.TYPE_INCOME_DUPLICATED,
+					"income-duplicate:" + rows.getFirst().getTypeId(),
+					DUPLICATE_MESSAGE_PREFIX + label + DUPLICATE_MESSAGE_INFIX + processSource(rows) + " och tillagd av handläggare "
+						+ "— kontrollera att inkomsten inte räknas två gånger");
+			})
+			.toList();
+	}
+
+	/**
+	 * True when the same income type is present both from a process feed (SSBTEK, or the application's declared incomes)
+	 * and from a caseworker edit.
+	 */
+	private static boolean hasBothOrigins(final List<FaNormIncomeEntity> rows) {
+		final var origins = rows.stream().map(FaNormIncomeEntity::getOrigin).collect(Collectors.toSet());
+		return (origins.contains(ORIGIN_SYSTEM) || origins.contains(ORIGIN_APPLICATION)) && origins.contains(ORIGIN_CASEWORKER);
+	}
+
+	/** Where the process row of a duplicated type came from, as the warning names it. */
+	private static String processSource(final List<FaNormIncomeEntity> rows) {
+		if (rows.stream().anyMatch(row -> ORIGIN_SYSTEM.equals(row.getOrigin()))) {
+			return " från SSBTEK";
+		}
+		return " från ansökan";
 	}
 
 	private void upsertHeader(final String errandId, final String applicationMonth, final Integer normId, final List<String> normType) {
@@ -91,8 +158,13 @@ public class DraftService {
 			header.setCalculationFromDate(parsed.atDay(1));
 			header.setCalculationToDate(parsed.atEndOfMonth());
 		});
-		ofNullable(normId).ifPresent(header::setNormId);
-		ofNullable(normType).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
+		// A norm the caseworker picked stands: the daily run would otherwise put the process's choice back every night.
+		if (!Boolean.TRUE.equals(header.getNormSetByCaseworker())) {
+			ofNullable(normId).ifPresent(header::setNormId);
+		}
+		// Copy: the norm types come straight off the managed errand entity, and handing its own collection instance to a
+		// second entity makes Hibernate fail the flush with "Found shared references to a collection".
+		ofNullable(normType).filter(list -> !list.isEmpty()).ifPresent(list -> header.setNormType(new ArrayList<>(list)));
 		header.setCalculationDate(LocalDate.now(ZoneId.systemDefault()));
 		calculationDraftRepository.save(header);
 	}
@@ -102,7 +174,7 @@ public class DraftService {
 	public CalculationDraft patchHeader(final String errandId, final NormHeaderInput input) {
 		final var header = calculationDraftRepository.findById(errandId)
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_DRAFT_FOR_ERRAND));
-		ofNullable(input.getNormId()).ifPresent(header::setNormId);
+		ofNullable(input.getNormId()).ifPresent(normId -> header.withNormId(normId).setNormSetByCaseworker(true));
 		ofNullable(input.getNormType()).filter(list -> !list.isEmpty()).ifPresent(header::setNormType);
 		ofNullable(input.getCalculationFromDate()).ifPresent(header::setCalculationFromDate);
 		ofNullable(input.getCalculationToDate()).ifPresent(header::setCalculationToDate);
@@ -137,6 +209,10 @@ public class DraftService {
 
 	@Transactional
 	public NormIncomeRow addIncome(final String errandId, final NormIncomeInput input) {
+		if ((input.getTypeId() == null) && !StringUtils.hasText(input.getTypeName())) {
+			// Without an id or a name the row names no FamilyCare income type, so it could never be carried into the normberäkning.
+			throw Problem.valueOf(BAD_REQUEST, "An income row needs a typeId or a typeName");
+		}
 		requireHeader(errandId);
 		final var entity = incomeRepository.save(CalculationDraftMapper.toNewIncomeEntity(errandId, incomeRepository.nextPositionForErrand(errandId), input));
 		return CalculationDraftMapper.toIncomeRow(entity);
@@ -199,7 +275,6 @@ public class DraftService {
 		entity.setDeviationFromDate(input.getDeviationFromDate());
 		entity.setDeviationToDate(input.getDeviationToDate());
 		entity.setNormInterval(input.getNormInterval());
-		entity.setJobStimulusAmount(input.getJobStimulusAmount());
 		entity.setNote(input.getNote());
 		return CalculationDraftMapper.toPersonRow(personRepository.save(entity));
 	}
@@ -212,12 +287,18 @@ public class DraftService {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Commit path — the effective (live, non-deleted) rows posted to Lifecare on a decision.
+	// Lifecare path — the effective (live, non-deleted) rows the prepare step posts as the proposal in Lifecare.
 	// ------------------------------------------------------------------------------------------------------------------
 
 	@Transactional(readOnly = true)
 	public Optional<FaCalculationDraftEntity> header(final String errandId) {
 		return calculationDraftRepository.findById(errandId);
+	}
+
+	/** Every income row, soft-deleted ones included — what a caseworker withheld matters to the SSBTEK sync baseline. */
+	@Transactional(readOnly = true)
+	public List<FaNormIncomeEntity> allIncomes(final String errandId) {
+		return incomeRepository.findByErrandId(errandId);
 	}
 
 	@Transactional(readOnly = true)

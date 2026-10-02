@@ -19,7 +19,24 @@ import static java.util.stream.Collectors.toMap;
  */
 public final class MapperUtil {
 
+	/** The longest note FamilyCare accepts on a calculation row; a longer one fails the whole create with 400. */
+	public static final int LIFECARE_NOTE_MAX_LENGTH = 80;
+
 	private MapperUtil() {}
+
+	/**
+	 * A note as FamilyCare can take it: cut to {@link #LIFECARE_NOTE_MAX_LENGTH} characters. For the notes careM itself
+	 * writes (the process feeds, the application's labels), where losing the tail beats losing the whole calculation.
+	 *
+	 * @param  note the note (may be {@code null})
+	 * @return      the note, cut to what FamilyCare accepts; {@code null} stays {@code null}
+	 */
+	public static String toLifecareNote(final String note) {
+		if ((note == null) || (note.length() <= LIFECARE_NOTE_MAX_LENGTH)) {
+			return note;
+		}
+		return note.substring(0, LIFECARE_NOTE_MAX_LENGTH);
+	}
 
 	/** Trim + lower-case a value for case/space-insensitive name matching; {@code null} becomes {@code ""}. */
 	public static String normalize(final String value) {

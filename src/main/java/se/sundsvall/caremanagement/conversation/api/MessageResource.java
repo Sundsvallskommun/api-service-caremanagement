@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,6 +37,7 @@ import se.sundsvall.dept44.support.Identifier;
 
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.HttpHeaders.LOCATION;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.MediaType.ALL_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
@@ -111,12 +111,9 @@ class MessageResource {
 	ResponseEntity<UnreadCount> unreadCount(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
-		@ValidUuid @PathVariable final String errandId,
-		@Parameter(name = Identifier.HEADER_NAME,
-			description = "Caller identity (type=adAccount → caseworker, type=partyId → applicant)",
-			example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) final String xSentBy) {
+		@ValidUuid @PathVariable final String errandId) {
 
-		return ok(new UnreadCount(readService.unreadCount(municipalityId, namespace, errandId, Identifier.parse(xSentBy))));
+		return ok(new UnreadCount(readService.unreadCount(municipalityId, namespace, errandId, caller())));
 	}
 
 	@PostMapping(path = "/read", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
@@ -130,10 +127,9 @@ class MessageResource {
 		@ValidMunicipalityId @PathVariable final String municipalityId,
 		@Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
 		@ValidUuid @PathVariable final String errandId,
-		@Parameter(name = Identifier.HEADER_NAME, description = "Caller identity (type=adAccount → caseworker, type=partyId → applicant)", example = "joe001doe; type=adAccount") @RequestHeader(Identifier.HEADER_NAME) final String xSentBy,
 		@Valid @NotNull @RequestBody final MarkMessagesRead request) {
 
-		readService.markRead(municipalityId, namespace, errandId, Identifier.parse(xSentBy), request.messageIds());
+		readService.markRead(municipalityId, namespace, errandId, caller(), request.messageIds());
 		return noContent().build();
 	}
 
@@ -165,5 +161,29 @@ class MessageResource {
 		final HttpServletResponse response) {
 
 		service.streamAttachmentFile(municipalityId, namespace, errandId, messageId, attachmentId, response);
+	}
+
+	/**
+	 * The caller identity, read from the thread-local {@link Identifier} that the dept44 filter parses out of the
+	 * {@code X-Sent-By} header.
+	 *
+	 * <p>
+	 * The header is declared once, globally, as an OpenAPI {@code apiKey} security scheme (see
+	 * {@code IdentifierOpenApiConfiguration}) rather than bound per operation with {@code @RequestHeader} — binding it
+	 * here as well would make Swagger UI send it twice, and the comma-joined value that produces is rejected by
+	 * {@link Identifier#parse(String)}.
+	 *
+	 * <p>
+	 * {@code RequireIdentifierInterceptor} normally turns away a missing or malformed header before the operation runs;
+	 * the guard here keeps the answer a 400 rather than a 500 also where that enforcement is switched off
+	 * ({@code caremanagement.identifier.required=false}).
+	 */
+	private static Identifier caller() {
+		final var identifier = Identifier.get();
+		if (identifier == null) {
+			throw Problem.valueOf(BAD_REQUEST, "Missing or malformed required header '" + Identifier.HEADER_NAME
+				+ "' — expected e.g. 'joe001doe; type=adAccount' or '<uuid>; type=partyId'");
+		}
+		return identifier;
 	}
 }

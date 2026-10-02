@@ -10,6 +10,7 @@ import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Asset;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Child;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Cost;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceView;
@@ -46,6 +47,16 @@ public final class FinancialAssistanceMapper {
 	private static final String CONTACT_CHANNEL_PHONE = "PHONE";
 
 	private FinancialAssistanceMapper() {}
+
+	/**
+	 * A plain copy of one of the entity's string collections. They are lazy: handed on as they are, they would be read
+	 * only when the response is written, after the transaction that loaded them has ended.
+	 */
+	private static List<String> copyOf(final List<String> source) {
+		return ofNullable(source)
+			.map(ArrayList::new)
+			.orElse(null);
+	}
 
 	private static <S, T> List<T> mapList(final List<S> source, final Function<S, T> mapper) {
 		return ofNullable(source)
@@ -100,7 +111,8 @@ public final class FinancialAssistanceMapper {
 	/**
 	 * Applies non-null fields from {@code source} onto {@code entity} (PATCH semantics — null fields on the source leave
 	 * the existing value untouched). The server-owned fields are never written from client data: {@code errandId},
-	 * {@code applicationType} (derived from the type slug), {@code lastDailyRunAt}, {@code created} and {@code modified}.
+	 * {@code applicationType} (derived from the type slug), {@code lastDailyRunAt}, {@code actualisationRequestedAt},
+	 * {@code created} and {@code modified}.
 	 */
 	public static FinancialAssistanceEntity updateEntity(final FinancialAssistanceEntity entity, final FinancialAssistanceData source) {
 		if (entity == null || source == null) {
@@ -149,7 +161,7 @@ public final class FinancialAssistanceMapper {
 				.withPeriodMonth(e.getPeriodMonth())
 				.withPeriodYear(e.getPeriodYear())
 				.withPeriodChoice(e.getPeriodChoice())
-				.withNormType(e.getNormType())
+				.withNormType(copyOf(e.getNormType()))
 				.withOtherBenefitDescription(e.getOtherBenefitDescription())
 				.withLivelihoodDescription(e.getLivelihoodDescription())
 				.withHasChildrenUnder21(e.getHasChildrenUnder21())
@@ -168,6 +180,9 @@ public final class FinancialAssistanceMapper {
 				.withStayDescription(e.getStayDescription())
 				.withAttestation(e.getAttestation())
 				.withAttestedAt(e.getAttestedAt())
+				.withLifecareDecisionId(e.getLifecareDecisionId())
+				.withLifecareCalculationId(e.getLifecareCalculationId())
+				.withLifecarePaymentIds(copyOf(e.getLifecarePaymentIds()))
 				.withChildren(mapList(e.getChildren(), FinancialAssistanceMapper::toChild))
 				.withCosts(mapList(e.getCosts(), FinancialAssistanceMapper::toCost))
 				.withIncomes(mapList(e.getIncomes(), FinancialAssistanceMapper::toIncome))
@@ -198,7 +213,24 @@ public final class FinancialAssistanceMapper {
 				.withModified(env.getModified())
 				.withTouched(env.getTouched())
 				.withLastDailyRunAt(ofNullable(entity).map(FinancialAssistanceEntity::getLastDailyRunAt).orElse(null))
-				.withData(toData(entity)))
+				.withLifecareServiceId(ofNullable(entity).map(FinancialAssistanceEntity::getLifecareServiceId).orElse(null))
+				.withData(toData(entity))
+				.withCommunication(toCommunicationChannels(entity))
+				.withHouseholdSizeChanged(ofNullable(entity).map(FinancialAssistanceEntity::getHouseholdSizeChanged).orElse(null)))
+			.orElse(null);
+	}
+
+	/**
+	 * The communication channels chosen at finalize, or {@code null} while the errand has not been finalized (no channel
+	 * flag set yet) — so Draken can tell "not decided" from "decided and nothing to send".
+	 */
+	public static CommunicationChannels toCommunicationChannels(final FinancialAssistanceEntity entity) {
+		return ofNullable(entity)
+			.filter(e -> e.getNotifyMinaSidor() != null || e.getNotifyDigitalMailbox() != null || e.getNotifyLetter() != null)
+			.map(e -> CommunicationChannels.create()
+				.withMinaSidor(e.getNotifyMinaSidor())
+				.withDigitalMailbox(e.getNotifyDigitalMailbox())
+				.withLetter(e.getNotifyLetter()))
 			.orElse(null);
 	}
 
@@ -419,6 +451,8 @@ public final class FinancialAssistanceMapper {
 				.withWorkExtent(source.getWorkExtent())
 				.withWorkDescription(source.getWorkDescription())
 				.withSickLeaveLevel(source.getSickLeaveLevel())
+				.withSickLeaveFrom(source.getSickLeaveFrom())
+				.withSickLeaveTo(source.getSickLeaveTo())
 				.withSfiStudyPath(source.getSfiStudyPath())
 				.withSfiCourse(source.getSfiCourse())
 				.withOtherDescription(source.getOtherDescription()))
@@ -433,6 +467,8 @@ public final class FinancialAssistanceMapper {
 				.withWorkExtent(source.getWorkExtent())
 				.withWorkDescription(source.getWorkDescription())
 				.withSickLeaveLevel(source.getSickLeaveLevel())
+				.withSickLeaveFrom(source.getSickLeaveFrom())
+				.withSickLeaveTo(source.getSickLeaveTo())
 				.withSfiStudyPath(source.getSfiStudyPath())
 				.withSfiCourse(source.getSfiCourse())
 				.withOtherDescription(source.getOtherDescription()))

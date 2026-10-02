@@ -37,6 +37,11 @@ public class Decision {
 	@Size(max = 4096)
 	private String description;
 
+	@Schema(description = "The co-applicant's orsak, when the household has a co-applicant and the decision carries one; description carries the applicant's.",
+		examples = "Beviljad")
+	@Size(max = 255)
+	private String coApplicantReason;
+
 	@Schema(description = "Optional decision amount, in SEK. For a financial-assistance decision this is the granted amount (0 for a rejection); for a recommendation it is the recommended amount when the pipeline has computed one.", examples = "7900.00")
 	private BigDecimal amount;
 
@@ -60,6 +65,21 @@ public class Decision {
 	@Schema(description = "Identifier of the actor that produced the decision. Use the caseworker userId for human decisions or a system identifier (e.g. `operaton`, `dmn-engine`) for automated ones.", examples = "jane01doe")
 	@Size(max = 64)
 	private String createdBy;
+
+	@Schema(description = """
+		Where the decision stands in Lifecare: SYNCED once it is receipted against the beslut careM saved there. Null for \
+		a decision that is never written to Lifecare.""",
+		examples = "SYNCED",
+		accessMode = READ_ONLY,
+		allowableValues = {
+			"PENDING", "SYNCED"
+		})
+	@Null(groups = OnCreate.class)
+	private String lifecareStatus;
+
+	@Schema(description = "The decision's id in Lifecare, once written there", examples = "88123", accessMode = READ_ONLY)
+	@Null(groups = OnCreate.class)
+	private String lifecareId;
 
 	@Schema(description = "Timestamp the decision was recorded (server-assigned)", accessMode = READ_ONLY)
 	@Null(groups = OnCreate.class)
@@ -119,6 +139,19 @@ public class Decision {
 
 	public Decision withDescription(final String description) {
 		this.description = description;
+		return this;
+	}
+
+	public String getCoApplicantReason() {
+		return coApplicantReason;
+	}
+
+	public void setCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
+	}
+
+	public Decision withCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
 		return this;
 	}
 
@@ -213,20 +246,48 @@ public class Decision {
 		return this;
 	}
 
+	public String getLifecareStatus() {
+		return lifecareStatus;
+	}
+
+	public void setLifecareStatus(final String lifecareStatus) {
+		this.lifecareStatus = lifecareStatus;
+	}
+
+	public Decision withLifecareStatus(final String lifecareStatus) {
+		this.lifecareStatus = lifecareStatus;
+		return this;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
+	public Decision withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final Decision that = (Decision) o;
 		return Objects.equals(id, that.id) && Objects.equals(decisionType, that.decisionType) && Objects.equals(value, that.value) && Objects.equals(description, that.description)
+			&& Objects.equals(coApplicantReason, that.coApplicantReason)
 			&& Objects.equals(amount, that.amount) && Objects.equals(decisionMessage, that.decisionMessage) && Objects.equals(decisionDate, that.decisionDate)
-			&& Objects.equals(periodFrom, that.periodFrom) && Objects.equals(periodTo, that.periodTo) && Objects.equals(createdBy, that.createdBy) && Objects.equals(created,
-				that.created);
+			&& Objects.equals(periodFrom, that.periodFrom) && Objects.equals(periodTo, that.periodTo) && Objects.equals(createdBy, that.createdBy)
+			&& Objects.equals(lifecareStatus, that.lifecareStatus) && Objects.equals(lifecareId, that.lifecareId) && Objects.equals(created, that.created);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, decisionType, value, description, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, created);
+		return Objects.hash(id, decisionType, value, description, coApplicantReason, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, lifecareStatus, lifecareId,
+			created);
 	}
 
 	@Override
@@ -236,12 +297,15 @@ public class Decision {
 			", decisionType='" + decisionType + '\'' +
 			", value='" + value + '\'' +
 			", description='" + description + '\'' +
+			", coApplicantReason='" + coApplicantReason + '\'' +
 			", amount=" + amount +
 			", decisionMessage='" + decisionMessage + '\'' +
 			", decisionDate=" + decisionDate +
 			", periodFrom=" + periodFrom +
 			", periodTo=" + periodTo +
 			", createdBy='" + createdBy + '\'' +
+			", lifecareStatus='" + lifecareStatus + '\'' +
+			", lifecareId='" + lifecareId + '\'' +
 			", created=" + created +
 			'}';
 	}

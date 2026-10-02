@@ -3,7 +3,8 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 /**
  * Shared string codes for the calculation sections — row provenance (who may write which column) and the recipient /
  * role enumerations. Kept as {@code String} (not enums) to match the module's API + entity convention; the process path
- * stamps {@link #ORIGIN_SYSTEM}, the Draken edit path {@link #ORIGIN_CASEWORKER}.
+ * stamps {@link #ORIGIN_SYSTEM} ({@link #ORIGIN_APPLICATION} for the application's declared incomes), the Draken edit
+ * path {@link #ORIGIN_CASEWORKER}.
  */
 public final class CalculationConstants {
 
@@ -11,6 +12,8 @@ public final class CalculationConstants {
 
 	public static final String ORIGIN_SYSTEM = "SYSTEM";
 	public static final String ORIGIN_CASEWORKER = "CASEWORKER";
+	/** A process row carrying an income the applicant declared in the application, kept apart from the SSBTEK rows. */
+	public static final String ORIGIN_APPLICATION = "APPLICATION";
 
 	public static final String RECIPIENT_APPLICANT = "APPLICANT";
 	public static final String RECIPIENT_CO_APPLICANT = "CO_APPLICANT";

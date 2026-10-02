@@ -25,6 +25,7 @@ class CalculationDraftTest {
 	@BeforeAll
 	static void setup() {
 		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+		BeanMatchers.registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(10000)), LocalDate.class);
 		BeanMatchers.registerValueGenerator(() -> List.of(NormIncomeRow.create().withTypeName("type-" + new Random().nextInt())), List.class);
 	}
 
@@ -44,6 +45,7 @@ class CalculationDraftTest {
 		final var applicationMonth = "2026-06";
 		final var normId = 1;
 		final var normType = List.of("NATIONAL_NORM");
+		final var normTypeDisplayNames = List.of("Riksnorm");
 		final var calculationFromDate = LocalDate.of(2026, JUNE, 1);
 		final var calculationToDate = LocalDate.of(2026, JUNE, 30);
 		final var calculationDate = LocalDate.of(2026, JUNE, 15);
@@ -64,6 +66,7 @@ class CalculationDraftTest {
 			.withApplicationMonth(applicationMonth)
 			.withNormId(normId)
 			.withNormType(normType)
+			.withNormTypeDisplayNames(normTypeDisplayNames)
 			.withCalculationFromDate(calculationFromDate)
 			.withCalculationToDate(calculationToDate)
 			.withCalculationDate(calculationDate)
@@ -84,6 +87,7 @@ class CalculationDraftTest {
 		assertThat(result.getApplicationMonth()).isEqualTo(applicationMonth);
 		assertThat(result.getNormId()).isEqualTo(normId);
 		assertThat(result.getNormType()).isEqualTo(normType);
+		assertThat(result.getNormTypeDisplayNames()).isEqualTo(normTypeDisplayNames);
 		assertThat(result.getCalculationFromDate()).isEqualTo(calculationFromDate);
 		assertThat(result.getCalculationToDate()).isEqualTo(calculationToDate);
 		assertThat(result.getCalculationDate()).isEqualTo(calculationDate);

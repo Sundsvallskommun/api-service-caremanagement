@@ -21,6 +21,14 @@ public class FinancialAssistanceMetadata {
 	@ArraySchema(arraySchema = @Schema(description = "The cost types, grouped by their Mina-sidor form section"), schema = @Schema(implementation = TypeOption.class))
 	private List<TypeOption> costTypes;
 
+	@ArraySchema(arraySchema = @Schema(description = "The payment money types (Payment.moneyType allowed values). Placeholder — the "
+		+ "real catalogue comes from Lifecare and isn't known yet."), schema = @Schema(implementation = TypeOption.class))
+	private List<TypeOption> moneyTypes;
+
+	@ArraySchema(arraySchema = @Schema(description = "The payment methods (Payment.paymentMethod allowed values). Placeholder — the "
+		+ "real catalogue comes from Lifecare and isn't known yet."), schema = @Schema(implementation = TypeOption.class))
+	private List<TypeOption> paymentMethods;
+
 	public static FinancialAssistanceMetadata create() {
 		return new FinancialAssistanceMetadata();
 	}
@@ -51,21 +59,49 @@ public class FinancialAssistanceMetadata {
 		return this;
 	}
 
+	public List<TypeOption> getMoneyTypes() {
+		return moneyTypes;
+	}
+
+	public void setMoneyTypes(final List<TypeOption> moneyTypes) {
+		this.moneyTypes = moneyTypes;
+	}
+
+	public FinancialAssistanceMetadata withMoneyTypes(final List<TypeOption> moneyTypes) {
+		this.moneyTypes = moneyTypes;
+		return this;
+	}
+
+	public List<TypeOption> getPaymentMethods() {
+		return paymentMethods;
+	}
+
+	public void setPaymentMethods(final List<TypeOption> paymentMethods) {
+		this.paymentMethods = paymentMethods;
+	}
+
+	public FinancialAssistanceMetadata withPaymentMethods(final List<TypeOption> paymentMethods) {
+		this.paymentMethods = paymentMethods;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		final FinancialAssistanceMetadata that = (FinancialAssistanceMetadata) o;
-		return Objects.equals(incomeTypes, that.incomeTypes) && Objects.equals(costTypes, that.costTypes);
+		return Objects.equals(incomeTypes, that.incomeTypes) && Objects.equals(costTypes, that.costTypes)
+			&& Objects.equals(moneyTypes, that.moneyTypes) && Objects.equals(paymentMethods, that.paymentMethods);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(incomeTypes, costTypes);
+		return Objects.hash(incomeTypes, costTypes, moneyTypes, paymentMethods);
 	}
 
 	@Override
 	public String toString() {
-		return "FinancialAssistanceMetadata{incomeTypes=" + incomeTypes + ", costTypes=" + costTypes + "}";
+		return "FinancialAssistanceMetadata{incomeTypes=" + incomeTypes + ", costTypes=" + costTypes + ", moneyTypes=" + moneyTypes
+			+ ", paymentMethods=" + paymentMethods + "}";
 	}
 }

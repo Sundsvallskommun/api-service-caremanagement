@@ -54,6 +54,7 @@ public final class NotificationMapper {
 				.withDescription(source.getDescription())
 				.withContent(source.getContent())
 				.withAcknowledged(Boolean.TRUE.equals(source.getAcknowledged()))
+				.withHandled(Boolean.TRUE.equals(source.getHandled()))
 				.withExpires(expires))
 			.orElse(null);
 	}
@@ -72,6 +73,7 @@ public final class NotificationMapper {
 				.withDescription(source.getDescription())
 				.withContent(source.getContent())
 				.withAcknowledged(source.isAcknowledged())
+				.withHandled(source.isHandled())
 				.withExpires(source.getExpires())
 				.withCreated(source.getCreated())
 				.withModified(source.getModified()))
@@ -87,6 +89,19 @@ public final class NotificationMapper {
 		ofNullable(patch.getDescription()).ifPresent(target::setDescription);
 		ofNullable(patch.getContent()).ifPresent(target::setContent);
 		ofNullable(patch.getAcknowledged()).ifPresent(target::setAcknowledged);
+		ofNullable(patch.getHandled()).ifPresent(handled -> applyHandled(target, handled));
+	}
+
+	/**
+	 * Marking a notification handled also acknowledges it - a caseworker cannot have acted on something they have not
+	 * seen, and leaving it unacknowledged would keep the errand in the unread filter after it was dealt with. Unmarking
+	 * handled leaves the acknowledgement alone.
+	 */
+	private static void applyHandled(final NotificationEntity target, final boolean handled) {
+		target.setHandled(handled);
+		if (handled) {
+			target.setAcknowledged(true);
+		}
 	}
 
 	private static NotificationType parseType(final String value) {

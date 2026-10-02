@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -129,12 +130,72 @@ class StakeholderServiceTest {
 		verify(eventPublisherMock).publishEvent(new StakeholderMutated(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID));
 	}
 
+	/**
+	 * Update is a PATCH — role is only {@code @NotBlank} on create — so a body that changes an address and leaves the
+	 * role out must keep the stored role and pass validation on it. Validating the incoming null instead rejects every
+	 * partial update of a type that declared a role catalogue.
+	 */
+	@Test
+	void updateWithoutARoleValidatesTheStoredOneAndKeepsIt() {
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withTypeSlug(TYPE_SLUG)));
+		when(roleRegistryMock.knownTypes()).thenReturn(Set.of(TYPE_SLUG));
+		when(roleRegistryMock.isValidRole(TYPE_SLUG, "APPLICANT")).thenReturn(true);
+		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID))
+			.thenReturn(Optional.of(StakeholderEntity.create().withId(STAKEHOLDER_ID).withErrandId(ERRAND_ID).withRole("APPLICANT").withCity("Sundsvall")));
+
+		service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, STAKEHOLDER_ID, Stakeholder.create().withCity("Timrå"));
+
+		final var saved = ArgumentCaptor.forClass(StakeholderEntity.class);
+		verify(stakeholderRepositoryMock).save(saved.capture());
+		assertThat(saved.getValue().getRole()).isEqualTo("APPLICANT");
+		assertThat(saved.getValue().getCity()).isEqualTo("Timrå");
+		verify(roleRegistryMock).isValidRole(TYPE_SLUG, "APPLICANT");
+		verify(eventPublisherMock).publishEvent(new StakeholderMutated(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID));
+	}
+
+	/** A type with no role catalogue stays unconstrained on update too, role or no role. */
+	@Test
+	void updateWithUnconstrainedTypeSkipsRoleValidation() {
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withTypeSlug("no-catalogue")));
+		when(roleRegistryMock.knownTypes()).thenReturn(Set.of(TYPE_SLUG));
+		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID))
+			.thenReturn(Optional.of(StakeholderEntity.create().withId(STAKEHOLDER_ID).withErrandId(ERRAND_ID)));
+
+		service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, STAKEHOLDER_ID, Stakeholder.create().withFirstName("Bertil"));
+
+		verify(stakeholderRepositoryMock).save(any(StakeholderEntity.class));
+		verify(roleRegistryMock, never()).isValidRole(any(), any());
+	}
+
+	/** A missing stakeholder is a 404, not a role complaint — the lookup has to come before the verdict. */
+	@Test
+	void updateOfAMissingStakeholderThrowsNotFound() {
+		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
+			.thenReturn(Optional.of(Errand.create().withTypeSlug(TYPE_SLUG)));
+		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, STAKEHOLDER_ID, Stakeholder.create()))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
+
+		verify(stakeholderRepositoryMock, never()).save(any(StakeholderEntity.class));
+		verifyNoInteractions(eventPublisherMock);
+	}
+
+	/**
+	 * The stored role is only the fallback. A body that does carry a role is still judged on the new one, so a partial
+	 * update cannot smuggle an invalid role past the catalogue by relying on a valid stored value.
+	 */
 	@Test
 	void updateWithInvalidRoleForTypeThrowsBadRequest() {
 		when(errandQueryServiceMock.findErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.thenReturn(Optional.of(Errand.create().withTypeSlug(TYPE_SLUG)));
 		when(roleRegistryMock.knownTypes()).thenReturn(Set.of(TYPE_SLUG));
 		when(roleRegistryMock.isValidRole(TYPE_SLUG, "BOGUS_ROLE")).thenReturn(false);
+		when(stakeholderRepositoryMock.findByErrandIdAndId(ERRAND_ID, STAKEHOLDER_ID))
+			.thenReturn(Optional.of(StakeholderEntity.create().withId(STAKEHOLDER_ID).withErrandId(ERRAND_ID).withRole("APPLICANT")));
 
 		assertThatThrownBy(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, STAKEHOLDER_ID,
 			Stakeholder.create().withRole("BOGUS_ROLE")))

@@ -22,10 +22,10 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * The draft calculation header for an errand — one row per errand, holding the application month and the selected
  * norm. The section rows (persons, incomes, expenses) live in their own tables ({@code errand_fa_norm_person},
  * {@code errand_fa_norm_income}, {@code errand_fa_norm_expense}), each row owning its process and caseworker values
- * separately. The financial assistance process prepares the draft each day without writing to Lifecare; on a decision
- * the effective
- * values
- * are posted. The errand id is the primary key.
+ * separately. The financial assistance process refreshes the draft each day and posts it to Lifecare as the
+ * normberäkning proposal; the caseworker continues that calculation in Lifecare from Draken, through careM's /lifecare
+ * calculation route. Once the errand has a {@code lifecareCalculationId} the draft is no longer refreshed. The errand
+ * id is the primary key.
  */
 @Entity
 @Table(name = "errand_financial_assistance_calculation_draft")
@@ -40,6 +40,10 @@ public class FaCalculationDraftEntity {
 
 	@Column(name = "norm_id")
 	private Integer normId;
+
+	/** The caseworker picked the norm; the daily beredning then leaves {@code normId} alone. */
+	@Column(name = "norm_set_by_caseworker")
+	private Boolean normSetByCaseworker;
 
 	@ElementCollection
 	@CollectionTable(name = "errand_fa_calculation_draft_norm_type", joinColumns = @JoinColumn(name = "errand_id"))
@@ -176,6 +180,19 @@ public class FaCalculationDraftEntity {
 		return this;
 	}
 
+	public Boolean getNormSetByCaseworker() {
+		return normSetByCaseworker;
+	}
+
+	public void setNormSetByCaseworker(final Boolean normSetByCaseworker) {
+		this.normSetByCaseworker = normSetByCaseworker;
+	}
+
+	public FaCalculationDraftEntity withNormSetByCaseworker(final Boolean normSetByCaseworker) {
+		this.normSetByCaseworker = normSetByCaseworker;
+		return this;
+	}
+
 	public Boolean getHasCustomHouseholdSize() {
 		return hasCustomHouseholdSize;
 	}
@@ -234,7 +251,7 @@ public class FaCalculationDraftEntity {
 			return false;
 		final FaCalculationDraftEntity that = (FaCalculationDraftEntity) o;
 		return Objects.equals(errandId, that.errandId) && Objects.equals(applicationMonth, that.applicationMonth)
-			&& Objects.equals(normId, that.normId) && Objects.equals(normType, that.normType)
+			&& Objects.equals(normId, that.normId) && Objects.equals(normSetByCaseworker, that.normSetByCaseworker) && Objects.equals(normType, that.normType)
 			&& Objects.equals(calculationFromDate, that.calculationFromDate) && Objects.equals(calculationToDate, that.calculationToDate)
 			&& Objects.equals(calculationDate, that.calculationDate) && Objects.equals(hasCustomHouseholdSize, that.hasCustomHouseholdSize)
 			&& Objects.equals(householdSize, that.householdSize) && Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
@@ -242,7 +259,7 @@ public class FaCalculationDraftEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(errandId, applicationMonth, normId, normType, calculationFromDate, calculationToDate, calculationDate, hasCustomHouseholdSize, householdSize,
+		return Objects.hash(errandId, applicationMonth, normId, normSetByCaseworker, normType, calculationFromDate, calculationToDate, calculationDate, hasCustomHouseholdSize, householdSize,
 			created, updated);
 	}
 
@@ -252,6 +269,7 @@ public class FaCalculationDraftEntity {
 			"errandId='" + errandId + '\'' +
 			", applicationMonth='" + applicationMonth + '\'' +
 			", normId=" + normId +
+			", normSetByCaseworker=" + normSetByCaseworker +
 			", normType=" + normType +
 			", calculationFromDate=" + calculationFromDate +
 			", calculationToDate=" + calculationToDate +

@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.stakeholders.api.model.ContactChannel;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Asset;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Child;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Cost;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinancialAssistanceData;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.Income;
@@ -46,7 +48,11 @@ class FinancialAssistanceMapperTest {
 		final var data = fullData();
 		final var entity = FinancialAssistanceMapper.toEntity(data, "errand-1");
 
-		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "created", "modified");
+		// the finalize-owned fields (household flag, notify channels), the actualisation step's marker and the Lifecare
+		// references are never set from client data
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("lastDailyRunAt", "actualisationRequestedAt", "created", "modified",
+			"householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter", "lifecareServiceId",
+			"lifecareDecisionId", "lifecareCalculationId", "lifecarePaymentIds");
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getApplicationType()).isEqualTo("NEW");
 		assertThat(entity.getMaritalStatus()).isEqualTo("SINGLE");
@@ -79,6 +85,10 @@ class FinancialAssistanceMapperTest {
 		assertThat(entity.getStayDescription()).isEqualTo("Lives at the registered address");
 		assertThat(entity.getAttestation()).isTrue();
 		assertThat(entity.getAttestedAt()).isEqualTo(ATTESTED_AT);
+		// server-owned: a client-sent Lifecare reference is ignored
+		assertThat(entity.getLifecareDecisionId()).isNull();
+		assertThat(entity.getLifecareCalculationId()).isNull();
+		assertThat(entity.getLifecarePaymentIds()).isNull();
 		assertThat(entity.getChildren()).hasSize(1);
 		assertThat(entity.getChildren().getFirst().getPartyId()).isEqualTo("20180101-1234");
 		assertThat(entity.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
@@ -180,49 +190,19 @@ class FinancialAssistanceMapperTest {
 			.withCreated(CREATED)
 			.withModified(MODIFIED);
 
+		// Everything toEntity(fullData(), ...) would produce, except the server-owned fields — those come from the
+		// pre-existing entity above, not from the client data, however fullData()'s own applicationType (NEW) is
+		// deliberately ignored.
+		final var expected = FinancialAssistanceMapper.toEntity(fullData(), "errand-1")
+			.withApplicationType("RENEWAL")
+			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withCreated(CREATED)
+			.withModified(MODIFIED);
+
 		final var result = FinancialAssistanceMapper.updateEntity(entity, fullData());
 
 		assertThat(result).isSameAs(entity);
-		// server-owned fields untouched (fullData carries applicationType NEW — must be ignored)
-		assertThat(result.getErrandId()).isEqualTo("errand-1");
-		assertThat(result.getApplicationType()).isEqualTo("RENEWAL");
-		assertThat(result.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
-		assertThat(result.getCreated()).isEqualTo(CREATED);
-		assertThat(result.getModified()).isEqualTo(MODIFIED);
-		// client fields replaced
-		assertThat(result).hasNoNullFieldsOrProperties();
-		assertThat(result.getMaritalStatus()).isEqualTo("SINGLE");
-		assertThat(result.getPeriodMonth()).isEqualTo(6);
-		assertThat(result.getPeriodYear()).isEqualTo(2026);
-		assertThat(result.getPeriodChoice()).isEqualTo("CURRENT_MONTH");
-		assertThat(result.getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
-		assertThat(result.getOtherBenefitDescription()).isEqualTo("Establishment benefit");
-		assertThat(result.getLivelihoodDescription()).isEqualTo("Söker arbete");
-		assertThat(result.getHasChildrenUnder21()).isTrue();
-		assertThat(result.getChildrenResidenceChanged()).isFalse();
-		assertThat(result.getChildrenResidenceChangeDescription()).isEqualTo("Bor växelvis");
-		assertThat(result.getHousingForm()).isEqualTo("RENTAL");
-		assertThat(result.getHousingPersonCount()).isEqualTo(3);
-		assertThat(result.getHousingRoomsPlusKitchen()).isEqualTo(3);
-		assertThat(result.getHousingDescription()).isEqualTo("Trerumslägenhet");
-		assertThat(result.getHousingChanged()).isFalse();
-		assertThat(result.getHousingChangeDescription()).isEqualTo("Flyttade i maj");
-		assertThat(result.getHasIncomes()).isTrue();
-		assertThat(result.getHasPendingBenefits()).isTrue();
-		assertThat(result.getHasAssets()).isTrue();
-		assertThat(result.getStaysInMunicipality()).isTrue();
-		assertThat(result.getStayDescription()).isEqualTo("Lives at the registered address");
-		assertThat(result.getAttestation()).isTrue();
-		assertThat(result.getAttestedAt()).isEqualTo(ATTESTED_AT);
-		assertThat(result.getChildren()).hasSize(1);
-		assertThat(result.getCosts()).hasSize(1);
-		assertThat(result.getIncomes()).hasSize(1);
-		assertThat(result.getPendingBenefits()).hasSize(1);
-		assertThat(result.getAssets()).hasSize(1);
-		assertThat(result.getPersons()).hasSize(1);
-		assertThat(result.getPlannings()).hasSize(1);
-		assertThat(result.getPlannedActivities()).hasSize(1);
-		assertThat(result.getJobApplications()).hasSize(1);
+		assertThat(result).usingRecursiveComparison().isEqualTo(expected);
 	}
 
 	@Test
@@ -286,6 +266,9 @@ class FinancialAssistanceMapperTest {
 		assertThat(data.getStayDescription()).isEqualTo("Bor utomlands");
 		assertThat(data.getAttestation()).isFalse();
 		assertThat(data.getAttestedAt()).isEqualTo(ATTESTED_AT);
+		assertThat(data.getLifecareDecisionId()).isEqualTo(4712);
+		assertThat(data.getLifecareCalculationId()).isEqualTo(4243);
+		assertThat(data.getLifecarePaymentIds()).containsExactly("90300");
 		assertThat(data.getChildren()).hasSize(1);
 		assertThat(data.getChildren().getFirst().getFirstName()).isEqualTo("Kid");
 		assertThat(data.getCosts()).hasSize(1);
@@ -338,7 +321,7 @@ class FinancialAssistanceMapperTest {
 
 		final var view = FinancialAssistanceMapper.toView(envelope, entity);
 
-		assertThat(view).isNotNull().hasNoNullFieldsOrPropertiesExcept("applicantName", "recommendation", "sectionApprovals");
+		assertThat(view).isNotNull().hasNoNullFieldsOrPropertiesExcept("applicantName", "recommendation");
 		assertThat(view.getId()).isEqualTo("errand-1");
 		assertThat(view.getErrandNumber()).isEqualTo("EB-26060042");
 		assertThat(view.getMunicipalityId()).isEqualTo("2281");
@@ -356,6 +339,46 @@ class FinancialAssistanceMapperTest {
 		assertThat(view.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
 		assertThat(view.getData()).isNotNull().hasNoNullFieldsOrProperties();
 		assertThat(view.getData().getApplicationType()).isEqualTo("RENEWAL");
+		assertThat(view.getHouseholdSizeChanged()).isTrue();
+		assertThat(view.getCommunication()).isEqualTo(CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(true));
+	}
+
+	@Test
+	void toViewLeavesFinalizeFieldsNullUntilFinalized() {
+		final var view = FinancialAssistanceMapper.toView(Errand.create().withId("errand-1"), FinancialAssistanceEntity.create().withErrandId("errand-1"));
+
+		assertThat(view.getCommunication()).isNull();
+		assertThat(view.getHouseholdSizeChanged()).isNull();
+	}
+
+	@Test
+	void toCommunicationChannelsIsNullUntilAnyFlagIsSet() {
+		assertThat(FinancialAssistanceMapper.toCommunicationChannels(null)).isNull();
+		assertThat(FinancialAssistanceMapper.toCommunicationChannels(FinancialAssistanceEntity.create())).isNull();
+		assertThat(FinancialAssistanceMapper.toCommunicationChannels(FinancialAssistanceEntity.create().withNotifyLetter(false)))
+			.isEqualTo(CommunicationChannels.create().withLetter(false));
+	}
+
+	@Test
+	void toDataCopiesTheLazyStringCollectionsInsteadOfHandingThemOn() {
+		final var normTypes = new ArrayList<>(List.of("NATIONAL_NORM"));
+		final var paymentIds = new ArrayList<>(List.of("p1", "p2"));
+		final var entity = FinancialAssistanceEntity.create().withNormType(normTypes).withLifecarePaymentIds(paymentIds);
+
+		final var data = FinancialAssistanceMapper.toData(entity);
+
+		// Handed on as they are, the entity's collections would only be read when the response is written, after the
+		// transaction that loaded them has ended.
+		assertThat(data.getNormType()).isEqualTo(normTypes).isNotSameAs(normTypes);
+		assertThat(data.getLifecarePaymentIds()).isEqualTo(paymentIds).isNotSameAs(paymentIds);
+	}
+
+	@Test
+	void toDataKeepsAbsentStringCollectionsAbsent() {
+		final var data = FinancialAssistanceMapper.toData(FinancialAssistanceEntity.create());
+
+		assertThat(data.getNormType()).isNull();
+		assertThat(data.getLifecarePaymentIds()).isNull();
 	}
 
 	@Test
@@ -368,6 +391,8 @@ class FinancialAssistanceMapperTest {
 		assertThat(view).isNotNull();
 		assertThat(view.getId()).isEqualTo("errand-1");
 		assertThat(view.getData()).isNull();
+		assertThat(view.getCommunication()).isNull();
+		assertThat(view.getHouseholdSizeChanged()).isNull();
 	}
 
 	@Test
@@ -472,6 +497,9 @@ class FinancialAssistanceMapperTest {
 			.withStayDescription("Lives at the registered address")
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
+			.withLifecareDecisionId(4711)
+			.withLifecareCalculationId(4242)
+			.withLifecarePaymentIds(List.of("90210", "90211", "90210"))
 			.withChildren(List.of(Child.create()
 				.withPartyId("20180101-1234")
 				.withFirstName("Kid")
@@ -570,6 +598,14 @@ class FinancialAssistanceMapperTest {
 			.withAttestation(false)
 			.withAttestedAt(ATTESTED_AT)
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withLifecareServiceId(7700)
+			.withLifecareDecisionId(4712)
+			.withLifecareCalculationId(4243)
+			.withLifecarePaymentIds(List.of("90300"))
+			.withHouseholdSizeChanged(true)
+			.withNotifyMinaSidor(true)
+			.withNotifyDigitalMailbox(false)
+			.withNotifyLetter(true)
 			.withChildren(List.of(FaChild.create()
 				.withPartyId("20180101-1234")
 				.withFirstName("Kid")

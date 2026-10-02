@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.core.service;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,7 +13,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.core.integration.db.ErrandNumberSequenceRepository;
 import se.sundsvall.caremanagement.core.integration.db.model.ErrandNumberSequenceEntity;
 
-import static java.time.ZoneId.systemDefault;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
@@ -23,7 +23,8 @@ class ErrandNumberGeneratorTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "FINANCIAL_ASSISTANCE";
-	private static final LocalDate TODAY = LocalDate.now(systemDefault());
+	/** The generator stamps the Swedish calendar month, not the JVM's — the expectation has to use the same zone. */
+	private static final LocalDate TODAY = LocalDate.now(ZoneId.of("Europe/Stockholm"));
 	private static final int YEAR = TODAY.getYear();
 	private static final int MONTH = TODAY.getMonthValue();
 	// Two-digit year + month stamp, e.g. "2606" in June 2026.

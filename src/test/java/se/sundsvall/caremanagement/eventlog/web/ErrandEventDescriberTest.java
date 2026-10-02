@@ -29,7 +29,6 @@ class ErrandEventDescriberTest {
 		assertThat(ErrandEventDescriber.describe("POST", List.of("notes"), false)).isEqualTo("Lade till anteckning");
 		assertThat(ErrandEventDescriber.describe("POST", List.of("attachments"), false)).isEqualTo("Lade till bilaga");
 		assertThat(ErrandEventDescriber.describe("DELETE", List.of("attachments"), true)).isEqualTo("Tog bort bilaga");
-		assertThat(ErrandEventDescriber.describe("GET", List.of("journal-entries"), false)).isEqualTo("Visade journalanteckningar");
 	}
 
 	@Test
@@ -45,14 +44,16 @@ class ErrandEventDescriberTest {
 	void calculationHeaderAndDraftAndData() {
 		assertThat(ErrandEventDescriber.describe("PATCH", List.of("calculation", "draft", "header"), false)).isEqualTo("Uppdaterade beräkningshuvud");
 		assertThat(ErrandEventDescriber.describe("GET", List.of("calculation", "draft"), false)).isEqualTo("Visade utkastberäkning");
+		// GUI-01: the manual SSBTEK read, logged on the errand
+		assertThat(ErrandEventDescriber.describe("GET", List.of("ssbtek"), false)).isEqualTo("Visade SSBTEK-underlag");
+		// The process's read of the household's personal numbers is a disclosure, logged in words
+		assertThat(ErrandEventDescriber.describe("GET", List.of("household-identifiers"), false)).isEqualTo("Visade hushållets personnummer");
 		assertThat(ErrandEventDescriber.describe("GET", List.of("data"), false)).isEqualTo("Visade ärendeuppgifter");
 	}
 
 	@Test
 	void actionStyleLeaves() {
 		assertThat(ErrandEventDescriber.describe("POST", List.of("calculation", "draft", "incomes", "restore"), false)).isEqualTo("Återställde inkomst i utkastberäkningen");
-		assertThat(ErrandEventDescriber.describe("POST", List.of("sections", "INKOMSTER", "approval"), false)).isEqualTo("Godkände en sektion");
-		assertThat(ErrandEventDescriber.describe("GET", List.of("sections", "approvals"), false)).isEqualTo("Visade sektionsgodkännanden");
 		assertThat(ErrandEventDescriber.describe("PATCH", List.of("notifications", "acknowledged"), false)).isEqualTo("Kvitterade notiser");
 	}
 

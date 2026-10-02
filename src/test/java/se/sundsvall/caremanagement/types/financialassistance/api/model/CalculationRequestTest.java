@@ -33,7 +33,9 @@ class CalculationRequestTest {
 			.withErrandId("cb20c51f-fcf3-42c0-b613-de563634a8ec")
 			.withClassifiedIncomes("[{}]")
 			.withUnhandledIncomes(List.of("u"))
-			.withChangeWarnings(List.of("c"));
+			.withChangeWarnings(List.of("c"))
+			.withSsbtekError(false)
+			.withDayCheckBasis(DayCheckBasis.create().withAllDaysConsumed(false));
 
 		assertThat(request.getApplicant()).isEqualTo("198001012389");
 		assertThat(request.getCoApplicant()).isEqualTo("198202022397");
@@ -42,6 +44,9 @@ class CalculationRequestTest {
 		assertThat(request.getClassifiedIncomes()).isEqualTo("[{}]");
 		assertThat(request.getUnhandledIncomes()).containsExactly("u");
 		assertThat(request.getChangeWarnings()).containsExactly("c");
+		assertThat(request.getSsbtekError()).isFalse();
+		assertThat(request.getDayCheckBasis()).isEqualTo(DayCheckBasis.create().withAllDaysConsumed(false));
+		assertThat(request).hasNoNullFieldsOrProperties();
 	}
 
 	@Test

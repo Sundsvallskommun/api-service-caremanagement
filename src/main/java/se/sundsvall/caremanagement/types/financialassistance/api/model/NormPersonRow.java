@@ -33,10 +33,13 @@ public class NormPersonRow {
 	@Schema(description = "The party id of the household member", accessMode = Schema.AccessMode.READ_ONLY)
 	private String partyId;
 
-	@Schema(description = "The role of the household member", allowableValues = {
-		"APPLICANT", "CO_APPLICANT", "CHILD"
+	@Schema(description = "The role of the household member (machine code; use roleDisplayName for the label)", allowableValues = {
+		"APPLICANT", "CO_APPLICANT", "CHILD", "VISITATION_CHILD"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String role;
+
+	@Schema(description = "Swedish display name for the role", examples = "Medsökande", accessMode = Schema.AccessMode.READ_ONLY)
+	private String roleDisplayName;
 
 	@Schema(description = "The name of the household member", accessMode = Schema.AccessMode.READ_ONLY)
 	private String name;
@@ -64,8 +67,10 @@ public class NormPersonRow {
 	@Schema(description = "The norm interval applied to the member")
 	private String normInterval;
 
-	@Schema(description = "The job stimulus amount applied to the member", examples = "1000.00")
-	private BigDecimal jobStimulusAmount;
+	@Schema(description = "The member's own share of the norm (the Belopp column of Lifecare's Beräkning view); carried over from the previous calculation, the norm itself is computed in Lifecare",
+		examples = "1431.00",
+		accessMode = Schema.AccessMode.READ_ONLY)
+	private BigDecimal amount;
 
 	@Schema(description = "Whether the row is soft-deleted (excluded from the calculation, not resurrected by the daily refresh)", accessMode = Schema.AccessMode.READ_ONLY)
 	private boolean deleted;
@@ -147,6 +152,19 @@ public class NormPersonRow {
 
 	public NormPersonRow withRole(final String role) {
 		this.role = role;
+		return this;
+	}
+
+	public String getRoleDisplayName() {
+		return roleDisplayName;
+	}
+
+	public void setRoleDisplayName(final String roleDisplayName) {
+		this.roleDisplayName = roleDisplayName;
+	}
+
+	public NormPersonRow withRoleDisplayName(final String roleDisplayName) {
+		this.roleDisplayName = roleDisplayName;
 		return this;
 	}
 
@@ -254,16 +272,16 @@ public class NormPersonRow {
 		return this;
 	}
 
-	public BigDecimal getJobStimulusAmount() {
-		return jobStimulusAmount;
+	public BigDecimal getAmount() {
+		return amount;
 	}
 
-	public void setJobStimulusAmount(final BigDecimal jobStimulusAmount) {
-		this.jobStimulusAmount = jobStimulusAmount;
+	public void setAmount(final BigDecimal amount) {
+		this.amount = amount;
 	}
 
-	public NormPersonRow withJobStimulusAmount(final BigDecimal jobStimulusAmount) {
-		this.jobStimulusAmount = jobStimulusAmount;
+	public NormPersonRow withAmount(final BigDecimal amount) {
+		this.amount = amount;
 		return this;
 	}
 
@@ -325,17 +343,19 @@ public class NormPersonRow {
 			return false;
 		final NormPersonRow that = (NormPersonRow) o;
 		return deleted == that.deleted && included == that.included && Objects.equals(id, that.id) && Objects.equals(origin, that.origin)
-			&& Objects.equals(position, that.position) && Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role) && Objects.equals(name, that.name)
+			&& Objects.equals(position, that.position) && Objects.equals(partyId, that.partyId) && Objects.equals(role, that.role)
+			&& Objects.equals(roleDisplayName, that.roleDisplayName) && Objects.equals(name, that.name)
 			&& Objects.equals(processDays, that.processDays) && Objects.equals(caseworkerDays, that.caseworkerDays) && Objects.equals(effectiveDays, that.effectiveDays)
 			&& Objects.equals(deviationFromDate, that.deviationFromDate) && Objects.equals(deviationToDate, that.deviationToDate)
-			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(jobStimulusAmount, that.jobStimulusAmount) && Objects.equals(note, that.note)
+			&& Objects.equals(normInterval, that.normInterval) && Objects.equals(amount, that.amount)
+			&& Objects.equals(note, that.note)
 			&& Objects.equals(created, that.created) && Objects.equals(updated, that.updated);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, origin, position, partyId, role, name, processDays, caseworkerDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
-			jobStimulusAmount, deleted, note, created, updated);
+		return Objects.hash(id, origin, position, partyId, role, roleDisplayName, name, processDays, caseworkerDays, effectiveDays, included, deviationFromDate, deviationToDate, normInterval,
+			amount, deleted, note, created, updated);
 	}
 
 	@Override
@@ -346,6 +366,7 @@ public class NormPersonRow {
 			", position=" + position +
 			", partyId='" + partyId + '\'' +
 			", role='" + role + '\'' +
+			", roleDisplayName='" + roleDisplayName + '\'' +
 			", name='" + name + '\'' +
 			", processDays=" + processDays +
 			", caseworkerDays=" + caseworkerDays +
@@ -354,7 +375,7 @@ public class NormPersonRow {
 			", deviationFromDate=" + deviationFromDate +
 			", deviationToDate=" + deviationToDate +
 			", normInterval='" + normInterval + '\'' +
-			", jobStimulusAmount=" + jobStimulusAmount +
+			", amount=" + amount +
 			", deleted=" + deleted +
 			", note='" + note + '\'' +
 			", created=" + created +

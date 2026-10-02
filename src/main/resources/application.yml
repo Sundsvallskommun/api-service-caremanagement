@@ -24,6 +24,9 @@ spring:
   flyway:
     enabled: false
   jpa:
+    # No EntityManager held open for the whole request: a lazy association is read inside the service transaction that
+    # maps it, never while the response is rendered.
+    open-in-view: false
     properties:
       hibernate:
         type:
@@ -63,14 +66,13 @@ spring:
             client-secret: ${INTEGRATION_FINANCIAL_AID_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             provider: financial-aid
-          # RPA is the one optional integration (integration.rpa.enabled is the master switch), so it keeps
-          # placeholder credentials — a deploy without an Orchestrator runs with enabled=false and never uses them.
-          rpa:
-            client-id: ${INTEGRATION_RPA_CLIENT_ID:placeholder}
-            client-secret: ${INTEGRATION_RPA_CLIENT_SECRET:placeholder}
+          # The opt-in integration below keeps placeholder credentials, so a deploy that does not use it needs no
+          # secrets for it: lifecare-integrator only wakes up when integration.lifecare-familycare.provider=integrator.
+          lifecare-integrator:
+            client-id: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_ID:placeholder}
+            client-secret: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_SECRET:placeholder}
             authorization-grant-type: client_credentials
-            provider: rpa
-            scope: OR.Queues, OR.Queues.Read, OR.Queues.Write
+            provider: lifecare-integrator
         provider:
           messaging:
             token-uri: ${INTEGRATION_MESSAGING_TOKEN_URI}
@@ -80,13 +82,57 @@ spring:
             token-uri: ${INTEGRATION_CITIZEN_TOKEN_URI}
           financial-aid:
             token-uri: ${INTEGRATION_FINANCIAL_AID_TOKEN_URI}
-          rpa:
-            token-uri: ${INTEGRATION_RPA_TOKEN_URI:http://localhost/token}
+          lifecare-integrator:
+            token-uri: ${INTEGRATION_LIFECARE_INTEGRATOR_TOKEN_URI:http://localhost/token}
+#========================================
+# Circuit breakers
+#========================================
+resilience4j:
+  circuitbreaker:
+    instances:
+      operaton:
+        base-config: default
+        # The engine's 404 ("no process instance is waiting") is an answer about one errand, not a failing engine.
+        record-failure-predicate: se.sundsvall.caremanagement.operaton.integration.configuration.OperatonCircuitBreakerFailures
+
 #========================================
 # Integration settings
 #========================================
 integration:
   operaton:
+    connect-timeout: 5
+    read-timeout: 30
+  # lifecare-integrator — the route to FamilyCare that works from outside the municipal network. Only used when
+  # integration.lifecare-familycare.provider=integrator; the credentials carry placeholders so a deploy on the direct
+  # route needs none of them.
+  # read-timeout 90: an attachment upload onto a Lifecare actualisation measured 41.5 s against the live API on
+  # 2026-09-23, and the integrator's own read timeout to FamilyCare is raised to 90 to match. The two are equal rather
+  # than staggered, so a FamilyCare call that runs the full 90 s may be cut here first; raise this above the
+  # integrator's if that shows up. A cut here is not free — the timeout throws past the error decoder, so the failure
+  # arrives without Lifecare's explanation.
+  lifecare-integrator:
+    url: ${INTEGRATION_LIFECARE_INTEGRATOR_URL:http://localhost/lifecare-integrator}
+    connect-timeout: 5
+    read-timeout: 90
+  # Lifecare ProfessionalWeb — the internal api2 surface Lifecare's own web client uses (normberäkning editing, decisions,
+  # payments, payees, reminders, journal notes, documents, job stimulus). Reached with a signed-in session of an
+  # integration account (SAML via MobilityGuard), not an API key. url is the Lifecare host without a module path; leave it
+  # unset and every ProfessionalWeb call answers 502 instead of the application failing to start. username/password are
+  # secrets: environment only. Only reachable from a network that resolves the internal Lifecare host.
+  lifecare-professionalweb:
+    # direct: careM signs in and talks to Lifecare itself (inside the municipal network only). integrator: through
+    # api-service-lifecare-integrator's POST /{municipalityId}/professional-web/exchange, using the lifecare-integrator
+    # url and OAuth2 registration above; the integrator then holds the account and the url/credentials below are unused.
+    provider: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_PROVIDER:direct}
+    url: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_URL:}
+    domain: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_DOMAIN:}
+    federation-profile: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_FEDERATION_PROFILE:}
+    username: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_USERNAME:}
+    password: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_PASSWORD:}
+    # Test environments only: the decision maker to put on every decision while the caseworkers are not yet in
+    # Lifecare's list of decision makers. Unset means the signed-in caseworker (X-Sent-By).
+    test-decision-maker: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_TEST_DECISION_MAKER:}
+    session-ttl: 20m
     connect-timeout: 5
     read-timeout: 30
   # financial-aid (SSBTEK proxy). OAuth2 client-credentials via the financial-aid Spring security registration above.
@@ -110,6 +156,12 @@ integration:
   # (query params / X-API-Key header); url is the FamilyCare base path (host + /WESE.FC.Api.FC). The key is sensitive — inject
   # via secret and keep it out of request logging.
   lifecare-familycare:
+    # Which route answers the FamilyCare surface: `familycare` talks to Lifecare directly (only reachable from inside
+    # the municipal network), `integrator` goes through api-service-lifecare-integrator. Declared explicitly so the
+    # environment variable that switches it is named here rather than left to relaxed binding — the env form of
+    # `lifecare-familycare` collapses the hyphen (INTEGRATION_LIFECAREFAMILYCARE_PROVIDER), which is easy to get wrong
+    # and fails silently: a misspelled name binds some other property and the direct route just stays on.
+    provider: ${INTEGRATION_LIFECARE_FAMILYCARE_PROVIDER:familycare}
     url: ${INTEGRATION_LIFECARE_FAMILYCARE_URL}
     domain: ${INTEGRATION_LIFECARE_FAMILYCARE_DOMAIN}
     key: ${INTEGRATION_LIFECARE_FAMILYCARE_KEY}
@@ -126,26 +178,17 @@ integration:
     # financial-assistance.eligibility.require-open-case is turned on. Confirm the vocabulary against production
     # Lifecare before adding values here.
     open-actualisation-statuses: Aktuell
-  # UiPath Orchestrator RPA — enqueues financial assistance Lifecare write/fetch jobs as queue items (AddQueueItem). url is the
-  # Orchestrator base; queue is the single financial assistance queue (the action travels in the item SpecificContent); folderIds map
-  # municipalityId → Orchestrator folder (X-UIPATH-OrganizationUnitId). OAuth2 via the rpa registration above. Set
-  # enabled=false to make every enqueue a logged no-op (environments without an Orchestrator).
-    # enabled defaults false so an unconfigured deploy is a logged no-op (no errors); set INTEGRATION_RPA_ENABLED=true
-    # plus INTEGRATION_RPA_URL/_TOKEN_URI to actually enqueue (in Drakel: the internal WireMock host + its /token stub).
-  rpa:
-    url: ${INTEGRATION_RPA_URL:http://localhost}
-    enabled: ${INTEGRATION_RPA_ENABLED:false}
-    queue: ${INTEGRATION_RPA_QUEUE:RakelEkonomisktBistand}
-    folder-ids:
-      2281: ${INTEGRATION_RPA_FOLDER_ID_2281:1}
-    connect-timeout: 5
-    read-timeout: 30
 #========================================
 # Notification settings
 #========================================
 notification:
   ttl: P30D
 scheduler:
+  process-message-retry:
+    cron: '0 * * * * *'
+    name: process-message-retry
+    shedlock-lock-at-most-for: PT5M
+    maximum-execution-time: PT5M
   notification-cleanup:
     cron: '0 0 2 * * *'
     name: notification-cleanup
@@ -156,21 +199,47 @@ scheduler:
     name: message-archive
     shedlock-lock-at-most-for: PT30M
     maximum-execution-time: PT30M
+  # Gives a financial assistance errand its process again when the start after its creation did not take (see
+  # financial-assistance.process-start-retry). Every five minutes; '-' switches the schedule off.
+  process-start-retry:
+    cron: '${SCHEDULER_PROCESS_START_RETRY_CRON:0 */5 * * * *}'
+    name: process-start-retry
+    shedlock-lock-at-most-for: PT10M
+    maximum-execution-time: PT10M
 #========================================
 # Conversation archiving settings
 #========================================
 # Nightly job: snapshots the conversation of every closed financial assistance errand into {errandNumber}_meddelandehistorik.pdf once it
 # has been closed (and untouched) for days-after-close days, then uploads it to the errand's Lifecare actualisation.
-# The Lifecare document-type / sender-type codes are tenant-specific (mocked in Drakel) — override per environment.
+# The Lifecare document-type / sender-type codes are the numeric ids from the actualisation proposal's
+# attachmentTypes (1 = "Inkommen handling", senderType 1 = "Den enskilde"). They are tenant-specific — override per
+# environment. FamilyCare rejects anything non-numeric with "InsertDocumentType parameter not a number".
 archive:
   message:
     municipality-id: 2281
     namespace: FINANCIAL_ASSISTANCE
     days-after-close: 30
-    lifecare-document-type: ${ARCHIVE_MESSAGE_LIFECARE_DOCUMENT_TYPE:MEDDELANDEHISTORIK}
-    lifecare-document-sender-type: ${ARCHIVE_MESSAGE_LIFECARE_SENDER_TYPE:MYNDIGHET}
+    lifecare-document-type: ${ARCHIVE_MESSAGE_LIFECARE_DOCUMENT_TYPE:1}
+    lifecare-document-sender-type: ${ARCHIVE_MESSAGE_LIFECARE_SENDER_TYPE:1}
     document-label: Meddelanden och bilagor från Draken
     lifecare-sender-name: Sundsvalls kommun
+#========================================
+# Lifecare actualisation settings
+#========================================
+# The catalogue entries verksamheten named for an EB återansökan (Regelverk Drakel 2026-09-21). Matched on the
+# catalogue entry's name, case- and space-insensitively. A name that is not in the person's proposal falls back to the
+# first offered value and is logged as a warning — an intake must never be blocked by a renamed catalogue entry, but a
+# silent fallback is exactly the guess this configuration removes. Override per environment if Lifecare renames one.
+# Not configured, and still "first offered": specify-type, working-status, service and investigation — verksamheten has
+# not named them. The caseworker is resolved from the applicant's previous Lifecare service, not set from here; the
+# regelverk's "Handläggare = Rakel" is an open question to verksamheten.
+lifecare:
+  actualisation:
+    type: ${LIFECARE_ACTUALISATION_TYPE:Ek Återansökan Digital Ekonomiskt bistånd}
+    from-who: ${LIFECARE_ACTUALISATION_FROM_WHO:Den enskilde}
+    reason: ${LIFECARE_ACTUALISATION_REASON:Ekonomiskt bistånd}
+    organisation: ${LIFECARE_ACTUALISATION_ORGANISATION:Ekonomiskt bistånd}
+    new-application-type: ${LIFECARE_ACTUALISATION_NEW_APPLICATION_TYPE:EK Nyansökan Digital Ekonomiskt bistånd}
 #========================================
 # Financial assistance settings
 #========================================
@@ -189,8 +258,43 @@ financial-assistance:
     # created errand is frozen as NEEDS_MANUAL_REVIEW (no aktualisering, no arkivering) for a caseworker to reopen in
     # Lifecare and release. Policy value — confirm the day count with legal/jurist.
     recently-closed-window-days: 30
+    # Off until the guard measures the right thing. It counts careM errands in status CLOSED, but a careM errand is one
+    # month's application and the normal flow ends PAID → CLOSED, so next month's ordinary renewal would be frozen and
+    # routed as "recently closed". The guard is meant for an EB insats that ended in Lifecare; switch it on only once it
+    # reads that (kvarlistan v07).
+    recently-closed-enabled: ${FINANCIAL_ASSISTANCE_RECENTLY_CLOSED_ENABLED:false}
     # TEST OVERRIDE, off by default: when true the eligibility check short-circuits and returns all three application
     # types (new/renewal/supplementary application) regardless of any existing case, so the frontend can exercise all
     # three flows. Only ever set FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES=true in a throwaway test environment — it
     # bypasses the real common-entry-point routing, including the protected-identity gate.
     return-all-types: ${FINANCIAL_ASSISTANCE_RETURN_ALL_TYPES:false}
+  lifecare:
+    # The Lifecare ServiceId(s) an ekonomiskt bistånd decision is made under. FamilyCare's decision list carries every
+    # IFO decision on the person (Vux, BoU, LVM, utredningar …); the Lifecare decision listing keeps only these, and the
+    # decision proposal's previous decision is the newest of them that covers a period. A Lifecare catalogue id
+    # (2 in Lifecare test), so override per environment. Comma-separated.
+    decision-service-ids: ${FINANCIAL_ASSISTANCE_LIFECARE_DECISION_SERVICE_IDS:2}
+  # Recovery of a process start that failed at creation (engine down, token 503, timeout — the start is best-effort and
+  # otherwise leaves the errand in RECEIVED for good). A scheduled job finds errands still in RECEIVED with no process
+  # instance linked, created between max-age and min-age ago, and starts their process unless the engine already runs
+  # one (businessKey = errandId). NEEDS_MANUAL_REVIEW and every other status are never touched. A start that keeps
+  # failing is retried until the errand is max-age old, then logged once as an error and left alone.
+  process-start-retry:
+    enabled: ${FINANCIAL_ASSISTANCE_PROCESS_START_RETRY_ENABLED:true}
+    municipality-id: 2281
+    namespace: FINANCIAL_ASSISTANCE
+    # Long enough to never race the start that follows the errand's creation.
+    min-age: ${FINANCIAL_ASSISTANCE_PROCESS_START_RETRY_MIN_AGE:PT10M}
+    # Upper bound of the retrying; keeps old rows (test data, long-abandoned errands) from being woken up.
+    max-age: ${FINANCIAL_ASSISTANCE_PROCESS_START_RETRY_MAX_AGE:P7D}
+  decision-proposal:
+    # FLAG-05: how far back (months, ending at the application month) återkrav are looked for in Lifecare. Money owed
+    # back stays owed across many applications, so this reaches further than the previous-decision lookup; FamilyCare's
+    # decision read has no balance, so a claim since repaid or forgiven is shown too and the caseworker checks it.
+    recovery-claim-lookback-months: ${FINANCIAL_ASSISTANCE_RECOVERY_CLAIM_LOOKBACK_MONTHS:36}
+
+# The ProfessionalWeb exchange through lifecare-integrator carries whatever the caseworker wrote and Lifecare's answers,
+# personnummer included. Keep it out of dept44's request/response payload logging entirely.
+logbook:
+  excluded:
+    paths: /**/professional-web/**

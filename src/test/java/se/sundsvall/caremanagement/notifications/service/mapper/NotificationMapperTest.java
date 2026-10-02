@@ -30,7 +30,8 @@ class NotificationMapperTest {
 			.withSubType("ERRAND")
 			.withDescription("New errand assigned to you")
 			.withContent("A longer body of text")
-			.withAcknowledged(true);
+			.withAcknowledged(true)
+			.withHandled(true);
 
 		final var entity = NotificationMapper.toEntity(notification, "2281", "FINANCIAL_ASSISTANCE", "errand-123", expires);
 
@@ -48,6 +49,7 @@ class NotificationMapperTest {
 		assertThat(entity.getDescription()).isEqualTo("New errand assigned to you");
 		assertThat(entity.getContent()).isEqualTo("A longer body of text");
 		assertThat(entity.isAcknowledged()).isTrue();
+		assertThat(entity.isHandled()).isTrue();
 		// id is server-assigned, never carried over from the dto
 		assertThat(entity.getId()).isNull();
 	}
@@ -64,6 +66,19 @@ class NotificationMapperTest {
 
 		assertThat(entity).isNotNull();
 		assertThat(entity.isAcknowledged()).isFalse();
+	}
+
+	@Test
+	void toEntityHandledDefaultsToFalseWhenNull() {
+		final var notification = Notification.create()
+			.withType("UPDATE")
+			.withDescription("desc")
+			.withHandled(null);
+
+		final var entity = NotificationMapper.toEntity(notification, "2281", "ns", "errand-1", FIXED_TIMESTAMP);
+
+		assertThat(entity).isNotNull();
+		assertThat(entity.isHandled()).isFalse();
 	}
 
 	@Test
@@ -128,6 +143,7 @@ class NotificationMapperTest {
 			.withDescription("New errand assigned to you")
 			.withContent("A longer body of text")
 			.withAcknowledged(true)
+			.withHandled(true)
 			.withExpires(expires)
 			.withCreated(created)
 			.withModified(modified);
@@ -146,6 +162,7 @@ class NotificationMapperTest {
 		assertThat(dto.getDescription()).isEqualTo("New errand assigned to you");
 		assertThat(dto.getContent()).isEqualTo("A longer body of text");
 		assertThat(dto.getAcknowledged()).isTrue();
+		assertThat(dto.getHandled()).isTrue();
 		assertThat(dto.getExpires()).isEqualTo(expires);
 		assertThat(dto.getCreated()).isEqualTo(created);
 		assertThat(dto.getModified()).isEqualTo(modified);
@@ -190,6 +207,13 @@ class NotificationMapperTest {
 		final var dto = NotificationMapper.toDto(NotificationEntity.create().withAcknowledged(false));
 
 		assertThat(dto.getAcknowledged()).isFalse();
+	}
+
+	@Test
+	void toDtoHandledFalseMapped() {
+		final var dto = NotificationMapper.toDto(NotificationEntity.create().withHandled(false));
+
+		assertThat(dto.getHandled()).isFalse();
 	}
 
 	@Test
@@ -255,6 +279,39 @@ class NotificationMapperTest {
 		NotificationMapper.applyPatch(target, patch);
 
 		assertThat(target.isAcknowledged()).isFalse();
+	}
+
+	@Test
+	void applyPatchHandledTrueAlsoAcknowledges() {
+		final var target = NotificationEntity.create().withAcknowledged(false).withHandled(false);
+		final var patch = Notification.create().withHandled(true);
+
+		NotificationMapper.applyPatch(target, patch);
+
+		assertThat(target.isHandled()).isTrue();
+		assertThat(target.isAcknowledged()).isTrue();
+	}
+
+	@Test
+	void applyPatchHandledFalseLeavesAcknowledgedAlone() {
+		final var target = NotificationEntity.create().withAcknowledged(true).withHandled(true);
+		final var patch = Notification.create().withHandled(false);
+
+		NotificationMapper.applyPatch(target, patch);
+
+		assertThat(target.isHandled()).isFalse();
+		assertThat(target.isAcknowledged()).isTrue();
+	}
+
+	@Test
+	void applyPatchHandledTrueWinsOverAcknowledgedFalseInSamePatch() {
+		final var target = NotificationEntity.create().withAcknowledged(false).withHandled(false);
+		final var patch = Notification.create().withAcknowledged(false).withHandled(true);
+
+		NotificationMapper.applyPatch(target, patch);
+
+		assertThat(target.isHandled()).isTrue();
+		assertThat(target.isAcknowledged()).isTrue();
 	}
 
 	@Test

@@ -1,14 +1,19 @@
 package se.sundsvall.caremanagement.notifications.service;
 
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.notifications.api.model.Notification;
 import se.sundsvall.caremanagement.notifications.integration.db.NotificationRepository;
+import se.sundsvall.caremanagement.notifications.integration.db.model.NotificationEntity;
 import se.sundsvall.caremanagement.shared.ErrandAccessGuard;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -48,5 +53,50 @@ class NotificationServiceTest {
 
 		assertThat(updated).isZero();
 		verifyNoInteractions(notificationRepositoryMock);
+	}
+
+	@Test
+	void handleAllDelegatesToRepository() {
+		when(notificationRepositoryMock.handleAllByErrand(NAMESPACE, MUNICIPALITY_ID, ERRAND_ID)).thenReturn(3);
+
+		final var updated = service.handleAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(updated).isEqualTo(3);
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		verify(notificationRepositoryMock).handleAllByErrand(NAMESPACE, MUNICIPALITY_ID, ERRAND_ID);
+	}
+
+	@Test
+	void createMarksSelfCreatedNotificationAcknowledgedAndHandled() {
+		when(propertiesMock.ttl()).thenReturn(Duration.ofDays(30));
+		when(notificationRepositoryMock.save(any(NotificationEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Notification.create()
+			.withOwnerId("jane01doe")
+			.withCreatedBy("jane01doe")
+			.withType("CREATE")
+			.withDescription("Something I did myself"));
+
+		final var captor = ArgumentCaptor.forClass(NotificationEntity.class);
+		verify(notificationRepositoryMock).save(captor.capture());
+		assertThat(captor.getValue().isAcknowledged()).isTrue();
+		assertThat(captor.getValue().isHandled()).isTrue();
+	}
+
+	@Test
+	void createLeavesForeignNotificationUnacknowledgedAndUnhandled() {
+		when(propertiesMock.ttl()).thenReturn(Duration.ofDays(30));
+		when(notificationRepositoryMock.save(any(NotificationEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, Notification.create()
+			.withOwnerId("jane01doe")
+			.withCreatedBy("john02doe")
+			.withType("CREATE")
+			.withDescription("Something somebody else did"));
+
+		final var captor = ArgumentCaptor.forClass(NotificationEntity.class);
+		verify(notificationRepositoryMock).save(captor.capture());
+		assertThat(captor.getValue().isAcknowledged()).isFalse();
+		assertThat(captor.getValue().isHandled()).isFalse();
 	}
 }

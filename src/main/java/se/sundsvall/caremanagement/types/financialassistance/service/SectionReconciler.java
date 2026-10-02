@@ -9,6 +9,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ObjIntConsumer;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormExpenseRepository;
@@ -19,6 +20,9 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.roleDisplayName;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 
 /**
@@ -35,6 +39,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.Calc
  * <li>an existing system row no longer in the fresh set is kept and reported as dropped (the caller raises a "no longer
  * reported" warning) — never auto-deleted;</li>
  * <li>caseworker-added rows are never matched, refreshed or dropped by the process.</li>
+ * <li>the application's declared incomes ({@code origin = APPLICATION}) are process rows of their own, matched only
+ * against each other.</li>
  * </ul>
  *
  * The three public methods are concrete per section (identity key, process-column copy and label all spelled out next
@@ -53,22 +59,35 @@ class SectionReconciler {
 		this.expenseRepository = expenseRepository;
 	}
 
+	private static final SectionOps<FaNormPersonEntity> PERSON_OPS = new SectionOps<>(SectionReconciler::personKey, FaNormPersonEntity::getOrigin,
+		SectionReconciler::copyPersonProcess, SectionReconciler::personLabel);
+	private static final SectionOps<FaNormIncomeEntity> INCOME_OPS = new SectionOps<>(SectionReconciler::incomeKey, FaNormIncomeEntity::getOrigin,
+		SectionReconciler::copyIncomeProcess, SectionReconciler::incomeLabel);
+	private static final SectionOps<FaNormExpenseEntity> EXPENSE_OPS = new SectionOps<>(SectionReconciler::expenseKey, FaNormExpenseEntity::getOrigin,
+		SectionReconciler::copyExpenseProcess, SectionReconciler::expenseLabel);
+
 	Diff reconcilePersons(final String errandId, final List<FaNormPersonEntity> fresh) {
 		final var saver = positioningSaver(personRepository.nextPositionForErrand(errandId), FaNormPersonEntity::getPosition, FaNormPersonEntity::setPosition, personRepository::save);
-		return merge(personRepository.findByErrandId(errandId), nullSafe(fresh),
-			SectionReconciler::personKey, FaNormPersonEntity::getOrigin, SectionReconciler::copyPersonProcess, SectionReconciler::personLabel, saver);
+		return merge(ORIGIN_SYSTEM, personRepository.findByErrandId(errandId), nullSafe(fresh), PERSON_OPS, saver);
 	}
 
+	/**
+	 * The SSBTEK rows and the application's declared incomes are reconciled apart, each against its own origin, so an
+	 * application income never refreshes, or is reported as, an SSBTEK income of the same type. Only the SSBTEK side is
+	 * reported: the NEW_INCOME / INCOME_DROPPED warnings are about what SSBTEK reports, and the application's incomes are
+	 * already in front of the handläggare on the application itself.
+	 */
 	Diff reconcileIncomes(final String errandId, final List<FaNormIncomeEntity> fresh) {
 		final var saver = positioningSaver(incomeRepository.nextPositionForErrand(errandId), FaNormIncomeEntity::getPosition, FaNormIncomeEntity::setPosition, incomeRepository::save);
-		return merge(incomeRepository.findByErrandId(errandId), nullSafe(fresh),
-			SectionReconciler::incomeKey, FaNormIncomeEntity::getOrigin, SectionReconciler::copyIncomeProcess, SectionReconciler::incomeLabel, saver);
+		final var existing = incomeRepository.findByErrandId(errandId);
+		final var byApplication = nullSafe(fresh).stream().collect(Collectors.partitioningBy(row -> ORIGIN_APPLICATION.equals(row.getOrigin())));
+		merge(ORIGIN_APPLICATION, existing, byApplication.get(true), INCOME_OPS, saver);
+		return merge(ORIGIN_SYSTEM, existing, byApplication.get(false), INCOME_OPS, saver);
 	}
 
 	Diff reconcileExpenses(final String errandId, final List<FaNormExpenseEntity> fresh) {
 		final var saver = positioningSaver(expenseRepository.nextPositionForErrand(errandId), FaNormExpenseEntity::getPosition, FaNormExpenseEntity::setPosition, expenseRepository::save);
-		return merge(expenseRepository.findByErrandId(errandId), nullSafe(fresh),
-			SectionReconciler::expenseKey, FaNormExpenseEntity::getOrigin, SectionReconciler::copyExpenseProcess, SectionReconciler::expenseLabel, saver);
+		return merge(ORIGIN_SYSTEM, expenseRepository.findByErrandId(errandId), nullSafe(fresh), EXPENSE_OPS, saver);
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -77,40 +96,44 @@ class SectionReconciler {
 	// the position they already have.
 	// ------------------------------------------------------------------------------------------------------------------
 
+	/**
+	 * The per-section strategy the shared {@link #merge} runs against: how to derive a row's identity key and origin,
+	 * how to refresh only the process columns of a matched row, and how to label a row for a warning.
+	 */
+	private record SectionOps<E>(Function<E, String> keyOf, Function<E, String> originOf, BiConsumer<E, E> copyProcessInto, Function<E, String> labelOf) {}
+
 	private static <E> Diff merge(
+		final String processOrigin,
 		final List<E> existing,
 		final List<E> fresh,
-		final Function<E, String> keyOf,
-		final Function<E, String> originOf,
-		final BiConsumer<E, E> copyProcessInto,
-		final Function<E, String> labelOf,
+		final SectionOps<E> ops,
 		final Consumer<E> persist) {
 
 		final var systemByKey = new LinkedHashMap<String, E>();
 		for (final var row : existing) {
-			if (ORIGIN_SYSTEM.equals(originOf.apply(row))) {
-				systemByKey.putIfAbsent(keyOf.apply(row), row);
+			if (processOrigin.equals(ops.originOf().apply(row))) {
+				systemByKey.putIfAbsent(ops.keyOf().apply(row), row);
 			}
 		}
 
 		final var freshKeys = new LinkedHashSet<String>();
 		final var added = new ArrayList<String>();
 		for (final var freshRow : fresh) {
-			final var key = keyOf.apply(freshRow);
+			final var key = ops.keyOf().apply(freshRow);
 			freshKeys.add(key);
 			final var match = systemByKey.get(key);
 			if (match != null) {
-				copyProcessInto.accept(match, freshRow); // refresh process columns only — caseworker value + deleted untouched
+				ops.copyProcessInto().accept(match, freshRow); // refresh process columns only — caseworker value + deleted untouched
 				persist.accept(match);
 			} else {
 				persist.accept(freshRow); // a genuinely new process row
-				added.add(labelOf.apply(freshRow));
+				added.add(ops.labelOf().apply(freshRow));
 			}
 		}
 
 		final var dropped = systemByKey.entrySet().stream()
 			.filter(entry -> !freshKeys.contains(entry.getKey()))
-			.map(entry -> labelOf.apply(entry.getValue()))
+			.map(entry -> ops.labelOf().apply(entry.getValue()))
 			.toList();
 
 		return new Diff(added, dropped);
@@ -177,6 +200,7 @@ class SectionReconciler {
 	private static void copyPersonProcess(final FaNormPersonEntity target, final FaNormPersonEntity fresh) {
 		target.setName(fresh.getName());
 		target.setProcessDays(fresh.getProcessDays());
+		target.setAmount(fresh.getAmount());
 	}
 
 	// --- warning labels ---
@@ -186,11 +210,20 @@ class SectionReconciler {
 	}
 
 	private static String expenseLabel(final FaNormExpenseEntity e) {
-		return ofNullable(e.getCostType()).orElse("Expense") + ofNullable(e.getSpecification()).map(spec -> " – " + spec).orElse("");
+		return ofNullable(costDisplayName(e.getCostType())).orElse("Utgift") + ofNullable(e.getSpecification()).map(spec -> " – " + spec).orElse("");
 	}
 
+	/**
+	 * A household member as a handläggare reads them: the name when the row has one, qualified by the role. A row
+	 * without a name falls back to the role alone — never to the party id, which says nothing to the reader and puts an
+	 * identifier into a warning text that is displayed verbatim.
+	 */
 	private static String personLabel(final FaNormPersonEntity e) {
-		return ofNullable(e.getName()).orElse(ofNullable(e.getPartyId()).orElse("Person")) + " (" + e.getRole() + ")";
+		final var role = ofNullable(roleDisplayName(e.getRole())).orElse("Hushållsmedlem");
+		if (!StringUtils.hasText(e.getName())) {
+			return role;
+		}
+		return e.getName() + " (" + role + ")";
 	}
 
 	/**

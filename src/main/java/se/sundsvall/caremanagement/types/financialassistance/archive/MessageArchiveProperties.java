@@ -33,9 +33,9 @@ public record MessageArchiveProperties(
 
 	@PositiveOrZero @DefaultValue("30") int daysAfterClose,
 
-	@NotBlank @DefaultValue("MEDDELANDEHISTORIK") String lifecareDocumentType,
+	@NotBlank @DefaultValue("1") String lifecareDocumentType,
 
-	@NotBlank @DefaultValue("MYNDIGHET") String lifecareDocumentSenderType,
+	@NotBlank @DefaultValue("1") String lifecareDocumentSenderType,
 
 	@NotBlank @DefaultValue("Meddelanden och bilagor från Draken") String documentLabel,
 

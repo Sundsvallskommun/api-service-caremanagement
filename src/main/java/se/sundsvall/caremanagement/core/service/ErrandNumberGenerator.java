@@ -1,12 +1,12 @@
 package se.sundsvall.caremanagement.core.service;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.core.integration.db.ErrandNumberSequenceRepository;
 import se.sundsvall.caremanagement.core.integration.db.model.ErrandNumberSequenceEntity;
 
-import static java.time.ZoneId.systemDefault;
 import static java.util.Locale.ROOT;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Predicate.not;
@@ -32,6 +32,13 @@ class ErrandNumberGenerator {
 
 	private static final String FALLBACK_PREFIX = "ERRAND";
 
+	/**
+	 * The month in an errand number is the Swedish calendar month, not the server's. The container runs in UTC, so
+	 * taking 'today' from the JVM zone would stamp an errand created between midnight and 02:00 on the first of a month
+	 * with the previous month.
+	 */
+	private static final ZoneId ERRAND_NUMBER_ZONE = ZoneId.of("Europe/Stockholm");
+
 	private final ErrandNumberPrefixResolver prefixResolver;
 	private final ErrandNumberSequenceRepository sequenceRepository;
 
@@ -41,7 +48,7 @@ class ErrandNumberGenerator {
 	}
 
 	String generate(final String municipalityId, final String namespace) {
-		final var today = LocalDate.now(systemDefault());
+		final var today = LocalDate.now(ERRAND_NUMBER_ZONE);
 		final var year = today.getYear();
 		final var month = today.getMonthValue();
 		final var prefix = prefixResolver.resolvePrefix(municipalityId, namespace)

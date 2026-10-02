@@ -39,6 +39,7 @@ class WarningTest {
 		final var warning = Warning.create()
 			.withId("id")
 			.withType("MISSING_SSBTEK")
+			.withSection("CALCULATION")
 			.withSourceKey("Dagersättning")
 			.withMessage("Saknas fortfarande i SSBTEK: Dagersättning")
 			.withStatus("OPEN")
