@@ -10,7 +10,9 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
@@ -34,6 +36,7 @@ import se.sundsvall.dept44.problem.Problem;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_NEW;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
@@ -92,15 +95,18 @@ public class FinancialAssistanceActualisationService {
 	private final DecisionService decisionService;
 	private final ErrandService errandService;
 	private final FinancialAssistanceRepository financialAssistanceRepository;
+	private final TransactionTemplate transactionTemplate;
 
 	FinancialAssistanceActualisationService(final ActualisationService actualisationService, final AttachmentService attachmentService,
 		final DecisionService decisionService,
-		final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository) {
+		final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository,
+		final PlatformTransactionManager transactionManager) {
 		this.actualisationService = actualisationService;
 		this.attachmentService = attachmentService;
 		this.decisionService = decisionService;
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
+		this.transactionTemplate = new TransactionTemplate(transactionManager);
 	}
 
 	/**
@@ -124,7 +130,18 @@ public class FinancialAssistanceActualisationService {
 	 * </ol>
 	 * A call without an {@code errandId}, or for an errand with no stored application, has nothing to hold the marker and
 	 * creates every time.
+	 *
+	 * <p>
+	 * <strong>No transaction around the whole step.</strong> The marker is committed on the errand row in a transaction
+	 * of its own, and recording the actualisation writes the insats to the same row. A transaction that had already read
+	 * anything before the marker was committed has a snapshot older than the row, and MariaDB with snapshot isolation
+	 * refuses its write ({@code 1020 Record has changed since last read}) — after Lifecare has created the actualisation
+	 * and taken the application, so the retry adopted it and uploaded the application a second time. The reads run in
+	 * their own short transactions, Lifecare is called outside any, and the record is written in one transaction started
+	 * after the marker (see {@link #recordActualisation}). It also keeps a database connection from being held for the
+	 * seconds Lifecare takes.
 	 */
+	@Transactional(propagation = NOT_SUPPORTED)
 	public ActualisationResponse createActualisation(final String municipalityId, final String namespace, final ActualisationRequest request) {
 		return ofNullable(request.getErrandId()).filter(StringUtils::hasText)
 			.map(errandId -> createForErrand(municipalityId, namespace, errandId, request))
@@ -191,8 +208,8 @@ public class FinancialAssistanceActualisationService {
 
 	/**
 	 * Whether an earlier attempt already went to Lifecare for the errand — and, when none did, commit that this one is
-	 * about to. The write is the repository's own transaction, so it is committed here and now, not with the intake: a
-	 * failure after Lifecare has created the actualisation rolls the intake back and must not take the marker with it.
+	 * about to. The write is the repository's own transaction, so it is committed here and now, not with the record: a
+	 * failure after Lifecare has created the actualisation rolls the record back and must not take the marker with it.
 	 *
 	 * <p>
 	 * A marker that was set between the read and the write counts as an earlier attempt: the conditional update reports
@@ -255,22 +272,26 @@ public class FinancialAssistanceActualisationService {
 	 *
 	 * <p>
 	 * The application is archived before the row is written, so its outcome can be folded into the same description
-	 * rather than needing a row of its own.
+	 * rather than needing a row of its own. The archive is a Lifecare call and runs outside any transaction; the three
+	 * writes after it share one, begun only now — after the marker was committed — so its snapshot is not older than
+	 * the errand row it updates.
 	 */
 	private void recordActualisation(final String municipalityId, final String namespace, final String errandId, final ActualisationResult result) {
 		final var archiveOutcome = archiveApplication(municipalityId, namespace, errandId, result.actualisationId());
 
-		addActualisationDecision(municipalityId, namespace, errandId, result.actualisationId(),
-			actualisationRecordedMessage(result).formatted(result.actualisationId(), archiveOutcome));
+		transactionTemplate.executeWithoutResult(status -> {
+			addActualisationDecision(municipalityId, namespace, errandId, result.actualisationId(),
+				actualisationRecordedMessage(result).formatted(result.actualisationId(), archiveOutcome));
 
-		// The insats the actualisation was linked to is the key Lifecare's own case reads take; keeping it on the errand
-		// saves every later errand open a Lifecare lookup. None for a nyansökan — that one is filled in on read.
-		ofNullable(result.serviceId())
-			.ifPresent(serviceId -> financialAssistanceRepository.updateLifecareServiceId(errandId, serviceId));
+			// The insats the actualisation was linked to is the key Lifecare's own case reads take; keeping it on the errand
+			// saves every later errand open a Lifecare lookup. None for a nyansökan — that one is filled in on read.
+			ofNullable(result.serviceId())
+				.ifPresent(serviceId -> financialAssistanceRepository.updateLifecareServiceId(errandId, serviceId));
 
-		ofNullable(result.assignedUserId()).filter(StringUtils::hasText)
-			.ifPresent(assignedUserId -> errandService.updateErrand(municipalityId, namespace, errandId,
-				PatchErrand.create().withAssignedUserId(assignedUserId)));
+			ofNullable(result.assignedUserId()).filter(StringUtils::hasText)
+				.ifPresent(assignedUserId -> errandService.updateErrand(municipalityId, namespace, errandId,
+					PatchErrand.create().withAssignedUserId(assignedUserId)));
+		});
 	}
 
 	/**

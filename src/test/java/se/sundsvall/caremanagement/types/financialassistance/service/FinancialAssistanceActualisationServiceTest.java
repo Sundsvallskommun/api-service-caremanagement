@@ -16,6 +16,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.attachments.service.AttachmentService;
 import se.sundsvall.caremanagement.core.api.model.Errand;
@@ -79,6 +81,9 @@ class FinancialAssistanceActualisationServiceTest {
 
 	@Mock
 	private FinancialAssistanceRepository financialAssistanceRepositoryMock;
+
+	@Mock
+	private PlatformTransactionManager transactionManagerMock;
 
 	@InjectMocks
 	private FinancialAssistanceActualisationService service;
@@ -350,6 +355,27 @@ class FinancialAssistanceActualisationServiceTest {
 	}
 
 	@Test
+	void theRecordIsWrittenInATransactionBegunAfterLifecareAnswered() {
+		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
+		when(actualisationServiceMock.createActualisation(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JUNE, 17), false)).thenReturn(new ActualisationResult(5012, "anna01ker", 25));
+
+		service.createActualisation(MUNICIPALITY_ID, NAMESPACE, requestForTheErrand());
+
+		// No transaction spans the marker and the Lifecare call: one that had read the errand row before the marker was
+		// committed could not write the insats to that row afterwards (MariaDB 1020), and the retry would upload the
+		// application to Lifecare a second time. The record is one transaction of its own, begun after Lifecare answered.
+		final InOrder order = inOrder(financialAssistanceRepositoryMock, actualisationServiceMock, transactionManagerMock, decisionServiceMock, errandServiceMock);
+		order.verify(financialAssistanceRepositoryMock).markActualisationRequestedIfAbsent(eq(ERRAND_ID), any(OffsetDateTime.class));
+		order.verify(actualisationServiceMock).createActualisation(MUNICIPALITY_ID, APPLICANT_PARTY_ID, LocalDate.of(2026, JUNE, 17), false);
+		order.verify(transactionManagerMock).getTransaction(any(TransactionDefinition.class));
+		order.verify(decisionServiceMock).create(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(Decision.class));
+		order.verify(financialAssistanceRepositoryMock).updateLifecareServiceId(ERRAND_ID, 25);
+		order.verify(errandServiceMock).updateErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), any(PatchErrand.class));
+		order.verify(transactionManagerMock).commit(any());
+		verify(transactionManagerMock).getTransaction(any(TransactionDefinition.class));
+	}
+
+	@Test
 	void aFailureAfterLifecareCreatedTheActualisationLeavesTheMarkerBehind() {
 		when(financialAssistanceRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(Optional.of(submittedErrand()));
 		when(actualisationServiceMock.createActualisation(any(), any(), any(), anyBoolean())).thenReturn(new ActualisationResult(5012, null, null));
@@ -359,7 +385,7 @@ class FinancialAssistanceActualisationServiceTest {
 		assertThatThrownBy(() -> service.createActualisation(MUNICIPALITY_ID, NAMESPACE, request))
 			.isInstanceOf(IllegalStateException.class);
 
-		// Committed before the failure, in its own transaction: rolling the intake back does not take it along.
+		// Committed before the failure, in its own transaction: rolling the record back does not take it along.
 		final InOrder order = inOrder(financialAssistanceRepositoryMock, actualisationServiceMock);
 		order.verify(financialAssistanceRepositoryMock).markActualisationRequestedIfAbsent(eq(ERRAND_ID), any(OffsetDateTime.class));
 		order.verify(actualisationServiceMock).createActualisation(any(), any(), any(), anyBoolean());
