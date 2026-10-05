@@ -274,6 +274,10 @@ financial-assistance:
     # decision proposal's previous decision is the newest of them that covers a period. A Lifecare catalogue id
     # (2 in Lifecare test), so override per environment. Comma-separated.
     decision-service-ids: ${FINANCIAL_ASSISTANCE_LIFECARE_DECISION_SERVICE_IDS:2}
+    # The Lifecare areas whose journalanteckningar and documents an EB errand shows. ProfessionalWeb's list spans every
+    # akt the person has (Vux, BoU, LVM …); a row is kept only when its owner type's name starts with one of these area
+    # codes ("EK Ekonomiskt bistånd"). Anything else, an unnamed owner included, is left out. Comma-separated.
+    record-areas: ${FINANCIAL_ASSISTANCE_LIFECARE_RECORD_AREAS:EK}
   # Recovery of a process start that failed at creation (engine down, token 503, timeout — the start is best-effort and
   # otherwise leaves the errand in RECEIVED for good). A scheduled job finds errands still in RECEIVED with no process
   # instance linked, created between max-age and min-age ago, and starts their process unless the engine already runs

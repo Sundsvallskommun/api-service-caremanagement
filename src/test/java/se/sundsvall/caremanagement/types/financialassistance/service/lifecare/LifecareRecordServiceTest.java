@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +12,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
@@ -25,6 +27,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareRecord;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareRecordBody;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.UpdateLifecareRecordRequest;
+import se.sundsvall.caremanagement.types.financialassistance.service.LifecareRecordFilter;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.JsonNode;
@@ -70,14 +73,21 @@ class LifecareRecordServiceTest {
 	private static final Map<String, String> BY_CLIENT = Map.of("id", PERSONAL_NUMBER);
 	private static final Map<String, String> BY_SERVICE = Map.of("id", "2");
 
+	// Rows 1-5 are the applicant's ekonomiskt bistånd records; 6-8 are written under another unit's akt or under no
+	// named owner, and must never be listed, read, changed or printed from an EB errand.
 	private static final String LIST = """
 		{ "documentModels": [
 		  { "id": 1, "title": "Anteckning", "date": "2026-09-23", "time": "10:00", "type": "Journalanteckning", "updateSignature": "RPA_031DEV",
-		    "updateDate": "2026-09-23", "protected": false, "locked": false, "documentType_Name": "JournalNote", "typeCode": 3 },
-		  { "id": 2, "title": "Anteckning", "date": "2026-09-23", "documentType_Name": "JournalNote", "typeCode": 3 },
-		  { "id": 3, "title": "Brev", "date": "2026-09-23", "documentType_Name": "Regular", "typeCode": 13 },
-		  { "id": 4, "title": "Fil", "date": "2026-09-23", "documentType_Name": "Pdf", "typeCode": 1 },
-		  { "id": 5, "title": "Blankett", "date": "2026-09-23", "documentType_Name": "Form", "typeCode": 1 } ] }
+		    "updateDate": "2026-09-23", "protected": false, "locked": false, "documentType_Name": "JournalNote", "typeCode": 3,
+		    "ownerTypeText": "EK Ekonomiskt bistånd" },
+		  { "id": 2, "title": "Anteckning", "date": "2026-09-23", "documentType_Name": "JournalNote", "typeCode": 3, "ownerTypeText": "EK Ekonomiskt bistånd" },
+		  { "id": 3, "title": "Brev", "date": "2026-09-23", "documentType_Name": "Regular", "typeCode": 13, "ownerTypeText": "EK Ekonomiskt bistånd" },
+		  { "id": 4, "title": "Fil", "date": "2026-09-23", "documentType_Name": "Pdf", "typeCode": 1,
+		    "ownerTypeText": "EK Återansökan Digital Ekonomiskt bistånd" },
+		  { "id": 5, "title": "Blankett", "date": "2026-09-23", "documentType_Name": "Form", "typeCode": 1, "ownerTypeText": "EK Ekonomiskt bistånd" },
+		  { "id": 6, "title": "Anteckning", "date": "2026-09-22", "documentType_Name": "JournalNote", "typeCode": 1, "ownerTypeText": "Vux LVM-utredning § 7" },
+		  { "id": 7, "title": "Brev", "date": "2026-09-22", "documentType_Name": "Regular", "typeCode": 13, "ownerTypeText": "BoU Avgift föräldrar" },
+		  { "id": 8, "title": "Anteckning", "date": "2026-09-22", "documentType_Name": "JournalNote", "typeCode": 3, "ownerTypeText": "" } ] }
 		""";
 
 	private static final String RECORD = """
@@ -100,6 +110,8 @@ class LifecareRecordServiceTest {
 	private LifecareCaseHistoryService caseHistoryService;
 	@Mock
 	private ProfessionalWebProperties properties;
+	@Spy
+	private LifecareRecordFilter recordFilter = new LifecareRecordFilter(Set.of("EK"));
 
 	@InjectMocks
 	private LifecareRecordService service;
@@ -227,6 +239,58 @@ class LifecareRecordServiceTest {
 		assertRefused(() -> service.readJournalNote(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
 		verify(client, never()).get(eq(PATH_READ_NOTE), anyMap());
 		verifyNoInteractions(recorder);
+	}
+
+	@Test
+	void listLeavesOutOtherUnitsAndUnnamedOwners() {
+		givenClientList();
+
+		final var records = service.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(records.getJournalNotes()).extracting(LifecareRecord::getId).doesNotContain("6", "8");
+		assertThat(records.getDocuments()).extracting(LifecareRecord::getId).doesNotContain("7");
+	}
+
+	@Test
+	void journalNoteBodiesNeverReadAnotherUnitsNote() {
+		givenClientList();
+		when(client.get(PATH_READ_NOTE, recordParams("1", "true", "false"))).thenReturn(json("{\"content\": \"<p>1</p>\"}"));
+		when(client.get(PATH_READ_NOTE, recordParams("2", "true", "false"))).thenReturn(json("{\"content\": \"<p>2</p>\"}"));
+
+		final var bodies = service.journalNoteBodies(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+
+		assertThat(bodies).extracting(LifecareRecordBody::getId).containsExactly("1", "2");
+		verify(client, never()).get(PATH_READ_NOTE, recordParams("6", "true", "false"));
+		verify(client, never()).get(PATH_READ_NOTE, recordParams("8", "true", "false"));
+	}
+
+	@Test
+	void readRefusesAnotherUnitsRecord() {
+		givenClientList();
+
+		// Record 6 is on the applicant's own list, but under a Vux akt: an EB errand must not reach it by id.
+		assertRefused(() -> service.readJournalNote(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 6), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
+		verify(client, never()).get(eq(PATH_READ_NOTE), anyMap());
+		verifyNoInteractions(recorder);
+	}
+
+	@Test
+	void updateRefusesAnotherUnitsRecord() {
+		givenClientList();
+
+		assertRefused(() -> service.updateDocument(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 7, UpdateLifecareRecordRequest.create().withContent("<p>x</p>")),
+			NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
+		verify(client, never()).post(anyString(), anyMap(), any());
+		verifyNoInteractions(recorder);
+	}
+
+	@Test
+	void readDocumentPdfRefusesAnotherUnitsDocument() {
+		givenClientList();
+
+		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 7), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
+		verify(client, never()).getPdf(anyString(), anyMap());
+		verifyNoInteractions(caseHistoryService, recorder);
 	}
 
 	@Test
@@ -455,7 +519,7 @@ class LifecareRecordServiceTest {
 		givenErrand();
 		when(errandService.applicantPersonalNumber(ERRAND)).thenReturn(PERSONAL_NUMBER);
 		when(client.get(PATH_LIST, BY_CLIENT)).thenReturn(json("""
-			{ "documentModels": [ { "id": 8, "title": "Fil", "date": "2026-09-23", "typeCode": 1 } ] }
+			{ "documentModels": [ { "id": 8, "title": "Fil", "date": "2026-09-23", "typeCode": 1, "ownerTypeText": "EK Ekonomiskt bistånd" } ] }
 			"""));
 
 		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 8), NOT_FOUND, LifecareRecordService.NO_PDF);
@@ -496,7 +560,7 @@ class LifecareRecordServiceTest {
 		givenErrand();
 		when(errandService.applicantPersonalNumber(ERRAND)).thenReturn(PERSONAL_NUMBER);
 		when(client.get(PATH_LIST, BY_CLIENT)).thenReturn(json("""
-			{ "documentModels": [ { "id": 7, "title": "Fil", "documentType_Name": "Pdf", "typeCode": 1 } ] }
+			{ "documentModels": [ { "id": 7, "title": "Fil", "documentType_Name": "Pdf", "typeCode": 1, "ownerTypeText": "EK Ekonomiskt bistånd" } ] }
 			"""));
 
 		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 7), NOT_FOUND, LifecareRecordService.NO_PDF);
