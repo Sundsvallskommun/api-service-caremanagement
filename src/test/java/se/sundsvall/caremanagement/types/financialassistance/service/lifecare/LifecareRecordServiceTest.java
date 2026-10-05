@@ -8,6 +8,8 @@ import java.util.Set;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -222,21 +224,19 @@ class LifecareRecordServiceTest {
 		verify(recorder).read(ERRAND, "DOCUMENT", "Läste ett dokument i Lifecare", "3");
 	}
 
-	@Test
-	void readRefusesARecordNotInTheApplicantsList() {
+	/**
+	 * 999 is on nobody's list; 3 is the applicant's EB record but a document, so the journal-note route must not fetch
+	 * it; 6 is on the applicant's own list but under a Vux akt, and 8 under no named owner, so an EB errand must not
+	 * reach either by id.
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = {
+		999, 3, 6, 8
+	})
+	void readRefusesARecordTheErrandCannotReach(final int id) {
 		givenClientList();
 
-		assertRefused(() -> service.readJournalNote(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 999), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
-		verify(client, never()).get(eq(PATH_READ_NOTE), anyMap());
-		verifyNoInteractions(recorder);
-	}
-
-	@Test
-	void readRefusesADocumentThroughTheJournalNoteRoute() {
-		givenClientList();
-
-		// Record 3 is the applicant's, but it is a document: the journal-note route must not fetch it.
-		assertRefused(() -> service.readJournalNote(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
+		assertRefused(() -> service.readJournalNote(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, id), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
 		verify(client, never()).get(eq(PATH_READ_NOTE), anyMap());
 		verifyNoInteractions(recorder);
 	}
@@ -262,16 +262,6 @@ class LifecareRecordServiceTest {
 		assertThat(bodies).extracting(LifecareRecordBody::getId).containsExactly("1", "2");
 		verify(client, never()).get(PATH_READ_NOTE, recordParams("6", "true", "false"));
 		verify(client, never()).get(PATH_READ_NOTE, recordParams("8", "true", "false"));
-	}
-
-	@Test
-	void readRefusesAnotherUnitsRecord() {
-		givenClientList();
-
-		// Record 6 is on the applicant's own list, but under a Vux akt: an EB errand must not reach it by id.
-		assertRefused(() -> service.readJournalNote(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 6), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
-		verify(client, never()).get(eq(PATH_READ_NOTE), anyMap());
-		verifyNoInteractions(recorder);
 	}
 
 	@Test
