@@ -118,11 +118,7 @@ final class LifecareDecisionBodies {
 			throw refuse(ERROR_UNREGISTERED_TYPE.formatted(text(decisionType.path("name")).orElse("")));
 		}
 
-		// The web app asks whether to write-protect only when the meddelande has text: a locked empty one could never be
-		// written afterwards (A4).
-		if (input.writeProtect() && !hasMessageText(input.message())) {
-			throw refuse(ERROR_NOTHING_TO_PROTECT);
-		}
+		requireMessageToProtect(input);
 
 		// The web app names the medsökande by personId, never NOONE, and asks for their orsak too (capture 2026-09-30).
 		final var coApplicant = elements(base.path(FIELD_DECISION_PERSONS)).stream()
@@ -177,6 +173,16 @@ final class LifecareDecisionBodies {
 		body.remove("whereDidChildGoType");
 		body.remove("guardianType");
 		return body;
+	}
+
+	/**
+	 * Write protection needs a meddelande with text. The web app asks whether to write-protect only then, since a locked
+	 * empty meddelande could never be written afterwards (A4).
+	 */
+	private static void requireMessageToProtect(final LifecareDecisionInput input) {
+		if (input.writeProtect() && !hasMessageText(input.message())) {
+			throw refuse(ERROR_NOTHING_TO_PROTECT);
+		}
 	}
 
 	/** Whether the meddelande, HTML as the editor sends it, holds any text once its tags and spaces are gone. */
