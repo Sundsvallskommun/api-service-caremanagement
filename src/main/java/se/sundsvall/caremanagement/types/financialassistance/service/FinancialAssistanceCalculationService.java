@@ -35,6 +35,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeade
 import se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.SurplusCalculationRemover;
 import se.sundsvall.caremanagement.types.financialassistance.service.mapper.CalculationDraftMapper;
 import se.sundsvall.caremanagement.types.financialassistance.service.model.DraftChanges;
 import se.sundsvall.dept44.problem.Problem;
@@ -90,13 +91,14 @@ public class FinancialAssistanceCalculationService {
 	private final LifecareServiceIdService lifecareServiceIdService;
 	private final CalculationSyncService calculationSyncService;
 	private final EndedErrandGate endedErrandGate;
+	private final SurplusCalculationRemover surplusRemover;
 
 	FinancialAssistanceCalculationService(final ErrandService errandService, final FinancialAssistanceRepository financialAssistanceRepository, final CalculationService calculationService,
 		final LifecareCaseService lifecareCaseService, final CitizenService citizenService, final DecisionService decisionService, final WarningService warningService,
 		final DraftService draftService, final CalculationFeeder calculationFeeder, final ApplicationRuleFeeder applicationRuleFeeder, final PeriodRuleFeeder periodRuleFeeder,
 		final IncomeChangeFeeder incomeChangeFeeder, final LateTransferFeeder lateTransferFeeder, final UntransferableIncomeFeeder untransferableIncomeFeeder,
 		final PaymentWarningService paymentWarningService, final LifecareServiceIdService lifecareServiceIdService, final CalculationSyncService calculationSyncService,
-		final EndedErrandGate endedErrandGate) {
+		final EndedErrandGate endedErrandGate, final SurplusCalculationRemover surplusRemover) {
 		this.errandService = errandService;
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.calculationService = calculationService;
@@ -115,6 +117,7 @@ public class FinancialAssistanceCalculationService {
 		this.lifecareServiceIdService = lifecareServiceIdService;
 		this.calculationSyncService = calculationSyncService;
 		this.endedErrandGate = endedErrandGate;
+		this.surplusRemover = surplusRemover;
 	}
 
 	/**
@@ -508,8 +511,9 @@ public class FinancialAssistanceCalculationService {
 	 * <p>
 	 * The link is conditional ({@link FinancialAssistanceRepository#linkLifecareCalculationIfAbsent}): the caseworker's
 	 * first save through the errand's /lifecare calculation route creates a calculation when the errand has none, so the
-	 * two can race. Whichever links first wins; the loser's
-	 * calculation stays in Lifecare unlinked (FamilyCare has no delete), and the warning below is the trace of it.
+	 * two can race. Whichever links first wins. When this run loses, its calculation is removed from Lifecare again
+	 * ({@link SurplusCalculationRemover}, through ProfessionalWeb since FamilyCare has no delete); should the removal
+	 * fail, it stays in Lifecare unlinked and the warning below is the trace of it.
 	 */
 	private void proposeInLifecare(final String municipalityId, final PrepareInput input) {
 		final Integer calculationId;
@@ -527,6 +531,11 @@ public class FinancialAssistanceCalculationService {
 			// What was just posted is what the system wrote: the baseline later SSBTEK changes are measured against.
 			calculationSyncService.seedFromProposal(input.errandId(), draftService.allIncomes(input.errandId()));
 			LOG.info("Created the normberäkning proposal {} in Lifecare for errand {}", calculationId, sanitizeForLogging(input.errandId()));
+			return;
+		}
+		if (surplusRemover.remove(calculationId)) {
+			LOG.info("Errand {} got a normberäkning linked while the prepare step created Lifecare calculation {}; that calculation was removed",
+				sanitizeForLogging(input.errandId()), calculationId);
 			return;
 		}
 		LOG.warn("Errand {} got a normberäkning linked while the prepare step created Lifecare calculation {}; that calculation is left unlinked",
