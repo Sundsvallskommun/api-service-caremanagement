@@ -21,6 +21,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareRecordContent;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareRecords;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.UpdateLifecareRecordRequest;
+import se.sundsvall.caremanagement.types.financialassistance.service.LifecareRecordFilter;
 import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -53,10 +54,12 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  * careM keeps nothing of them but the access-log rows.
  *
  * <p>
- * Lifecare's list is keyed on the person, not the errand: it spans every akt the applicant has. The personnummer comes
- * from the errand, never from the caller. A record read or changed by id must be in that list, so an errand cannot
- * reach
- * another person's record by naming its id. New records are written on the errand's insats.
+ * Lifecare's list is keyed on the person, not the errand: it spans every akt the applicant has, other units' included.
+ * Only the rows written under an ekonomiskt bistånd owner are kept ({@link LifecareRecordFilter}), and every list,
+ * body,
+ * read, change and PDF below works on that filtered list. The personnummer comes from the errand, never from the
+ * caller. A record read or changed by id must be in the filtered list, so an errand can reach neither another person's
+ * record nor another unit's by naming its id. New records are written on the errand's insats.
  * </p>
  */
 @Service
@@ -103,18 +106,20 @@ public class LifecareRecordService {
 	private final LifecareAccessRecorder recorder;
 	private final LifecareCaseHistoryService caseHistoryService;
 	private final ProfessionalWebProperties properties;
+	private final LifecareRecordFilter recordFilter;
 
 	LifecareRecordService(final ProfessionalWebClient client, final LifecareErrandService errandService, final LifecareAccessRecorder recorder,
-		final LifecareCaseHistoryService caseHistoryService, final ProfessionalWebProperties properties) {
+		final LifecareCaseHistoryService caseHistoryService, final ProfessionalWebProperties properties, final LifecareRecordFilter recordFilter) {
 		this.client = client;
 		this.errandService = errandService;
 		this.recorder = recorder;
 		this.caseHistoryService = caseHistoryService;
 		this.properties = properties;
+		this.recordFilter = recordFilter;
 	}
 
 	/**
-	 * The applicant's journalanteckningar and documents, across all of the applicant's akter.
+	 * The applicant's journalanteckningar and documents under ekonomiskt bistånd, across the applicant's EB akter.
 	 *
 	 * @param  municipalityId the municipality
 	 * @param  namespace      the namespace
@@ -389,8 +394,9 @@ public class LifecareRecordService {
 		return caseHistoryService.documentContent(municipalityId, matches.getFirst());
 	}
 
+	/** The applicant's list, with only the rows written under an ekonomiskt bistånd owner. */
 	private JsonNode readList(final LifecareErrand errand) {
-		return client.get(PATH_LIST, Map.of("id", errandService.applicantPersonalNumber(errand)));
+		return recordFilter.financialAssistanceOnly(client.get(PATH_LIST, Map.of("id", errandService.applicantPersonalNumber(errand))));
 	}
 
 	private static ObjectNode requireObject(final JsonNode node, final String path) {
