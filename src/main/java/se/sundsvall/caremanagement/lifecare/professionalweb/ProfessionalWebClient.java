@@ -87,7 +87,11 @@ public class ProfessionalWebClient {
 	 * @return      the answer, a missing node when Lifecare answered with an empty body
 	 */
 	public JsonNode delete(final String path, final Object body) {
-		return toJson(exchange(DELETE, path, Map.of(), body));
+		return delete(path, Map.of(), body);
+	}
+
+	public JsonNode delete(final String path, final Map<String, String> params, final Object body) {
+		return toJson(exchange(DELETE, path, params, body));
 	}
 
 	/**

@@ -179,6 +179,17 @@ class LifecareCalculationClient {
 	}
 
 	/**
+	 * Removes a beräkning (Calculation/Delete, the call behind Ta bort in Lifecare's list of beräkningar). Only for a
+	 * beräkning careM itself has just created and nothing links to: Lifecare offers removal of a beräkning that is not
+	 * slutlig.
+	 *
+	 * @param calculationId the beräkning
+	 */
+	void delete(final int calculationId) {
+		client.delete("api2/Calculation/Delete", params(BUSINESS_TYPE, CALCULATION_BUSINESS_TYPE, BUSINESS_ID, String.valueOf(calculationId)), null);
+	}
+
+	/**
 	 * The beräkning rendered as PDF by Lifecare's own print template. Not under api2: it is the page Lifecare's web app
 	 * opens to print a beräkning.
 	 *

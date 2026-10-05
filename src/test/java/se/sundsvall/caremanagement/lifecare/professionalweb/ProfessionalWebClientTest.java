@@ -169,6 +169,16 @@ class ProfessionalWebClientTest {
 	}
 
 	@Test
+	void deleteSendsTheParamsInTheQueryAndNoBody() {
+		wireMock.stubFor(com.github.tomakehurst.wiremock.client.WireMock.delete(urlPathEqualTo(API))
+			.withQueryParam("businessType", equalTo("3"))
+			.withQueryParam("businessId", equalTo("53"))
+			.willReturn(aResponse().withStatus(200)));
+
+		assertThat(client.delete("api2/Thing/Get", Map.of("businessType", "3", "businessId", "53"), null).isMissingNode()).isTrue();
+	}
+
+	@Test
 	void pdfIsCheckedForItsSignature() {
 		wireMock.stubFor(get(urlPathEqualTo("/WESE.FC.ProfessionalWeb/RenderPdf/Print")).inScenario("pdf").whenScenarioStateIs(STARTED)
 			.willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/pdf").withBody("%PDF-1.7 x")).willSetStateTo("broken"));

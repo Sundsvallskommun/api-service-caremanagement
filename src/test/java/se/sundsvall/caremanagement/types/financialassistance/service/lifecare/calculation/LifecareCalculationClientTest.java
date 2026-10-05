@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.json;
@@ -46,6 +47,14 @@ class LifecareCalculationClientTest {
 	private Map<String, String> readWith(final String path) {
 		verify(professionalWeb).get(eq(path), paramsCaptor.capture());
 		return paramsCaptor.getValue();
+	}
+
+	@Test
+	void deletesABeräkning() {
+		client.delete(53);
+
+		verify(professionalWeb).delete(eq("api2/Calculation/Delete"), paramsCaptor.capture(), isNull());
+		assertThat(paramsCaptor.getValue()).containsExactly(entry("businessType", "3"), entry("businessId", "53"));
 	}
 
 	@Test

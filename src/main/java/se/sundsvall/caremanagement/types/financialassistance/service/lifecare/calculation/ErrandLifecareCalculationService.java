@@ -54,6 +54,7 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 public class ErrandLifecareCalculationService {
 
 	static final String ERROR_ALREADY_LINKED = "Ärendet har redan en normberäkning kopplad. Beräkning %d som just skapades i Lifecare är överflödig – ta bort den i Lifecare och läs om ärendet.";
+	static final String ERROR_ALREADY_LINKED_REMOVED = "Ärendet har redan en normberäkning kopplad. Beräkning %d som just skapades i Lifecare var överflödig och är borttagen – läs om ärendet.";
 
 	private static final Logger LOG = LoggerFactory.getLogger(ErrandLifecareCalculationService.class);
 	private static final ZoneId SWEDISH_TIME = ZoneId.of("Europe/Stockholm");
@@ -64,14 +65,16 @@ public class ErrandLifecareCalculationService {
 	private final LifecareCalculationEditService editService;
 	private final NormberakningDraftReader draftReader;
 	private final LifecareAccessRecorder recorder;
+	private final SurplusCalculationRemover surplusRemover;
 
 	ErrandLifecareCalculationService(final LifecareErrandService errandService, final LifecareCalculationClient client, final LifecareCalculationEditService editService,
-		final NormberakningDraftReader draftReader, final LifecareAccessRecorder recorder) {
+		final NormberakningDraftReader draftReader, final LifecareAccessRecorder recorder, final SurplusCalculationRemover surplusRemover) {
 		this.errandService = errandService;
 		this.client = client;
 		this.editService = editService;
 		this.draftReader = draftReader;
 		this.recorder = recorder;
+		this.surplusRemover = surplusRemover;
 	}
 
 	/**
@@ -212,14 +215,21 @@ public class ErrandLifecareCalculationService {
 		}
 	}
 
-	/** Links the errand to the new beräkning. Without the link the next save would make a second one. */
+	/**
+	 * Links the errand to the new beräkning. Without the link the next save would make a second one. When the daily
+	 * prepare (or another save) linked its beräkning first, this one is surplus: it is removed from Lifecare, and reading
+	 * the errand again is all the caseworker has to do. Should Lifecare refuse the removal, the caseworker is told to
+	 * remove it there.
+	 */
 	private void link(final LifecareErrand errand, final int calculationId) {
 		try {
 			errandService.linkCalculation(errand, calculationId);
 		} catch (final RuntimeException e) {
 			if ((e instanceof final ThrowableProblem problem) && (problem.getStatus() == CONFLICT)) {
-				// The daily prepare (or another save) linked its calculation first: this one is surplus, and reading the
-				// errand again is all the caseworker has to do.
+				if (surplusRemover.remove(calculationId)) {
+					recorder.written(errand, LifecareAccessEntry.DELETE, TARGET, "Tog bort en överflödig normberäkning i Lifecare", String.valueOf(calculationId));
+					throw Problem.valueOf(CONFLICT, ERROR_ALREADY_LINKED_REMOVED.formatted(calculationId));
+				}
 				throw Problem.valueOf(CONFLICT, ERROR_ALREADY_LINKED.formatted(calculationId));
 			}
 			LOG.error("Calculation {} was created in Lifecare but errand {} could not be linked to it ({})", calculationId, sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());

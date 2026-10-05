@@ -49,6 +49,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
+import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.SurplusCalculationRemover;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -131,6 +132,9 @@ class FinancialAssistanceCalculationServiceTest {
 
 	@Mock
 	private EndedErrandGate endedErrandGateMock;
+
+	@Mock
+	private SurplusCalculationRemover surplusRemoverMock;
 
 	@InjectMocks
 	private FinancialAssistanceCalculationService service;
@@ -793,6 +797,24 @@ class FinancialAssistanceCalculationServiceTest {
 		// The BFF's link stands: the loaded entity is not given this run's id, so the stamp never overwrites it.
 		assertThat(errand.getLifecareCalculationId()).isNull();
 		// Nor is a calculation this run does not own taken as the baseline.
+		verifyNoInteractions(calculationSyncServiceMock);
+		verify(repositoryMock).save(errand);
+		// Its own calculation is surplus: removal was tried (the mock answers false, so it is left unlinked).
+		verify(surplusRemoverMock).remove(778);
+	}
+
+	@Test
+	void prepareRemovesItsProposalWhenDrakenLinkedOneFirst() {
+		final var month = YearMonth.of(2026, JUNE);
+		final var errand = completeRunWithDraft(month);
+		when(calculationServiceMock.commitEffective(any(), any(), any(), any(), any(), any(), any())).thenReturn(778);
+		when(repositoryMock.linkLifecareCalculationIfAbsent(ERRAND_ID, 778)).thenReturn(0);
+		when(surplusRemoverMock.remove(778)).thenReturn(true);
+
+		service.prepareCalculation(MUNICIPALITY_ID, NAMESPACE, completeRequest());
+
+		verify(surplusRemoverMock).remove(778);
+		assertThat(errand.getLifecareCalculationId()).isNull();
 		verifyNoInteractions(calculationSyncServiceMock);
 		verify(repositoryMock).save(errand);
 	}

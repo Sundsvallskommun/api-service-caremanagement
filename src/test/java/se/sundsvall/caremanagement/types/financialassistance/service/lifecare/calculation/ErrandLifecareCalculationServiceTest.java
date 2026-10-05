@@ -51,6 +51,8 @@ class ErrandLifecareCalculationServiceTest {
 	private static final LifecareErrand LINKED = new LifecareErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 1, 31, null, null, 2026, 9);
 
 	@Mock
+	private SurplusCalculationRemover surplusRemover;
+	@Mock
 	private LifecareErrandService errandService;
 	@Mock
 	private LifecareCalculationClient client;
@@ -92,7 +94,7 @@ class ErrandLifecareCalculationServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new ErrandLifecareCalculationService(errandService, client, new LifecareCalculationEditService(client, recorder), draftReader, recorder);
+		service = new ErrandLifecareCalculationService(errandService, client, new LifecareCalculationEditService(client, recorder), draftReader, recorder, surplusRemover);
 		final var draft = draft();
 		when(draftReader.read(any())).thenReturn(new DraftWithNumbers(draft, Map.of("p1", "880209-T050")));
 		when(client.readProposal(1)).thenReturn(proposal());
@@ -267,8 +269,27 @@ class ErrandLifecareCalculationServiceTest {
 		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false))
 			.hasFieldOrPropertyWithValue("status", CONFLICT)
 			.hasMessageContaining("Beräkning 31")
-			.hasMessageContaining("överflödig");
+			.hasMessageContaining("överflödig")
+			.hasMessageContaining("ta bort den i Lifecare");
 		verify(recorder).written(UNLINKED, "CREATE", "CALCULATION", "Sparade normberäkningen i Lifecare", "31");
+		// Lifecare refused the removal (the mock answers false): nothing is logged as removed.
+		verify(surplusRemover).remove(31);
+		verify(recorder, never()).written(any(), eq("DELETE"), any(), any(), any());
+	}
+
+	@Test
+	void removesTheSurplusBeräkningWhenAnotherWasLinkedFirst() {
+		errandIs(UNLINKED);
+		when(client.create(eq(1), any())).thenReturn(saved());
+		doThrow(Problem.valueOf(CONFLICT, "Another calculation is linked")).when(errandService).linkCalculation(UNLINKED, 31);
+		when(surplusRemover.remove(31)).thenReturn(true);
+
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false))
+			.hasFieldOrPropertyWithValue("status", CONFLICT)
+			.hasMessageContaining("Beräkning 31")
+			.hasMessageContaining("är borttagen");
+		verify(recorder).written(UNLINKED, "CREATE", "CALCULATION", "Sparade normberäkningen i Lifecare", "31");
+		verify(recorder).written(UNLINKED, "DELETE", "CALCULATION", "Tog bort en överflödig normberäkning i Lifecare", "31");
 	}
 
 	@Test
