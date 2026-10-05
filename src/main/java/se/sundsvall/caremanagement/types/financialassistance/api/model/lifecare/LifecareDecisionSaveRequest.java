@@ -34,7 +34,8 @@ public record LifecareDecisionSaveRequest(
 	@Schema(description = "The beslutsmeddelande as HTML", examples = "<p>Beslut</p>") @Size(max = 1048576) String decisionMessage,
 	@Schema(description = """
 		Spara och skrivskydda beslut: saves the beslut write-protected in Lifecare (its meddelande locked), after which it \
-		can no longer be changed from careM.""", examples = "false") Boolean writeProtect,
+		can no longer be changed from careM. Refused with 422 when the beslutsmeddelande has no text, as Lifecare's web app \
+		offers it only then.""", examples = "false") Boolean writeProtect,
 	@Schema(description = """
 		Lifecare's code for the medsökande's orsak, from the same orsaker as the sökande's. Required when the household has \
 		a medsökande in Lifecare and the beslut carries an orsak; ignored without a medsökande.""", examples = "1") Integer coApplicantReasonCode) {

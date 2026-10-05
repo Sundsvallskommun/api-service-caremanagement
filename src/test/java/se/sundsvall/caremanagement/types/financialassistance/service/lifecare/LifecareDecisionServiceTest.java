@@ -234,7 +234,7 @@ class LifecareDecisionServiceTest {
 		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
-			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, null, true, null));
+			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Beslut</p>", true, null));
 
 		verify(accessRecorderMock).written(errand, "CREATE", "DECISION", "Registrerade och skrivskyddade beslutet i Lifecare", "98");
 	}
