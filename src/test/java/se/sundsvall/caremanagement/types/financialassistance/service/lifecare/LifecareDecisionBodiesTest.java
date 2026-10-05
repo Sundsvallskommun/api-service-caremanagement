@@ -7,6 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.Month;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.core.io.ClassPathResource;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.JsonNode;
@@ -266,7 +269,36 @@ class LifecareDecisionBodiesTest {
 		final var saved = (ObjectNode) fixture("update-saved.json");
 		saved.put("lockedMessage", true);
 
-		assertRefused(() -> buildUpdate(saved, fixture("update-proposal.json"), avslag()), "låst");
+		assertRefused(() -> buildUpdate(saved, fixture("update-proposal.json"), avslag()), "Beslutsmeddelandet är skrivskyddat");
+	}
+
+	@ParameterizedTest
+	@NullAndEmptySource
+	@ValueSource(strings = {
+		"   ", "<p></p>", "<p>&nbsp;</p>", "<p><br></p>"
+	})
+	void writeProtectIsRefusedWithoutAMessage(final String message) {
+		final var protectedWithoutText = new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
+			new BigDecimal("5"), 16, message, true, "RPA_031DEV", null);
+
+		assertRefused(() -> buildCreate(fixture("create-proposal.json"), protectedWithoutText), "inget beslutsmeddelande att skrivskydda");
+	}
+
+	@Test
+	void writeProtectLocksAMessageWithText() {
+		final var protectedWithText = new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
+			new BigDecimal("5"), 16, "<p>Beslut</p>", true, "RPA_031DEV", null);
+
+		assertThat(buildCreate(fixture("create-proposal.json"), protectedWithText).path("lockedMessage").booleanValue()).isTrue();
+	}
+
+	@Test
+	void anUnprotectedBeslutNeedsNoMessage() {
+		final var unprotected = new LifecareDecisionInput(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
+			new BigDecimal("5"), 16, null, false, "RPA_031DEV", null);
+
+		assertThat(buildCreate(fixture("create-proposal.json"), unprotected).has("lockedMessage")).isTrue();
+		assertThat(buildCreate(fixture("create-proposal.json"), unprotected).path("lockedMessage").booleanValue()).isFalse();
 	}
 
 	@Test

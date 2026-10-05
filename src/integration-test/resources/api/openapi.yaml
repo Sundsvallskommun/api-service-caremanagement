@@ -9827,7 +9827,8 @@ components:
           type: boolean
           description: "Spara och skrivskydda beslut: saves the beslut write-protected\
             \ in Lifecare (its meddelande locked), after which it can no longer be\
-            \ changed from careM."
+            \ changed from careM. Refused with 422 when the beslutsmeddelande has\
+            \ no text, as Lifecare's web app offers it only then."
           examples:
           - false
         coApplicantReasonCode:

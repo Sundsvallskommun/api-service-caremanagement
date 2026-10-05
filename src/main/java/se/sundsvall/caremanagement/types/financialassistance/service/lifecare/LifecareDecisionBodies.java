@@ -31,7 +31,14 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  * beslut
  * carries one for the sökande, a beslutsfattare Lifecare does not know (the
  * beslut must name the caseworker, never fall back on the integration account), a period the beslutstyp requires but
- * the beslut lacks, and for a change also a beslut Lifecare has locked and a change of beslutstyp.
+ * the beslut lacks, write protection without a beslutsmeddelande, and for a change also a beslut whose meddelande
+ * Lifecare has locked and a change of beslutstyp.
+ * </p>
+ *
+ * <p>
+ * Write protection is Lifecare's own: {@code lockedMessage} in the ordinary Create and Update body, which locks the
+ * beslutsmeddelande and nothing else (A4, 2026-10-05). The web app offers it only for a meddelande with text, since a
+ * locked meddelande can be revised but never written again.
  * </p>
  *
  * <p>
@@ -49,7 +56,8 @@ final class LifecareDecisionBodies {
 	static final String ERROR_CO_APPLICANT_ID = "Medsökanden saknar personnummer i Lifecare.";
 	static final String ERROR_UNKNOWN_DECISION_MAKER = "Handläggaren %s finns inte som beslutsfattare i Lifecare.";
 	static final String ERROR_MISSING_PERIOD = "Beslutet saknar period, som beslutstypen kräver i Lifecare.";
-	static final String ERROR_LOCKED = "Beslutet är låst i Lifecare och kan inte ändras från Drakel.";
+	static final String ERROR_LOCKED = "Beslutsmeddelandet är skrivskyddat i Lifecare. Beslutet kan inte ändras från Drakel.";
+	static final String ERROR_NOTHING_TO_PROTECT = "Det finns inget beslutsmeddelande att skrivskydda.";
 	static final String ERROR_TYPE_CHANGE = "Beslutstypen kan inte ändras på ett beslut som redan finns i Lifecare. Ändra beslutet direkt i Lifecare.";
 	static final String ERROR_NO_BESLUT = "Lifecare answered without a beslut object to fill in";
 
@@ -110,6 +118,12 @@ final class LifecareDecisionBodies {
 			throw refuse(ERROR_UNREGISTERED_TYPE.formatted(text(decisionType.path("name")).orElse("")));
 		}
 
+		// The web app asks whether to write-protect only when the meddelande has text: a locked empty one could never be
+		// written afterwards (A4).
+		if (input.writeProtect() && !hasMessageText(input.message())) {
+			throw refuse(ERROR_NOTHING_TO_PROTECT);
+		}
+
 		// The web app names the medsökande by personId, never NOONE, and asks for their orsak too (capture 2026-09-30).
 		final var coApplicant = elements(base.path(FIELD_DECISION_PERSONS)).stream()
 			.filter(person -> isTrue(person.path(FIELD_CO_APPLICANT)))
@@ -163,6 +177,14 @@ final class LifecareDecisionBodies {
 		body.remove("whereDidChildGoType");
 		body.remove("guardianType");
 		return body;
+	}
+
+	/** Whether the meddelande, HTML as the editor sends it, holds any text once its tags and spaces are gone. */
+	static boolean hasMessageText(final String html) {
+		return Optional.ofNullable(html)
+			.map(message -> message.replaceAll("<[^>]*>", "").replace("&nbsp;", " ").strip())
+			.filter(text -> !text.isEmpty())
+			.isPresent();
 	}
 
 	/** A person the beslut concerns, marked as included as the web app marks it. */
