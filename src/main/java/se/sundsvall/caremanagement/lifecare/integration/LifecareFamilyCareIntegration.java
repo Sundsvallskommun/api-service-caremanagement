@@ -19,12 +19,17 @@ import generated.se.sundsvall.lifecarefamilycare.User;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Supplier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.endOfDay;
 import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.startOfDay;
 
@@ -35,20 +40,31 @@ import static se.sundsvall.caremanagement.lifecare.integration.FamilyCareDates.s
  * identity number and income data (sprint privacy rule, vof-ekonomiskt-bistand/CLAUDE.md).
  *
  * <p>
+ * Arguments are party ids ({@link LifecareFamilyCare}); FamilyCare keys on the personal identity number, so every
+ * person-scoped call resolves it through the citizen service first — the one place {@code municipalityId} is used
+ * here, since FamilyCare has no tenant in its API.
+ *
+ * <p>
  * The period reads take the window as {@link LocalDate}s and render them here, through {@link FamilyCareDates}, so no
  * caller can hand FamilyCare a date in a format it rejects. The window is inclusive in both ends: the start date
  * becomes start of day and the end date end of day.
  */
 @Component
-public class LifecareFamilyCareIntegration {
+@ConditionalOnProperty(name = "integration.lifecare-familycare.provider", havingValue = "familycare", matchIfMissing = true)
+public class LifecareFamilyCareIntegration implements LifecareFamilyCare {
 
 	/** Everything uploaded to an actualisation is a generated or uploaded PDF. */
 	private static final String PDF_MIME_TYPE = "application/pdf";
 
-	private final LifecareFamilyCareClient lifecareFamilyCareClient;
+	private static final String NO_PERSONAL_NUMBER = "No personal identity number could be resolved for a person on the calculation";
+	private static final String NO_CITIZEN = "No citizen found for partyId %s";
 
-	public LifecareFamilyCareIntegration(final LifecareFamilyCareClient lifecareFamilyCareClient) {
+	private final LifecareFamilyCareClient lifecareFamilyCareClient;
+	private final CitizenService citizenService;
+
+	public LifecareFamilyCareIntegration(final LifecareFamilyCareClient lifecareFamilyCareClient, final CitizenService citizenService) {
 		this.lifecareFamilyCareClient = lifecareFamilyCareClient;
+		this.citizenService = citizenService;
 	}
 
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
@@ -67,74 +83,158 @@ public class LifecareFamilyCareIntegration {
 		return e.getClass().getSimpleName();
 	}
 
-	public PersonBasedPersonDTO getPerson(final String personId) {
-		return call("fetching person", () -> lifecareFamilyCareClient.getPerson(personId));
+	/**
+	 * FamilyCare's master data for the person, or {@code null} when FamilyCare holds no such person — it answers 404 for
+	 * one it does not know, which is an answer and not a failure (the integrator treats it the same way on its side). A
+	 * citizen the personal identity number cannot be resolved for is still a failure: that is resolved before the call.
+	 */
+	@Override
+	public PersonBasedPersonDTO getPerson(final String municipalityId, final String partyId) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching person", () -> personOrNull(personalNumber));
 	}
 
-	public List<PersonBasedContactDTO> getContacts(final String personId) {
-		return call("fetching contacts", () -> lifecareFamilyCareClient.getContacts(personId));
+	private PersonBasedPersonDTO personOrNull(final String personalNumber) {
+		try {
+			return lifecareFamilyCareClient.getPerson(personalNumber);
+		} catch (final ThrowableProblem e) {
+			if (UpstreamNotFound.matches(e)) {
+				return null;
+			}
+			throw e;
+		}
 	}
 
-	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String personId, final LocalDate startDate, final LocalDate endDate) {
-		return call("fetching actualisations", () -> lifecareFamilyCareClient.getActualisations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	@Override
+	public List<PersonBasedContactDTO> getContacts(final String municipalityId, final String partyId) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching contacts", () -> lifecareFamilyCareClient.getContacts(personalNumber));
 	}
 
-	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String personId, final LocalDate startDate, final LocalDate endDate) {
-		return call("fetching calculations", () -> lifecareFamilyCareClient.getCalculations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	@Override
+	public ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching actualisations", () -> lifecareFamilyCareClient.getActualisations(personalNumber, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String personId, final LocalDate startDate, final LocalDate endDate) {
-		return call("fetching decision", () -> lifecareFamilyCareClient.getDecisions(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	@Override
+	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching calculations", () -> lifecareFamilyCareClient.getCalculations(personalNumber, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String personId, final LocalDate startDate, final LocalDate endDate) {
-		return call("fetching payments", () -> lifecareFamilyCareClient.getPayments(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	@Override
+	public ApiPaginationCompositePersonBasedDecisionDTO getDecisions(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching decision", () -> lifecareFamilyCareClient.getDecisions(personalNumber, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String personId, final LocalDate startDate, final LocalDate endDate) {
-		return call("fetching investigations", () -> lifecareFamilyCareClient.getInvestigations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	@Override
+	public ApiPaginationCompositePersonBasedPaymentDTO getPayments(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching payments", () -> lifecareFamilyCareClient.getPayments(personalNumber, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String personId, final LocalDate startDate, final LocalDate endDate) {
-		return call("fetching services", () -> lifecareFamilyCareClient.getServices(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	@Override
+	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching investigations", () -> lifecareFamilyCareClient.getInvestigations(personalNumber, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String personId, final LocalDate startDate, final LocalDate endDate) {
-		return call("fetching executions", () -> lifecareFamilyCareClient.getExecutions(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	@Override
+	public ApiPaginationCompositePersonBasedServiceDTO getServices(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching services", () -> lifecareFamilyCareClient.getServices(personalNumber, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String personId, final LocalDate startDate, final LocalDate endDate) {
-		return call("fetching resource allocations", () -> lifecareFamilyCareClient.getResourceAllocations(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	@Override
+	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching executions", () -> lifecareFamilyCareClient.getExecutions(personalNumber, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
-	public List<User> getUsers(final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
+	@Override
+	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching resource allocations", () -> lifecareFamilyCareClient.getResourceAllocations(personalNumber, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	}
+
+	@Override
+	public List<User> getUsers(final String municipalityId, final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
 		return call("fetching users", () -> lifecareFamilyCareClient.getUsers(limit, offset, modifiedAfter, modifiedBefore));
 	}
 
-	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String personId, final LocalDate startDate, final LocalDate endDate) {
-		return call("fetching documents", () -> lifecareFamilyCareClient.getDocuments(personId, startOfDay(startDate), endOfDay(endDate), null, null, false));
+	@Override
+	public ApiPaginationCompositePersonBasedDocumentDTO getDocuments(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching documents", () -> lifecareFamilyCareClient.getDocuments(personalNumber, startOfDay(startDate), endOfDay(endDate), null, null, false));
 	}
 
 	// ---- Write-back (actualisation + calculation) and the proposals that drive it ----------------------------------
 
-	public byte[] getDocumentContent(final String id) {
+	@Override
+	public byte[] getDocumentContent(final String municipalityId, final String id) {
 		return call("fetching document content", () -> lifecareFamilyCareClient.getDocumentContent(id));
 	}
 
-	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String personId) {
-		return call("fetching actualisation proposal", () -> lifecareFamilyCareClient.getActualisationProposal(personId));
+	@Override
+	public PersonBasedAktualiseringProposalDTO getActualisationProposal(final String municipalityId, final String partyId) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching actualisation proposal", () -> lifecareFamilyCareClient.getActualisationProposal(personalNumber));
 	}
 
-	public Integer createActualisation(final PostAktualiseringsBodyRequest body) {
+	@Override
+	public Integer createActualisation(final String municipalityId, final PostAktualiseringsBodyRequest body) {
+		body.setPersonId(personalNumber(municipalityId, body.getPersonId()));
 		return call("creating actualisation", () -> lifecareFamilyCareClient.createActualisation(body));
 	}
 
-	public PersonBasedCalculationProposalDTO getCalculationProposal(final String personId) {
-		return call("fetching calculation proposal", () -> lifecareFamilyCareClient.getCalculationProposal(personId));
+	@Override
+	public PersonBasedCalculationProposalDTO getCalculationProposal(final String municipalityId, final String partyId) {
+		final var personalNumber = personalNumber(municipalityId, partyId);
+		return call("fetching calculation proposal", () -> lifecareFamilyCareClient.getCalculationProposal(personalNumber));
 	}
 
-	public Integer createCalculation(final PostCalculationBodyRequest body) {
+	/**
+	 * Create the calculation, first resolving the applicant and every household row from a party id to the personal
+	 * identity number FamilyCare keys on (confirmed with Tieto 2026-09-22 — every {@code PersonId} in the FamilyCare
+	 * API is a personal identity number, including the one on {@code CalculationPersons}).
+	 *
+	 * <p>
+	 * The body is careM's own, built per call in {@code CalculationService.commitEffective} and used nowhere else, so
+	 * it is rewritten in place rather than copied.
+	 *
+	 * <p>
+	 * A row that does not resolve fails the whole calculation. Skipping it would silently shrink the household the
+	 * norm is computed from — a family of four paid as three, with nothing on the errand saying why.
+	 */
+	@Override
+	public Integer createCalculation(final String municipalityId, final PostCalculationBodyRequest body) {
+		body.setPersonId(personalNumber(municipalityId, body.getPersonId()));
+		resolveHouseholdPersonIds(municipalityId, body);
 		return call("creating calculation", () -> lifecareFamilyCareClient.createCalculation(body));
+	}
+
+	private void resolveHouseholdPersonIds(final String municipalityId, final PostCalculationBodyRequest body) {
+		ofNullable(body.getCalculationPersons()).orElseGet(List::of)
+			.forEach(person -> person.setPersonId(resolvePersonalNumber(municipalityId, person.getPersonId())));
+	}
+
+	/**
+	 * The personal identity number behind a person-scoped argument. Resolved before the FamilyCare call rather than
+	 * inside it, so a citizen-service failure surfaces as itself instead of being reported as a Lifecare one.
+	 */
+	private String personalNumber(final String municipalityId, final String partyId) {
+		return citizenService.getPersonalNumber(municipalityId, partyId)
+			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NO_CITIZEN.formatted(partyId)));
+	}
+
+	private String resolvePersonalNumber(final String municipalityId, final String partyId) {
+		if (!hasText(partyId)) {
+			throw Problem.valueOf(BAD_GATEWAY, NO_PERSONAL_NUMBER);
+		}
+		return citizenService.getPersonalNumber(municipalityId, partyId)
+			.orElseThrow(() -> Problem.valueOf(BAD_GATEWAY, NO_PERSONAL_NUMBER));
 	}
 
 	/**
@@ -142,12 +242,12 @@ public class LifecareFamilyCareIntegration {
 	 * {@code Content} part named after the file. Everything sent this way is a generated or uploaded PDF, so the part is
 	 * typed as {@code application/pdf}. No payload is logged.
 	 */
-	public void postActualisationAttachment(final Integer actualisationId, final String documentType, final String documentSenderType,
-		final String title, final String senderName, final String fileName, final byte[] content) {
-
-		final var file = new ByteArrayMultipartFile("Content", fileName, PDF_MIME_TYPE, content);
+	@Override
+	public void postActualisationAttachment(final String municipalityId, final Integer actualisationId, final AttachmentUpload attachment) {
+		final var file = new ByteArrayMultipartFile("Content", attachment.fileName(), PDF_MIME_TYPE, attachment.content());
 		call("uploading actualisation attachment", () -> {
-			lifecareFamilyCareClient.postActualisationAttachment(actualisationId, documentType, documentSenderType, title, senderName, file);
+			lifecareFamilyCareClient.postActualisationAttachment(actualisationId, attachment.documentType(), attachment.documentSenderType(), attachment.title(),
+				attachment.senderName(), file);
 			return null;
 		});
 	}

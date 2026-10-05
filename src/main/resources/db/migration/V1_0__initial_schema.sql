@@ -5,6 +5,10 @@
 -- then: dropping redundant errand indexes, sizing UUID id/FK columns at varchar(36), and
 -- dropping the historical lookup seed data (the canonical copy ships in code via
 -- ErrandTypeContribution; the lookup rows are a runtime-editable mirror created on demand).
+--
+-- Squashed again on 2026-09-29 from V1_0..V1_34, the Rakel 2.0 sprint series, which was
+-- never released beyond the Drakel sprint environment. Generated the same way: the series
+-- applied to a clean MariaDB 10.6 and its structure dumped, tables in alphabetical order.
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -52,7 +56,10 @@ CREATE TABLE `decision` (
   `decision_type` varchar(32) DEFAULT NULL,
   `value` varchar(255) DEFAULT NULL,
   `description` varchar(4096) DEFAULT NULL,
+  `co_applicant_reason` varchar(255) DEFAULT NULL,
   `created_by` varchar(64) DEFAULT NULL,
+  `lifecare_status` varchar(16) DEFAULT NULL,
+  `lifecare_id` varchar(64) DEFAULT NULL,
   `created` datetime(6) DEFAULT NULL,
   `amount` decimal(15,2) DEFAULT NULL,
   `decision_message` varchar(8192) DEFAULT NULL,
@@ -95,24 +102,18 @@ CREATE TABLE `errand` (
   KEY `idx_errand_municipality_namespace_applicant_name` (`municipality_id`,`namespace`,`applicant_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `errand_document` (
+CREATE TABLE `errand_co_caseworker` (
   `id` varchar(36) NOT NULL,
   `errand_id` varchar(36) NOT NULL,
-  `document_type` varchar(255) NOT NULL,
-  `heading` varchar(255) NOT NULL,
-  `document_text` longtext DEFAULT NULL,
-  `document_date_time` datetime(6) NOT NULL,
-  `status` varchar(16) NOT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
+  `municipality_id` varchar(8) NOT NULL,
+  `namespace` varchar(32) NOT NULL,
+  `user_id` varchar(64) NOT NULL,
   `created` datetime(6) NOT NULL,
-  `modified_by` varchar(64) DEFAULT NULL,
-  `modified` datetime(6) DEFAULT NULL,
-  `locked_by` varchar(64) DEFAULT NULL,
-  `locked` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_document_errand_id` (`errand_id`),
-  KEY `idx_document_document_date_time` (`document_date_time`),
-  CONSTRAINT `fk_document_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
+  UNIQUE KEY `uc_co_caseworker_errand_id_user_id` (`errand_id`,`user_id`),
+  KEY `idx_co_caseworker_errand_id` (`errand_id`),
+  KEY `idx_co_caseworker_mid_ns_user_id` (`municipality_id`,`namespace`,`user_id`),
+  CONSTRAINT `fk_co_caseworker_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `errand_event` (
@@ -125,6 +126,7 @@ CREATE TABLE `errand_event` (
   `description` varchar(512) DEFAULT NULL,
   `http_method` varchar(8) DEFAULT NULL,
   `request_path` varchar(1024) DEFAULT NULL,
+  `lifecare_id` varchar(64) DEFAULT NULL,
   `actor` varchar(64) DEFAULT NULL,
   `actor_type` varchar(32) DEFAULT NULL,
   `request_id` varchar(64) DEFAULT NULL,
@@ -134,7 +136,8 @@ CREATE TABLE `errand_event` (
   PRIMARY KEY (`id`),
   KEY `idx_errand_event_errand_id_created` (`errand_id`,`created`),
   KEY `idx_errand_event_created` (`created`),
-  KEY `idx_errand_event_source` (`source`)
+  KEY `idx_errand_event_source` (`source`),
+  KEY `idx_errand_event_actor_created` (`actor`,`created`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `errand_fa_asset` (
@@ -159,6 +162,25 @@ CREATE TABLE `errand_fa_calculation_draft_norm_type` (
   `norm_type` varchar(32) DEFAULT NULL,
   KEY `idx_fa_calc_draft_norm_type_errand_id` (`errand_id`),
   CONSTRAINT `fk_fa_calc_draft_norm_type_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand_financial_assistance_calculation_draft` (`errand_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `errand_fa_calculation_sync` (
+  `id` varchar(36) NOT NULL,
+  `errand_id` varchar(36) NOT NULL,
+  `income_type_key` varchar(255) NOT NULL,
+  `income_type_id` int(11) DEFAULT NULL,
+  `income_type_name` varchar(255) DEFAULT NULL,
+  `role` varchar(16) NOT NULL,
+  `ssbtek_amount` decimal(12,2) DEFAULT NULL,
+  `ssbtek_baseline_amount` decimal(12,2) DEFAULT NULL,
+  `ssbtek_read_at` datetime(6) DEFAULT NULL,
+  `system_written_amount` decimal(12,2) DEFAULT NULL,
+  `system_written_at` datetime(6) DEFAULT NULL,
+  `created` datetime(6) DEFAULT NULL,
+  `updated` datetime(6) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_fa_calculation_sync_errand_type_role` (`errand_id`,`income_type_key`,`role`),
+  CONSTRAINT `fk_fa_calculation_sync_draft` FOREIGN KEY (`errand_id`) REFERENCES `errand_financial_assistance_calculation_draft` (`errand_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `errand_fa_child` (
@@ -202,6 +224,13 @@ CREATE TABLE `errand_fa_job_application` (
   `employer_and_place` varchar(255) DEFAULT NULL,
   KEY `idx_fa_job_application_errand_id` (`errand_id`),
   CONSTRAINT `fk_fa_job_application_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand_financial_assistance` (`errand_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `errand_fa_lifecare_payment` (
+  `errand_id` varchar(36) NOT NULL,
+  `lifecare_payment_id` varchar(64) NOT NULL,
+  PRIMARY KEY (`errand_id`,`lifecare_payment_id`),
+  CONSTRAINT `fk_fa_lifecare_payment_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand_financial_assistance` (`errand_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `errand_fa_norm_expense` (
@@ -264,7 +293,7 @@ CREATE TABLE `errand_fa_norm_person` (
   `deviation_from_date` date DEFAULT NULL,
   `deviation_to_date` date DEFAULT NULL,
   `norm_interval` varchar(64) DEFAULT NULL,
-  `job_stimulus_amount` decimal(12,2) DEFAULT NULL,
+  `amount` decimal(12,2) DEFAULT NULL,
   `position` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_fa_norm_person_errand` (`errand_id`),
@@ -324,6 +353,8 @@ CREATE TABLE `errand_fa_planning` (
   `work_extent` varchar(32) DEFAULT NULL,
   `work_description` longtext DEFAULT NULL,
   `sick_leave_level` varchar(32) DEFAULT NULL,
+  `sick_leave_from` date DEFAULT NULL,
+  `sick_leave_to` date DEFAULT NULL,
   `sfi_study_path` varchar(64) DEFAULT NULL,
   `sfi_course` varchar(64) DEFAULT NULL,
   `other_description` longtext DEFAULT NULL,
@@ -359,6 +390,13 @@ CREATE TABLE `errand_financial_assistance` (
   `modified` datetime(6) DEFAULT NULL,
   `housing_person_count` int(11) DEFAULT NULL,
   `last_daily_run_at` datetime(6) DEFAULT NULL,
+  `lifecare_service_id` int(11) DEFAULT NULL,
+  `lifecare_decision_id` int(11) DEFAULT NULL,
+  `lifecare_calculation_id` int(11) DEFAULT NULL,
+  `household_size_changed` bit(1) DEFAULT NULL,
+  `notify_mina_sidor` bit(1) DEFAULT NULL,
+  `notify_digital_mailbox` bit(1) DEFAULT NULL,
+  `notify_letter` bit(1) DEFAULT NULL,
   PRIMARY KEY (`errand_id`),
   CONSTRAINT `fk_financial_assistance_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -374,39 +412,9 @@ CREATE TABLE `errand_financial_assistance_calculation_draft` (
   `calculation_date` date DEFAULT NULL,
   `has_custom_household_size` bit(1) DEFAULT NULL,
   `household_size` int(11) DEFAULT NULL,
+  `norm_set_by_caseworker` bit(1) DEFAULT NULL,
   PRIMARY KEY (`errand_id`),
   CONSTRAINT `fk_fa_calculation_draft_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-CREATE TABLE `errand_financial_assistance_monitoring` (
-  `id` varchar(36) NOT NULL,
-  `errand_id` varchar(36) NOT NULL,
-  `title` varchar(255) NOT NULL,
-  `description` longtext DEFAULT NULL,
-  `start_date` date NOT NULL,
-  `end_date` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `created` datetime(6) DEFAULT NULL,
-  `updated` datetime(6) DEFAULT NULL,
-  `source` varchar(16) NOT NULL DEFAULT 'CASEWORKER',
-  `lifecare_id` varchar(64) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_fa_monitoring_errand_id_lifecare_id` (`errand_id`,`lifecare_id`),
-  CONSTRAINT `fk_fa_monitoring_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-CREATE TABLE `errand_financial_assistance_section_approval` (
-  `id` varchar(36) NOT NULL,
-  `errand_id` varchar(36) NOT NULL,
-  `section` varchar(32) NOT NULL,
-  `approved` bit(1) NOT NULL DEFAULT b'0',
-  `approved_by` varchar(64) DEFAULT NULL,
-  `approved_at` datetime(6) DEFAULT NULL,
-  `created` datetime(6) DEFAULT NULL,
-  `updated` datetime(6) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_fa_section_approval` (`errand_id`,`section`),
-  CONSTRAINT `fk_fa_section_approval_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `errand_financial_assistance_warning` (
@@ -420,7 +428,7 @@ CREATE TABLE `errand_financial_assistance_warning` (
   `created` datetime(6) DEFAULT NULL,
   `updated` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_fa_warning_dedup` (`errand_id`,`type`,`source_key`),
+  UNIQUE KEY `uq_fa_warning_dedup` (`errand_id`,`type`,`source_key`),
   CONSTRAINT `fk_fa_warning_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -440,26 +448,6 @@ CREATE TABLE `errand_form_snapshot` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_form_snapshot_errand` (`errand_id`),
   CONSTRAINT `fk_form_snapshot_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-CREATE TABLE `errand_journal_entry` (
-  `id` varchar(36) NOT NULL,
-  `errand_id` varchar(36) NOT NULL,
-  `entry_type` varchar(255) NOT NULL,
-  `heading` varchar(255) NOT NULL,
-  `entry_text` mediumtext DEFAULT NULL,
-  `entry_date_time` datetime(6) NOT NULL,
-  `status` varchar(16) NOT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `created` datetime(6) NOT NULL,
-  `modified_by` varchar(64) DEFAULT NULL,
-  `modified` datetime(6) DEFAULT NULL,
-  `locked_by` varchar(64) DEFAULT NULL,
-  `locked` datetime(6) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_journal_entry_errand_id` (`errand_id`),
-  KEY `idx_journal_entry_entry_date_time` (`entry_date_time`),
-  CONSTRAINT `fk_journal_entry_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `errand_message` (
@@ -602,6 +590,7 @@ CREATE TABLE `notification` (
   `description` varchar(512) NOT NULL,
   `content` varchar(2048) DEFAULT NULL,
   `acknowledged` bit(1) NOT NULL DEFAULT b'0',
+  `handled` bit(1) NOT NULL DEFAULT b'0',
   `expires` datetime(6) NOT NULL,
   `created` datetime(6) DEFAULT NULL,
   `modified` datetime(6) DEFAULT NULL,
@@ -610,6 +599,8 @@ CREATE TABLE `notification` (
   KEY `idx_notification_mid_ns_owner_id_acknowledged` (`municipality_id`,`namespace`,`owner_id`,`acknowledged`),
   KEY `idx_notification_mid_ns_errand_id_acknowledged` (`municipality_id`,`namespace`,`errand_id`,`acknowledged`),
   KEY `idx_notification_expires` (`expires`),
+  KEY `idx_notification_mid_ns_owner_id_handled` (`municipality_id`,`namespace`,`owner_id`,`handled`),
+  KEY `idx_notification_mid_ns_errand_id_handled` (`municipality_id`,`namespace`,`errand_id`,`handled`),
   CONSTRAINT `fk_notification_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -625,6 +616,24 @@ CREATE TABLE `permit` (
   `modified` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_permit_errand_id` (`errand_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `process_message_retry` (
+  `id` varchar(36) NOT NULL,
+  `errand_id` varchar(36) NOT NULL,
+  `municipality_id` varchar(8) NOT NULL,
+  `namespace` varchar(32) NOT NULL,
+  `message_name` varchar(64) NOT NULL,
+  `variables` varchar(1024) DEFAULT NULL,
+  `status` varchar(16) NOT NULL,
+  `attempts` int(11) NOT NULL,
+  `last_error` varchar(1024) DEFAULT NULL,
+  `next_attempt` datetime(6) NOT NULL,
+  `created` datetime(6) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_process_message_retry_status_next_attempt` (`status`,`next_attempt`),
+  KEY `idx_process_message_retry_errand_id` (`errand_id`),
+  CONSTRAINT `fk_process_message_retry_errand_id` FOREIGN KEY (`errand_id`) REFERENCES `errand` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `referral` (
@@ -669,6 +678,17 @@ CREATE TABLE `stakeholder` (
   PRIMARY KEY (`id`),
   KEY `idx_stakeholder_external_id_role_errand_id` (`external_id`,`role`,`errand_id`),
   KEY `fk_stakeholder_errand_id` (`errand_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `user_settings` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `municipality_id` varchar(8) NOT NULL,
+  `ad_account` varchar(64) NOT NULL,
+  `ssbtek_open_in_new_window` bit(1) NOT NULL DEFAULT b'1',
+  `created` datetime(6) DEFAULT NULL,
+  `modified` datetime(6) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_user_settings_municipality_id_ad_account` (`municipality_id`,`ad_account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

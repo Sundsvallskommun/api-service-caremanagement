@@ -26,8 +26,12 @@ import java.util.TreeSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.citizen.service.CitizenService;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.caremanagement.lifecare.service.mapper.ExpenseTypeMapper;
+import se.sundsvall.caremanagement.lifecare.service.mapper.IncomeTypeMapper;
+import se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
 
 import static java.lang.Boolean.TRUE;
@@ -39,7 +43,7 @@ import static se.sundsvall.caremanagement.lifecare.service.mapper.MapperUtil.toA
 
 /**
  * Answers financial-assistance-routing questions about a person from Lifecare FamilyCare. Wraps {@link
- * LifecareFamilyCareIntegration}, reading actualisations, decision and calculations over a lookback window ending at
+ * LifecareFamilyCare}, reading actualisations, decision and calculations over a lookback window ending at
  * the reference date, and reduces them to a domain {@link LifecareCaseSummary}. FamilyCare's date strings (from/to
  * periods) and generated DTOs never leave this module.
  *
@@ -54,14 +58,17 @@ public class LifecareCaseService {
 	/** Guard against a malformed decision period (e.g. from 2000 to 2030) producing an unbounded month set. */
 	private static final int MAX_MONTHS_PER_DECISION = 36;
 
-	private final LifecareFamilyCareIntegration lifecareFamilyCareIntegration;
+	private final LifecareFamilyCare lifecareFamilyCareIntegration;
+	private final CitizenService citizenService;
 	private final int lookbackMonths;
 	private final Set<String> openActualisationStatuses;
 
-	LifecareCaseService(final LifecareFamilyCareIntegration lifecareFamilyCareIntegration,
+	LifecareCaseService(final LifecareFamilyCare lifecareFamilyCareIntegration,
+		final CitizenService citizenService,
 		@Value("${integration.lifecare-familycare.lookback-months:13}") final int lookbackMonths,
 		@Value("${integration.lifecare-familycare.open-actualisation-statuses:Aktuell}") final List<String> openActualisationStatuses) {
 		this.lifecareFamilyCareIntegration = lifecareFamilyCareIntegration;
+		this.citizenService = citizenService;
 		this.lookbackMonths = lookbackMonths;
 		this.openActualisationStatuses = openActualisationStatuses.stream()
 			.filter(StringUtils::hasText)
@@ -73,22 +80,22 @@ public class LifecareCaseService {
 	 * Summarises the person's financial assistance footprint in FamilyCare over the lookback window ending at
 	 * {@code referenceDate}.
 	 *
-	 * @param  personId      the person's personal identity number
+	 * @param  partyId       the person's partyId
 	 * @param  referenceDate the date the routing is evaluated against (bounds the lookback window)
 	 * @return               the distilled summary; never {@code null}
 	 */
-	public LifecareCaseSummary summarize(final String personId, final LocalDate referenceDate) {
+	public LifecareCaseSummary summarize(final String municipalityId, final String partyId, final LocalDate referenceDate) {
 		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var actualisations = ofNullable(lifecareFamilyCareIntegration.getActualisations(personId, start, referenceDate))
+		final var actualisations = ofNullable(lifecareFamilyCareIntegration.getActualisations(municipalityId, partyId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedAktualiseringDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, referenceDate))
+		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(municipalityId, partyId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(municipalityId, partyId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
@@ -114,6 +121,9 @@ public class LifecareCaseService {
 	 * Returns {@code null} when no actualisation carried a readable status — the vocabulary is not fully confirmed
 	 * against production data, so "unknown" is reported as such rather than guessed at.
 	 */
+	// java:S2447 — this is a deliberate tri-state Boolean (true/false/unknown), not a boxing mistake; defaulting the
+	// "unknown" case to false would misreport an unconfirmed status vocabulary as "case closed".
+	@SuppressWarnings("java:S2447")
 	private Boolean hasOpenCase(final List<PersonBasedAktualiseringDTO> actualisations) {
 		final var statuses = actualisations.stream()
 			.map(PersonBasedAktualiseringDTO::getStatus)
@@ -134,14 +144,21 @@ public class LifecareCaseService {
 
 	/**
 	 * Whether the person is flagged with protected identity in Lifecare FamilyCare — protected address (skyddad
-	 * population register/retained registration) or protected registration (confidentiality marking). Propagates the
-	 * integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 * population register/retained registration) or protected registration (confidentiality marking).
 	 *
-	 * @param  personId the person's personal identity number
-	 * @return          {@code true} when either protection flag is set, {@code false} otherwise or when unknown
+	 * <p>
+	 * A person Lifecare holds no record of — every first-time applicant — cannot be flagged there, so that is
+	 * {@code false}; the population register (citizen) stays the authority for whether such a person is protected. Every
+	 * <em>other</em> failure (5xx, transport, an open circuit breaker, a partyId that cannot be resolved) propagates as the
+	 * integration's {@code BAD_GATEWAY} problem, and the caller decides whether to treat the lookup as best-effort
+	 * (eligibility) or fail closed (the errand-created gate).
+	 *
+	 * @param  partyId the person's partyId
+	 * @return         {@code true} when either protection flag is set; {@code false} when neither is, or when Lifecare
+	 *                 holds no such person
 	 */
-	public boolean hasProtectedIdentity(final String personId) {
-		return ofNullable(lifecareFamilyCareIntegration.getPerson(personId))
+	public boolean hasProtectedIdentity(final String municipalityId, final String partyId) {
+		return ofNullable(lifecareFamilyCareIntegration.getPerson(municipalityId, partyId))
 			.map(person -> TRUE.equals(person.getAddressProtection()) || TRUE.equals(person.getProtectedRegistration()))
 			.orElse(false);
 	}
@@ -152,18 +169,24 @@ public class LifecareCaseService {
 	 * Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup
 	 * as best-effort.
 	 *
-	 * @param  personId      the applicant's personal identity number
+	 * <p>
+	 * Everyone in the returned roster is identified by {@code partyId}, whichever route answered: the direct FamilyCare
+	 * client hands back personal identity numbers, so those are resolved here, while the integrator already answers
+	 * with party ids and is passed through. The applicant is the argument itself, already a partyId on both routes, so
+	 * it matches their own row in {@code members} without a lookup.
+	 *
+	 * @param  partyId       the applicant's partyId
 	 * @param  referenceDate the date the lookup is evaluated against (bounds the lookback window)
 	 * @return               the roster (applicant, co-applicant and the calculation members); members empty when none
 	 */
-	public LifecareRoster latestRoster(final String personId, final LocalDate referenceDate) {
+	public LifecareRoster latestRoster(final String municipalityId, final String partyId, final LocalDate referenceDate) {
 		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(municipalityId, partyId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of);
 
-		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(personId, start, referenceDate))
+		final var decisions = ofNullable(lifecareFamilyCareIntegration.getDecisions(municipalityId, partyId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedDecisionDTO::getResult)
 			.orElseGet(List::of);
 
@@ -171,14 +194,33 @@ public class LifecareCaseService {
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
 			.orElseGet(List::of).stream()
 			.filter(person -> hasText(person.getPersonId()))
-			.map(person -> new LifecareRoster.Member(person.getPersonId(), person.getName()))
+			.map(person -> new LifecareRoster.Member(toPartyId(municipalityId, person.getPersonId()), person.getName()))
 			.toList();
 
-		final var coApplicant = latestDecision(decisions)
-			.flatMap(LifecareCaseService::coApplicantPersonId)
+		final var latestDecision = latestDecision(decisions);
+		final var coApplicant = latestDecision
+			.flatMap(LifecareCaseService::flaggedCoApplicant)
+			.map(identity -> toPartyId(municipalityId, identity))
+			.or(() -> latestDecision.flatMap(LifecareCaseService::namedCoApplicant))
 			.orElse(null);
 
-		return new LifecareRoster(personId, coApplicant, members);
+		return new LifecareRoster(partyId, coApplicant, members);
+	}
+
+	/**
+	 * A person <em>from a FamilyCare response</em> as a {@code partyId}. The integrator route already answers with one,
+	 * so it is returned unchanged; the direct route answers with a personal identity number, which the citizen service
+	 * resolves. An unresolvable identity becomes {@code null} rather than being passed along as something it is not —
+	 * a personnummer leaking into a partyId field would reach the API, which never returns one.
+	 *
+	 * <p>
+	 * Not for arguments: those are party ids on both routes already.
+	 */
+	private String toPartyId(final String municipalityId, final String identity) {
+		if (lifecareFamilyCareIntegration.respondsWithPartyId()) {
+			return identity;
+		}
+		return citizenService.getPartyId(municipalityId, identity).orElse(null);
 	}
 
 	/**
@@ -187,21 +229,12 @@ public class LifecareCaseService {
 	 * check. Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on
 	 * failure; the caller decides whether to treat the lookup as best-effort.
 	 *
-	 * @param  personId         the applicant's personal identity number
+	 * @param  partyId          the applicant's partyId
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
 	 * @return                  the previous calculation's distinct income-type names, or empty
 	 */
-	public List<String> previousCalculationIncomeTypes(final String personId, final YearMonth applicationMonth) {
-		final var referenceDate = applicationMonth.atDay(1);
-		final var start = referenceDate.minusMonths(lookbackMonths);
-
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
-			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
-			.orElseGet(List::of).stream()
-			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
-			.toList();
-
-		return latestCalculation(calculations)
+	public List<String> previousCalculationIncomeTypes(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
+		return latestCalculationBefore(municipalityId, partyId, applicationMonth)
 			.map(PersonBasedCalculationDTO::getCalculationIncomesDTOs)
 			.orElseGet(List::of).stream()
 			.map(CommonCalculationIncomeDTO::getType)
@@ -211,30 +244,100 @@ public class LifecareCaseService {
 	}
 
 	/**
-	 * The household on the person's most recent calculation strictly before {@code applicationMonth} — its person ids,
-	 * member count and norm sum — the baseline the current application's household is compared against to warn on drift.
-	 * Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the
-	 * caller decides whether to treat the lookup as best-effort.
+	 * The summed amount per financial assistance income type on the person's most recent calculation strictly before
+	 * {@code applicationMonth} — the baseline the återansökan income comparison
+	 * ({@code Decision_inkomstMotForegaende}) holds the application's own declared incomes against. Each FamilyCare
+	 * income row contributes {@code amountApplicant + amountCoApplicant} (a missing side counts as zero), keyed by the
+	 * application income type its FamilyCare name resolves to via {@link IncomeTypeMapper}; rows whose name resolves to
+	 * none of the four compared types are skipped, so a type absent from the map means "the previous calculation had no
+	 * such income". Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem
+	 * on failure; the caller decides whether to treat the lookup as best-effort.
 	 *
-	 * @param  personId         the applicant's personal identity number
+	 * @param  partyId          the applicant's partyId
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
-	 * @return                  the previous household (empty when none)
+	 * @return                  the summed amount keyed by financial assistance income type (empty when none)
 	 */
-	public PreviousHousehold previousHousehold(final String personId, final YearMonth applicationMonth) {
+	public Map<String, BigDecimal> previousCalculationIncomeAmounts(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
+		final var amounts = new HashMap<String, BigDecimal>();
+		latestCalculationBefore(municipalityId, partyId, applicationMonth)
+			.map(PersonBasedCalculationDTO::getCalculationIncomesDTOs)
+			.orElseGet(List::of)
+			.forEach(income -> IncomeTypeMapper.incomeTypeForFamilyCareName(income.getType())
+				.ifPresent(incomeType -> amounts.merge(incomeType, incomeAmount(income), BigDecimal::add)));
+		return amounts;
+	}
+
+	/**
+	 * The summed amount per FamilyCare income type on the person's most recent calculation strictly before
+	 * {@code applicationMonth} — the baseline this month's SSBTEK amounts are compared with (verksamhetens G4: the
+	 * previous month is the previous normberäkning). Keyed by the normalised FamilyCare type name
+	 * ({@link MapperUtil#normalize}), each row contributing {@code amountApplicant + amountCoApplicant} (a missing side
+	 * counting as zero); rows without a type name are skipped. Unlike {@link #previousCalculationIncomeAmounts}, every
+	 * income type is kept, and "no previous calculation" is told apart from "a previous calculation without incomes".
+	 * Propagates the integration's {@code BAD_GATEWAY} problem on failure; the caller decides what a failed read means.
+	 *
+	 * @param  partyId          the applicant's partyId
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
+	 * @return                  empty when there is no previous calculation at all, otherwise its amounts by normalised
+	 *                          type name (possibly an empty map)
+	 */
+	public Optional<Map<String, BigDecimal>> previousCalculationIncomeTypeAmounts(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
+		return latestCalculationBefore(municipalityId, partyId, applicationMonth)
+			.map(calculation -> {
+				final var amounts = new HashMap<String, BigDecimal>();
+				ofNullable(calculation.getCalculationIncomesDTOs()).orElseGet(List::of).stream()
+					.filter(income -> hasText(income.getType()))
+					.forEach(income -> amounts.merge(MapperUtil.normalize(income.getType()), incomeAmount(income), BigDecimal::add));
+				return amounts;
+			});
+	}
+
+	/** An income row's amount across both sides — applicant + co-applicant, a missing side counting as zero. */
+	private static BigDecimal incomeAmount(final CommonCalculationIncomeDTO income) {
+		final var applicant = ofNullable(toAmount(income.getAmountApplicant())).orElse(BigDecimal.ZERO);
+		final var coApplicant = ofNullable(toAmount(income.getAmountCoApplicant())).orElse(BigDecimal.ZERO);
+		return applicant.add(coApplicant);
+	}
+
+	/**
+	 * The person's most recent calculation strictly before {@code applicationMonth} over the lookback window — the
+	 * shared "föregående normberäkning" read the income/household/expense baselines are all taken from.
+	 */
+	private Optional<PersonBasedCalculationDTO> latestCalculationBefore(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
 		final var referenceDate = applicationMonth.atDay(1);
 		final var start = referenceDate.minusMonths(lookbackMonths);
 
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
+		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(municipalityId, partyId, start, referenceDate))
 			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
 			.orElseGet(List::of).stream()
 			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
 			.toList();
 
-		final var latest = latestCalculation(calculations);
-		final var personIds = latest
+		return latestCalculation(calculations);
+	}
+
+	/**
+	 * The household on the person's most recent calculation strictly before {@code applicationMonth} — its party ids,
+	 * member count, norm sum, housing cost and free-text norm — the baseline the current application's household is
+	 * compared against to warn on drift.
+	 * Empty when there is no prior calculation. Propagates the integration's {@code BAD_GATEWAY} problem on failure; the
+	 * caller decides whether to treat the lookup as best-effort.
+	 *
+	 * @param  partyId          the applicant's partyId
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
+	 * @return                  the previous household (empty when none)
+	 */
+	public PreviousHousehold previousHousehold(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
+		final var latest = latestCalculationBefore(municipalityId, partyId, applicationMonth);
+		final var identities = latest
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
 			.orElseGet(List::of).stream()
 			.map(PersonBasedCalculationPersonDTO::getPersonId)
+			.filter(StringUtils::hasText)
+			.distinct()
+			.toList();
+		final var partyIds = identities.stream()
+			.map(identity -> toPartyId(municipalityId, identity))
 			.filter(StringUtils::hasText)
 			.collect(toSet());
 		final var normSum = toAmount(latest.map(PersonBasedCalculationDTO::getNormSum).orElse(null));
@@ -247,7 +350,68 @@ public class LifecareCaseService {
 			.reduce(BigDecimal::add)
 			.orElse(null);
 
-		return new PreviousHousehold(personIds, personIds.size(), normSum, housingCost);
+		return new PreviousHousehold(partyIds, partyIds.size() == identities.size(), identities.size(), normSum, housingCost,
+			latest.map(PersonBasedCalculationDTO::getNorm).orElse(null));
+	}
+
+	/**
+	 * The family on the person's most recent calculation strictly before {@code applicationMonth} — the members, with
+	 * party ids and any deviating period, and the calculation's common household cost — which the återansökan regelverk
+	 * copies into the new normberäkning. Empty when there is no prior calculation. Propagates the integration's
+	 * {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 *
+	 * <p>
+	 * A member whose identity the citizen service cannot resolve is kept with a {@code null} party id and makes the
+	 * family incomplete, so the caller can tell a short list from a small household.
+	 * </p>
+	 *
+	 * @param  partyId          the applicant's partyId
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
+	 * @return                  the previous family (empty when none)
+	 */
+	public PreviousFamily previousFamily(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
+		final var latest = latestCalculationBefore(municipalityId, partyId, applicationMonth);
+		final var members = latest
+			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
+			.orElseGet(List::of).stream()
+			.filter(person -> hasText(person.getPersonId()))
+			.map(person -> new PreviousFamily.Member(toPartyId(municipalityId, person.getPersonId()), person.getName(),
+				toDate(person.getDeviationFromDate()), toDate(person.getDeviationToDate())))
+			.toList();
+		final var complete = members.stream().allMatch(member -> hasText(member.partyId()));
+		return new PreviousFamily(members, complete, toAmount(latest.map(PersonBasedCalculationDTO::getCommonHouseholdCost).orElse(null)));
+	}
+
+	/**
+	 * The norm amount per household member on the person's most recent calculation strictly before {@code
+	 * applicationMonth} — the Belopp column of Lifecare's Beräkning view, keyed by {@code partyId} because that is what
+	 * careM's own draft person rows are keyed by. Empty when there is no prior calculation. Propagates the integration's
+	 * {@code BAD_GATEWAY} problem on failure; the caller decides whether to treat the lookup as best-effort.
+	 *
+	 * <p>
+	 * Carrying the previous month's amount forward is the closest careM can get on its own: the norm is computed in
+	 * Lifecare, and the current month's calculation does not exist until the draft is committed. A member Lifecare has
+	 * never paid for — a newborn, a new co-applicant — is simply absent from the map and keeps no amount, rather than
+	 * being given one that was never calculated.
+	 * </p>
+	 *
+	 * @param  partyId          the applicant's partyId
+	 * @param  applicationMonth the month being applied for; only calculations before it are considered
+	 * @return                  the member's norm amount keyed by party id (empty when none)
+	 */
+	public Map<String, BigDecimal> previousPersonAmounts(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
+		final var amounts = new HashMap<String, BigDecimal>();
+		latestCalculationBefore(municipalityId, partyId, applicationMonth)
+			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
+			.orElseGet(List::of)
+			.forEach(person -> {
+				final var memberPartyId = toPartyId(municipalityId, person.getPersonId());
+				final var amount = toAmount(person.getAmount());
+				if (hasText(memberPartyId) && (amount != null)) {
+					amounts.putIfAbsent(memberPartyId, amount);
+				}
+			});
+		return amounts;
 	}
 
 	/**
@@ -258,21 +422,12 @@ public class LifecareCaseService {
 	 * special-expense (LEVNADSKOSTNADER I ÖVRIGT) array is untyped in the FamilyCare spec and not read, so those types
 	 * start without history).
 	 *
-	 * @param  personId         the applicant's personal identity number
+	 * @param  partyId          the applicant's partyId
 	 * @param  applicationMonth the month being applied for; only calculations before it are considered
 	 * @return                  approved amount keyed by financial assistance cost type (empty when none)
 	 */
-	public Map<String, BigDecimal> previousExpenseAmounts(final String personId, final YearMonth applicationMonth) {
-		final var referenceDate = applicationMonth.atDay(1);
-		final var start = referenceDate.minusMonths(lookbackMonths);
-
-		final var calculations = ofNullable(lifecareFamilyCareIntegration.getCalculations(personId, start, referenceDate))
-			.map(ApiPaginationCompositePersonBasedCalculationDTO::getResult)
-			.orElseGet(List::of).stream()
-			.filter(calculation -> (periodOf(calculation) != null) && periodOf(calculation).isBefore(applicationMonth))
-			.toList();
-
-		final var latest = latestCalculation(calculations);
+	public Map<String, BigDecimal> previousExpenseAmounts(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
+		final var latest = latestCalculationBefore(municipalityId, partyId, applicationMonth);
 		final var amounts = new HashMap<String, BigDecimal>();
 		latest.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs).orElseGet(List::of)
 			.forEach(expense -> ExpenseTypeMapper.costTypeForFamilyCareName(expense.getType()).ifPresent(costType -> {
@@ -284,13 +439,12 @@ public class LifecareCaseService {
 		return amounts;
 	}
 
-	/** The previous housing cost — Rent/housing expense rows, matched on the FamilyCare type name (best-effort). */
+	/**
+	 * Whether an expense row is the housing cost (Lifecare's "Boendekostnad"), classified by the same catalogue mapping
+	 * the other previous-expense amounts use rather than by a guess at the name.
+	 */
 	private static boolean isHousing(final String type) {
-		if (type == null) {
-			return false;
-		}
-		final var lower = type.toLowerCase();
-		return lower.contains("rent") || lower.contains("housing");
+		return ExpenseTypeMapper.costTypeForFamilyCareName(type).filter("RENT"::equals).isPresent();
 	}
 
 	/** The decided (approved) amount of an expense, falling back to the applied amount. */
@@ -318,13 +472,21 @@ public class LifecareCaseService {
 	 * The co-applicant's personal identity number on a decision — a flagged participant, falling back to the scalar
 	 * field.
 	 */
-	private static Optional<String> coApplicantPersonId(final PersonBasedDecisionDTO decision) {
-		final var flagged = ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()
+	private static Optional<String> flaggedCoApplicant(final PersonBasedDecisionDTO decision) {
+		return ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()
 			.filter(person -> Boolean.TRUE.equals(person.getIsCoApplicant()))
 			.map(PersonBasedDecisionPersonDTO::getPersonId)
 			.filter(StringUtils::hasText)
 			.findFirst();
-		return flagged.or(() -> ofNullable(decision.getCoApplicant()).filter(StringUtils::hasText));
+	}
+
+	/**
+	 * FamilyCare's own co-applicant field on the decision, used when no person on it is flagged. It is free text, not
+	 * an identity, so it is left exactly as it came — resolving it would only ever produce {@code null} and throw away
+	 * the one thing it does say.
+	 */
+	private static Optional<String> namedCoApplicant(final PersonBasedDecisionDTO decision) {
+		return ofNullable(decision.getCoApplicant()).filter(StringUtils::hasText);
 	}
 
 	/** The calculation with the most recent period (to/from), whose persons form the household constellation. */
@@ -359,6 +521,18 @@ public class LifecareCaseService {
 	/** The representative period of a decision — its {@code toDate} month, falling back to {@code fromDate}. */
 	private static YearMonth periodOf(final PersonBasedDecisionDTO decision) {
 		return toYearMonth(decision.getToDate()).or(() -> toYearMonth(decision.getFromDate())).orElse(null);
+	}
+
+	/** The leading {@code yyyy-MM-dd} of a FamilyCare date string, {@code null} when absent or unreadable. */
+	static LocalDate toDate(final String value) {
+		if (!hasText(value) || (value.trim().length() < 10)) {
+			return null;
+		}
+		try {
+			return LocalDate.parse(value.trim().substring(0, 10));
+		} catch (final DateTimeException e) {
+			return null;
+		}
 	}
 
 	/** Lenient year-month extraction from FamilyCare's date strings ("yyyy-MM-dd", "yyyy-MM", or an ISO datetime). */

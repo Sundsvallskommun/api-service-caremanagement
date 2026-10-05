@@ -20,8 +20,8 @@ class MessageArchivePropertiesTest {
 		assertThat(properties.municipalityId()).isEqualTo("2281");
 		assertThat(properties.namespace()).isEqualTo("FINANCIAL_ASSISTANCE");
 		assertThat(properties.daysAfterClose()).isEqualTo(30);
-		assertThat(properties.lifecareDocumentType()).isEqualTo("MEDDELANDEHISTORIK");
-		assertThat(properties.lifecareDocumentSenderType()).isEqualTo("MYNDIGHET");
+		assertThat(properties.lifecareDocumentType()).isEqualTo("1");
+		assertThat(properties.lifecareDocumentSenderType()).isEqualTo("1");
 		assertThat(properties.documentLabel()).isEqualTo("Meddelanden och bilagor från Draken");
 		assertThat(properties.lifecareSenderName()).isEqualTo("Sundsvalls kommun");
 	}

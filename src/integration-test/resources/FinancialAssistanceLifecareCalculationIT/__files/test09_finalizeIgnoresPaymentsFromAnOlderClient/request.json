@@ -1,0 +1,24 @@
+{
+	"decision": {
+		"outcome": "BIFALL",
+		"reason": "Arbetslös, ingen ersättning/stöd",
+		"periodFrom": "2026-10-01",
+		"periodTo": "2026-10-31",
+		"amount": 5200,
+		"decisionMessage": "Du beviljas ekonomiskt bistånd för oktober 2026."
+	},
+	"communication": {
+		"minaSidor": true,
+		"digitalMailbox": false,
+		"letter": false
+	},
+	"payments": [
+		{
+			"payee": "APPLICANT",
+			"amount": 5200,
+			"paymentDate": "2026-09-25",
+			"paymentMethod": "BANK_ACCOUNT"
+		}
+	],
+	"householdSizeChanged": false
+}

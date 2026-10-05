@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
@@ -36,7 +35,6 @@ class NormPersonInputTest {
 		final var deviationFromDate = LocalDate.of(2026, JUNE, 1);
 		final var deviationToDate = LocalDate.of(2026, JUNE, 15);
 		final var normInterval = "MONTH";
-		final var jobStimulusAmount = BigDecimal.valueOf(1000.00);
 		final var note = "note";
 
 		final var result = NormPersonInput.create()
@@ -48,7 +46,6 @@ class NormPersonInputTest {
 			.withDeviationFromDate(deviationFromDate)
 			.withDeviationToDate(deviationToDate)
 			.withNormInterval(normInterval)
-			.withJobStimulusAmount(jobStimulusAmount)
 			.withNote(note);
 
 		assertThat(result).hasNoNullFieldsOrProperties();
@@ -60,7 +57,6 @@ class NormPersonInputTest {
 		assertThat(result.getDeviationFromDate()).isEqualTo(deviationFromDate);
 		assertThat(result.getDeviationToDate()).isEqualTo(deviationToDate);
 		assertThat(result.getNormInterval()).isEqualTo(normInterval);
-		assertThat(result.getJobStimulusAmount()).isEqualTo(jobStimulusAmount);
 		assertThat(result.getNote()).isEqualTo(note);
 	}
 

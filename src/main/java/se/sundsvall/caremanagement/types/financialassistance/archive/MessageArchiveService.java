@@ -18,6 +18,7 @@ import se.sundsvall.caremanagement.core.service.ErrandService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
 import se.sundsvall.caremanagement.decisions.service.DecisionService;
 import se.sundsvall.caremanagement.lifecare.service.ActualisationService;
+import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.caremanagement.shared.SourceFile;
 
 import static java.time.OffsetDateTime.now;
@@ -79,10 +80,10 @@ public class MessageArchiveService {
 		final var candidates = errandService.findByStatusTouchedBefore(properties.municipalityId(), properties.namespace(), STATUS_CLOSED, cutoff);
 
 		LOG.info("Message archive: {} closed errand(s) eligible for archiving (closed on or before {})", candidates.size(), cutoff);
-		candidates.forEach(this::archiveOne);
+		candidates.forEach(errand -> archiveOne(properties.municipalityId(), errand));
 	}
 
-	private void archiveOne(final Errand errand) {
+	private void archiveOne(final String municipalityId, final Errand errand) {
 		try {
 			if (attachmentService.messageHistoryExists(errand.getId())) {
 				return;
@@ -116,12 +117,13 @@ public class MessageArchiveService {
 			// throws, so a "Failed to archive" log can no longer coincide with a document actually created in Lifecare.
 			attachmentService.createMessageHistoryAttachment(errand.getMunicipalityId(), errand.getNamespace(), errand.getId(), fileName, pdf);
 
-			actualisationService.uploadAttachment(actualisationId.get(), fileName, pdf,
-				properties.lifecareDocumentType(), properties.lifecareDocumentSenderType(), title, properties.lifecareSenderName());
+			actualisationService.uploadAttachment(municipalityId, actualisationId.get(),
+				new AttachmentUpload(properties.lifecareDocumentType(), properties.lifecareDocumentSenderType(), title, properties.lifecareSenderName(), fileName, pdf));
 
 			LOG.info("Archived message history for errand {} ({} message(s)) to Lifecare actualisation {}", errand.getErrandNumber(), thread.size(), actualisationId.get());
 		} catch (final Exception e) {
-			LOG.error("Failed to archive message history for errand {}: {}", errand.getErrandNumber(), e.getMessage(), e);
+			// The exception type only: the Lifecare upload and the PDF render may echo message content.
+			LOG.error("Failed to archive message history for errand {} ({})", errand.getErrandNumber(), e.getClass().getSimpleName());
 		}
 	}
 

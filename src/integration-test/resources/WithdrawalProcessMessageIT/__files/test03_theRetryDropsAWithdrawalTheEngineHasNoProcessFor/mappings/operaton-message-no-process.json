@@ -1,0 +1,28 @@
+{
+	"scenarioName": "engine",
+	"requiredScenarioState": "Up",
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-operaton/2281/message",
+		"bodyPatterns": [
+			{
+				"equalToJson": {
+					"messageName": "ErrandWithdrawn",
+					"businessKey": "77777777-7777-7777-7777-777777777777"
+				},
+				"ignoreExtraElements": true
+			}
+		]
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/problem+json"
+		},
+		"jsonBody": {
+			"title": "Not Found",
+			"status": 404,
+			"detail": "No process instance is waiting for message 'ErrandWithdrawn' with business key '77777777-7777-7777-7777-777777777777'"
+		},
+		"status": 404
+	}
+}

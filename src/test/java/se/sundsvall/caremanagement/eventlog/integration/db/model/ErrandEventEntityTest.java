@@ -47,6 +47,7 @@ class ErrandEventEntityTest {
 			.withDescription("READ errand")
 			.withHttpMethod("GET")
 			.withRequestPath("/2281/FINANCIAL_ASSISTANCE/errands/errand-1")
+			.withLifecareId("4711")
 			.withActor("joe001doe")
 			.withActorType("adAccount")
 			.withRequestId("req-1")
@@ -58,6 +59,7 @@ class ErrandEventEntityTest {
 		assertThat(entity.getErrandId()).isEqualTo("errand-1");
 		assertThat(entity.getMunicipalityId()).isEqualTo("2281");
 		assertThat(entity.getNamespace()).isEqualTo("FINANCIAL_ASSISTANCE");
+		assertThat(entity.getLifecareId()).isEqualTo("4711");
 		assertThat(entity.getSource()).isEqualTo("HTTP");
 		assertThat(entity.getAction()).isEqualTo("READ");
 		assertThat(entity.getTarget()).isEqualTo("errand");

@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.notifications.integration.db.NotificationRepository;
+import se.sundsvall.caremanagement.notifications.integration.db.model.NotificationEntity;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
@@ -126,6 +127,19 @@ class NotificationIT extends AbstractAppTest {
 	}
 
 	@Test
+	void test07b_readNotificationsByCoCaseworker() {
+		// coworker1 is seeded (testdata-it.sql) as a co-caseworker on errand 1111... alongside assignee1. Widened
+		// visibility must return the exact same notification rows a direct owner would see — same ids, same shared
+		// handled/acknowledged state — never a duplicate copy.
+		setupCall()
+			.withServicePath(OWNER_PATH + "?ownerId=coworker1")
+			.withHttpMethod(GET)
+			.withExpectedResponseStatus(OK)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
+	}
+
+	@Test
 	void test08_readNotificationNotFound() {
 		setupCall()
 			.withServicePath(ERRAND_PATH.formatted(ERRAND_ID) + "/" + UNKNOWN_NOTIFICATION_ID)
@@ -143,5 +157,18 @@ class NotificationIT extends AbstractAppTest {
 			.withExpectedResponseStatus(NOT_FOUND)
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
+	}
+
+	@Test
+	void test10_handleAll() {
+		setupCall()
+			.withServicePath(ERRAND_PATH.formatted(ERRAND_ID) + "/handled")
+			.withHttpMethod(PUT)
+			.withExpectedResponseStatus(NO_CONTENT)
+			.withExpectedResponseBodyIsNull()
+			.sendRequestAndVerifyResponse();
+
+		assertThat(notificationRepository.findAll()).allMatch(NotificationEntity::isHandled);
+		assertThat(notificationRepository.findAll()).allMatch(NotificationEntity::isAcknowledged);
 	}
 }

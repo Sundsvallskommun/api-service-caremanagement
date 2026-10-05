@@ -61,6 +61,12 @@ public class FinancialAssistanceView {
 	@DateTimeFormat(iso = DATE_TIME)
 	private OffsetDateTime lastDailyRunAt;
 
+	@Schema(description = """
+		The applicant's open financial-assistance service (insats) id in Lifecare — the key Lifecare's own case reads \
+		(journal, documents, reminders, jobbstimulans) take. Null while the applicant has no open EB insats, or when the \
+		Lifecare lookup could not be made; a later read tries again.""", examples = "7700", accessMode = READ_ONLY)
+	private Integer lifecareServiceId;
+
 	@Schema(description = "The typed financial assistance application payload", implementation = FinancialAssistanceData.class)
 	private FinancialAssistanceData data;
 
@@ -70,9 +76,12 @@ public class FinancialAssistanceView {
 	private Decision recommendation;
 
 	@Schema(
-		description = "The caseworker approval state of the three financial assistance view sections (calculation, payment, decision) — whether each has been verified as approved. Always present with all three sections.",
+		description = "The communication channels the caseworker chose when finalizing the errand (Besluta och utbetala), or null until then. The Draken BFF sends the decision through these; caremanagement only records the choice.",
 		accessMode = READ_ONLY)
-	private SectionApprovals sectionApprovals;
+	private CommunicationChannels communication;
+
+	@Schema(description = "Whether the caseworker changed the household size (gemensamma kostnader) when finalizing. Null until the errand has been finalized.", accessMode = READ_ONLY)
+	private Boolean householdSizeChanged;
 
 	public static FinancialAssistanceView create() {
 		return new FinancialAssistanceView();
@@ -273,6 +282,19 @@ public class FinancialAssistanceView {
 		return this;
 	}
 
+	public Integer getLifecareServiceId() {
+		return lifecareServiceId;
+	}
+
+	public void setLifecareServiceId(final Integer lifecareServiceId) {
+		this.lifecareServiceId = lifecareServiceId;
+	}
+
+	public FinancialAssistanceView withLifecareServiceId(final Integer lifecareServiceId) {
+		this.lifecareServiceId = lifecareServiceId;
+		return this;
+	}
+
 	public FinancialAssistanceData getData() {
 		return data;
 	}
@@ -299,16 +321,29 @@ public class FinancialAssistanceView {
 		return this;
 	}
 
-	public SectionApprovals getSectionApprovals() {
-		return sectionApprovals;
+	public CommunicationChannels getCommunication() {
+		return communication;
 	}
 
-	public void setSectionApprovals(final SectionApprovals sectionApprovals) {
-		this.sectionApprovals = sectionApprovals;
+	public void setCommunication(final CommunicationChannels communication) {
+		this.communication = communication;
 	}
 
-	public FinancialAssistanceView withSectionApprovals(final SectionApprovals sectionApprovals) {
-		this.sectionApprovals = sectionApprovals;
+	public FinancialAssistanceView withCommunication(final CommunicationChannels communication) {
+		this.communication = communication;
+		return this;
+	}
+
+	public Boolean getHouseholdSizeChanged() {
+		return householdSizeChanged;
+	}
+
+	public void setHouseholdSizeChanged(final Boolean householdSizeChanged) {
+		this.householdSizeChanged = householdSizeChanged;
+	}
+
+	public FinancialAssistanceView withHouseholdSizeChanged(final Boolean householdSizeChanged) {
+		this.householdSizeChanged = householdSizeChanged;
 		return this;
 	}
 
@@ -324,14 +359,17 @@ public class FinancialAssistanceView {
 			&& Objects.equals(reporterUserId, that.reporterUserId) && Objects.equals(assignedUserId, that.assignedUserId)
 			&& Objects.equals(processInstanceId, that.processInstanceId) && Objects.equals(created, that.created)
 			&& Objects.equals(modified, that.modified) && Objects.equals(touched, that.touched)
-			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(data, that.data)
-			&& Objects.equals(recommendation, that.recommendation) && Objects.equals(sectionApprovals, that.sectionApprovals);
+			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(lifecareServiceId, that.lifecareServiceId)
+			&& Objects.equals(data, that.data)
+			&& Objects.equals(recommendation, that.recommendation)
+			&& Objects.equals(communication, that.communication) && Objects.equals(householdSizeChanged, that.householdSizeChanged);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id, errandNumber, municipalityId, namespace, typeSlug, title, status, priority, reporterUserId,
-			assignedUserId, processInstanceId, created, modified, touched, lastDailyRunAt, data, recommendation, sectionApprovals);
+			assignedUserId, processInstanceId, created, modified, touched, lastDailyRunAt, lifecareServiceId, data, recommendation,
+			communication, householdSizeChanged);
 	}
 
 	@Override
@@ -340,7 +378,8 @@ public class FinancialAssistanceView {
 			+ municipalityId + "', namespace='" + namespace + "', typeSlug='" + typeSlug + "', title='" + title
 			+ "', status='" + status + "', priority='" + priority + "', reporterUserId='" + reporterUserId
 			+ "', assignedUserId='" + assignedUserId + "', processInstanceId='" + processInstanceId + "', created=" + created
-			+ ", modified=" + modified + ", touched=" + touched + ", lastDailyRunAt=" + lastDailyRunAt + ", data=" + data
-			+ ", recommendation=" + recommendation + ", sectionApprovals=" + sectionApprovals + '}';
+			+ ", modified=" + modified + ", touched=" + touched + ", lastDailyRunAt=" + lastDailyRunAt + ", lifecareServiceId=" + lifecareServiceId + ", data=" + data
+			+ ", recommendation=" + recommendation + ", communication=" + communication
+			+ ", householdSizeChanged=" + householdSizeChanged + '}';
 	}
 }

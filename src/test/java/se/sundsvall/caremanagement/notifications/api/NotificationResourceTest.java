@@ -127,6 +127,19 @@ class NotificationResourceTest {
 	}
 
 	@Test
+	void handleAll() {
+		when(serviceMock.handleAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(2);
+
+		webTestClient.put()
+			.uri(uri -> uri.path(ERRAND_BASE + "/handled").build(Map.of(
+				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isNoContent();
+
+		verify(serviceMock).handleAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+	}
+
+	@Test
 	void readNotificationsByOwner() {
 		when(serviceMock.readAllByOwner(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq("jane01doe"), any(Sort.class)))
 			.thenReturn(List.of(Notification.create().withId(NOTIFICATION_ID).withOwnerId("jane01doe")));

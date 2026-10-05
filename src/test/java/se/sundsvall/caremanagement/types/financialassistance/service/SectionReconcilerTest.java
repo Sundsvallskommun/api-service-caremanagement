@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
@@ -54,6 +55,31 @@ class SectionReconcilerTest {
 		assertThat(diff.added()).containsExactly("Bostadsbidrag");
 		assertThat(diff.dropped()).isEmpty();
 		verify(incomeRepositoryMock).save(fresh);
+	}
+
+	@Test
+	void applicationRowsAreReconciledApartFromTheSsbtekRowsAndNeverReported() {
+		// Same Lifecare type from SSBTEK and from the application: two rows, each refreshed from its own feed, and the
+		// declared income is neither "new in SSBTEK" nor "no longer in SSBTEK".
+		final var existingSsbtek = systemRow(4, "Underhållsstöd", "1250");
+		final var existingApplication = applicationRow(4, "Underhållsstöd", "500");
+		final var droppedApplication = applicationRow(40, "Övriga inkomster", "100");
+		final var freshSsbtek = systemRow(4, "Underhållsstöd", "1300");
+		final var freshApplication = applicationRow(4, "Underhållsstöd", "600");
+		final var newApplication = applicationRow(30, "Swish/Insättningar/Överföringar", "599");
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existingSsbtek, existingApplication, droppedApplication)));
+
+		final var diff = sectionReconciler.reconcileIncomes(ERRAND_ID, List.of(freshSsbtek, freshApplication, newApplication));
+
+		assertThat(diff.added()).isEmpty();
+		assertThat(diff.dropped()).isEmpty();
+		assertThat(existingSsbtek.getApplicantProcessAmount()).isEqualByComparingTo("1300");
+		assertThat(existingApplication.getApplicantProcessAmount()).isEqualByComparingTo("600");
+		verify(incomeRepositoryMock).save(existingSsbtek);
+		verify(incomeRepositoryMock).save(existingApplication);
+		verify(incomeRepositoryMock).save(newApplication);
+		verify(incomeRepositoryMock, never()).save(freshSsbtek);
+		verify(incomeRepositoryMock, never()).save(freshApplication);
 	}
 
 	@Test
@@ -112,6 +138,23 @@ class SectionReconcilerTest {
 		verify(incomeRepositoryMock, never()).save(existing); // not auto-deleted, not re-saved
 	}
 
+	/** The Belopp column is a process value, so the daily refresh carries the new one in without touching the override. */
+	@Test
+	void reconcilePersonsRefreshesTheNormAmount() {
+		final var existing = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withPartyId("f47ac10b-58cc-4372-a567-0e02b2c3d479")
+			.withName("Alva Alvsson").withProcessDays(30).withIncluded(true).withAmount(new BigDecimal("1431.00")).withCaseworkerDays(15);
+		final var fresh = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withPartyId("f47ac10b-58cc-4372-a567-0e02b2c3d479")
+			.withName("Alva Alvsson").withProcessDays(30).withIncluded(true).withAmount(new BigDecimal("1512.00"));
+		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(new ArrayList<>(List.of(existing)));
+
+		final var diff = sectionReconciler.reconcilePersons(ERRAND_ID, List.of(fresh));
+
+		assertThat(diff.added()).isEmpty();
+		assertThat(existing.getAmount()).isEqualByComparingTo("1512.00"); // process refreshed
+		assertThat(existing.getCaseworkerDays()).isEqualTo(15); // caseworker value untouched
+		verify(personRepositoryMock).save(existing);
+	}
+
 	@Test
 	void reconcilePersonsKeepsChildrenWithoutPartyIdDistinct() {
 		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
@@ -125,6 +168,21 @@ class SectionReconcilerTest {
 		final var diff = sectionReconciler.reconcilePersons(ERRAND_ID, List.of(child1, child2, child3));
 
 		assertThat(diff.added()).hasSize(3);
+	}
+
+	@Test
+	void reconcilePersonsLabelsAddedRowsByNameAndRoleNeverByPartyId() {
+		when(personRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of());
+		final var named = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole("CO_APPLICANT").withPartyId("f47ac10b-58cc-4372-a567-0e02b2c3d479")
+			.withName("Karin Nilsson").withProcessDays(30).withIncluded(true);
+		final var nameless = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole("APPLICANT").withPartyId("6f0e2b1c-1111-2222-3333-444455556666")
+			.withProcessDays(30).withIncluded(true);
+
+		final var diff = sectionReconciler.reconcilePersons(ERRAND_ID, List.of(named, nameless));
+
+		// The label is what the NEW_PERSON warning text is written from — a party id in it says nothing to a handläggare.
+		assertThat(diff.added()).containsExactly("Karin Nilsson (Medsökande)", "Sökande");
+		assertThat(diff.added()).noneMatch(label -> label.contains("f47ac10b") || label.contains("6f0e2b1c"));
 	}
 
 	@Test
@@ -167,7 +225,7 @@ class SectionReconcilerTest {
 
 		final var diff = sectionReconciler.reconcileExpenses(ERRAND_ID, List.of(fresh));
 
-		assertThat(diff.added()).containsExactly("MEDICINE – Glasses"); // costType + specification
+		assertThat(diff.added()).containsExactly("Medicin – Glasses"); // costType + specification
 		assertThat(diff.dropped()).containsExactly("FOOD"); // costType only, no specification
 		verify(expenseRepositoryMock).save(fresh);
 	}
@@ -182,6 +240,10 @@ class SectionReconcilerTest {
 		assertThat(diff.added()).isEmpty();
 		assertThat(diff.dropped()).containsExactly("Bostadsbidrag");
 		verify(incomeRepositoryMock, never()).save(existing);
+	}
+
+	private static FaNormIncomeEntity applicationRow(final Integer typeId, final String typeName, final String processAmount) {
+		return systemRow(typeId, typeName, processAmount).withOrigin(ORIGIN_APPLICATION);
 	}
 
 	private static FaNormIncomeEntity systemRow(final Integer typeId, final String typeName, final String processAmount) {

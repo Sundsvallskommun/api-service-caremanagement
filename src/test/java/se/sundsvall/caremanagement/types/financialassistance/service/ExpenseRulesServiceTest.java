@@ -54,14 +54,16 @@ class ExpenseRulesServiceTest {
 	}
 
 	@Test
-	void verdictFallsBackToAppliedAndStaticBucketWhenResultsEmpty() {
+	void verdictFlagsForReviewWhenTheDecisionMatchesNoRule() {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq("Decision_medicin"), anyMap())).thenReturn(List.of());
 
 		final var result = service.verdict(MUNICIPALITY_ID, "MEDICINE", new BigDecimal("500"), null, null, null, null);
 
+		// the amount still stands - but an expense the rules never assessed must not look rule-approved
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("500"));
 		assertThat(result.bucket()).isEqualTo("SPECIAL_EXPENSE");
-		assertThat(result.warning()).isFalse();
+		assertThat(result.warning()).isTrue();
+		assertThat(result.rule()).isEqualTo("Regelverket gav inget utslag för utgiften – manuell kontroll");
 	}
 
 	@Test
@@ -76,7 +78,7 @@ class ExpenseRulesServiceTest {
 	}
 
 	@Test
-	void verdictFallsBackToAppliedAndStaticBucketWhenDecisionThrows() {
+	void verdictFlagsForReviewWhenTheEngineCannotBeReached() {
 		when(processServiceMock.evaluateDecision(eq(MUNICIPALITY_ID), eq("Decision_sjukresor"), anyMap()))
 			.thenThrow(new RuntimeException("operaton down"));
 
@@ -85,6 +87,9 @@ class ExpenseRulesServiceTest {
 
 		assertThat(result.processAmount()).isEqualByComparingTo(new BigDecimal("300"));
 		assertThat(result.bucket()).isEqualTo("SPECIAL_EXPENSE");
+		// an engine outage leaves the expense unassessed; the caseworker is told rather than shown a silent pass
+		assertThat(result.warning()).isTrue();
+		assertThat(result.rule()).isEqualTo("Regelverket kunde inte nås – utgiften är inte bedömd, manuell kontroll");
 	}
 
 	@Test

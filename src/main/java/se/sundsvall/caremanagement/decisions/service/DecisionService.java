@@ -6,6 +6,7 @@ import java.util.Set;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.core.api.model.Errand;
 import se.sundsvall.caremanagement.core.spi.ErrandQueryService;
 import se.sundsvall.caremanagement.decisions.api.model.Decision;
@@ -19,6 +20,7 @@ import se.sundsvall.dept44.problem.Problem;
 import static java.time.OffsetDateTime.now;
 import static java.time.ZoneId.systemDefault;
 import static java.time.temporal.ChronoUnit.MILLIS;
+import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.util.StringUtils.hasText;
 import static se.sundsvall.caremanagement.decisions.service.mapper.DecisionMapper.toDecision;
@@ -31,6 +33,10 @@ public class DecisionService {
 
 	private static final String ERRAND_NOT_FOUND_MESSAGE = "No errand with id '%s' found in namespace '%s' for municipality id '%s'";
 	private static final String DECISION_NOT_FOUND_MESSAGE = "No decision with id '%s' found on errand '%s' in namespace '%s' for municipality id '%s'";
+
+	/** Set by finalize when it hands the decision over to be written into Lifecare. */
+	public static final String LIFECARE_STATUS_PENDING = "PENDING";
+	static final String LIFECARE_STATUS_SYNCED = "SYNCED";
 
 	private final ErrandQueryService errandQueryService;
 	private final DecisionRepository decisionRepository;
@@ -64,6 +70,28 @@ public class DecisionService {
 		return toDecisionList(decisionRepository.findByErrandIdOrderByCreatedDesc(errandId));
 	}
 
+	/**
+	 * Whether a decision of the given type and value is recorded on an errand other than the given one — across
+	 * municipalities and namespaces, because what it is asked about (a Lifecare id, say) belongs to no tenant.
+	 */
+	@Transactional(readOnly = true)
+	public boolean existsOnAnotherErrand(final String decisionType, final String value, final String errandId) {
+		return decisionRepository.existsByDecisionTypeAndValueAndErrandIdNot(decisionType, value, errandId);
+	}
+
+	/**
+	 * Receipt the decision against the beslut already saved in Lifecare: marks it {@code SYNCED} with Lifecare's id. Called
+	 * by finalize, which only runs once the errand's beslut is in Lifecare.
+	 */
+	public Decision markSyncedInLifecare(final String municipalityId, final String namespace, final String errandId, final String decisionId,
+		final String lifecareId) {
+
+		final var entity = findDecision(municipalityId, namespace, errandId, decisionId);
+		return toDecision(decisionRepository.save(entity
+			.withLifecareStatus(LIFECARE_STATUS_SYNCED)
+			.withLifecareId(ofNullable(lifecareId).filter(StringUtils::hasText).orElse(entity.getLifecareId()))));
+	}
+
 	public void delete(final String municipalityId, final String namespace, final String errandId, final String decisionId) {
 		final var entity = findDecision(municipalityId, namespace, errandId, decisionId);
 		decisionRepository.delete(entity);
@@ -91,7 +119,7 @@ public class DecisionService {
 		if (recipients.isEmpty()) {
 			return;
 		}
-		final var description = "Decision recorded: %s = %s".formatted(decision.getDecisionType(), decision.getValue());
+		final var description = DecisionNotificationText.describe(decision.getDecisionType(), decision.getValue());
 		recipients.forEach(ownerId -> publisher.publishEvent(new NotificationRequest(
 			municipalityId, namespace, errand.getId(), ownerId, decision.getCreatedBy(), "CREATE", "DECISION", description)));
 	}

@@ -38,6 +38,7 @@ public class NotificationService {
 		final var entity = NotificationMapper.toEntity(notification, municipalityId, namespace, errandId, expires);
 		if (selfCreated(notification)) {
 			entity.setAcknowledged(true);
+			entity.setHandled(true);
 		}
 		return notificationRepository.save(entity).getId();
 	}
@@ -55,9 +56,15 @@ public class NotificationService {
 			.toList();
 	}
 
+	/**
+	 * Notifications visible to {@code ownerId} — direct owner OR co-caseworker on the errand (see the
+	 * {@code cocaseworkers} module). A notification is one row with one shared {@code handled}/{@code acknowledged}
+	 * state: marking it handled from either recipient marks it handled for both, since this only widens who can see
+	 * the same row, never duplicates it.
+	 */
 	@Transactional(readOnly = true)
 	public List<Notification> readAllByOwner(final String municipalityId, final String namespace, final String ownerId, final Sort sort) {
-		return notificationRepository.findAllByNamespaceAndMunicipalityIdAndOwnerId(namespace, municipalityId, ownerId, sort).stream()
+		return notificationRepository.findAllVisibleToUser(namespace, municipalityId, ownerId, sort).stream()
 			.map(NotificationMapper::toDto)
 			.toList();
 	}
@@ -76,6 +83,15 @@ public class NotificationService {
 	public int acknowledgeAll(final String municipalityId, final String namespace, final String errandId) {
 		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
 		return notificationRepository.acknowledgeAllByErrand(namespace, municipalityId, errandId);
+	}
+
+	/**
+	 * Marks every notification on the errand handled - the caseworker has dealt with what they say, not merely seen
+	 * them. Acknowledgement follows along, since handled implies read.
+	 */
+	public int handleAll(final String municipalityId, final String namespace, final String errandId) {
+		errandGuard.verifyExistingErrand(municipalityId, namespace, errandId);
+		return notificationRepository.handleAllByErrand(namespace, municipalityId, errandId);
 	}
 
 	/**

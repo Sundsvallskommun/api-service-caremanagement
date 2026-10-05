@@ -35,10 +35,13 @@ class DecisionMapperTest {
 			.withDescription(DESCRIPTION)
 			.withAmount(AMOUNT)
 			.withDecisionMessage(DECISION_MESSAGE)
+			.withCoApplicantReason("Beviljad")
 			.withDecisionDate(DECISION_DATE)
 			.withPeriodFrom(PERIOD_FROM)
 			.withPeriodTo(PERIOD_TO)
 			.withCreatedBy(CREATED_BY)
+			.withLifecareStatus("SYNCED")
+			.withLifecareId("88123")
 			.withCreated(CREATED);
 
 		final var decision = DecisionMapper.toDecision(entity);
@@ -54,6 +57,9 @@ class DecisionMapperTest {
 		assertThat(decision.getPeriodFrom()).isEqualTo(PERIOD_FROM);
 		assertThat(decision.getPeriodTo()).isEqualTo(PERIOD_TO);
 		assertThat(decision.getCreatedBy()).isEqualTo(CREATED_BY);
+		assertThat(decision.getCoApplicantReason()).isEqualTo("Beviljad");
+		assertThat(decision.getLifecareStatus()).isEqualTo("SYNCED");
+		assertThat(decision.getLifecareId()).isEqualTo("88123");
 		assertThat(decision.getCreated()).isEqualTo(CREATED);
 	}
 
@@ -71,15 +77,19 @@ class DecisionMapperTest {
 			.withDescription(DESCRIPTION)
 			.withAmount(AMOUNT)
 			.withDecisionMessage(DECISION_MESSAGE)
+			.withCoApplicantReason("Beviljad")
 			.withDecisionDate(DECISION_DATE)
 			.withPeriodFrom(PERIOD_FROM)
 			.withPeriodTo(PERIOD_TO)
 			.withCreatedBy(CREATED_BY)
+			.withLifecareStatus("PENDING")
 			.withCreated(CREATED);
 
 		final var entity = DecisionMapper.toDecisionEntity(decision, ERRAND_ID);
 
-		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created");
+		assertThat(entity).isNotNull().hasNoNullFieldsOrPropertiesExcept("id", "created", "lifecareId");
+		// only the status is carried over: a new decision has no Lifecare id or message yet
+		assertThat(entity.getLifecareStatus()).isEqualTo("PENDING");
 		// errandId comes from the argument, not the source DTO
 		assertThat(entity.getErrandId()).isEqualTo(ERRAND_ID);
 		assertThat(entity.getDecisionType()).isEqualTo(DECISION_TYPE);
@@ -91,6 +101,7 @@ class DecisionMapperTest {
 		assertThat(entity.getPeriodFrom()).isEqualTo(PERIOD_FROM);
 		assertThat(entity.getPeriodTo()).isEqualTo(PERIOD_TO);
 		assertThat(entity.getCreatedBy()).isEqualTo(CREATED_BY);
+		assertThat(entity.getCoApplicantReason()).isEqualTo("Beviljad");
 		// id and created are server/JPA-assigned and must not be carried over from the DTO
 		assertThat(entity.getId()).isNull();
 		assertThat(entity.getCreated()).isNull();

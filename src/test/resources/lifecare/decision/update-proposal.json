@@ -1,0 +1,35 @@
+{
+	"decision": {
+		"decisionPersons": []
+	},
+	"decisionMakers": [
+		{
+			"id": "RPA_031DEV",
+			"name": "RPA_031DEV",
+			"title": "Automatiserad testhandläggare"
+		},
+		{
+			"id": "TEST",
+			"name": "Test Handläggare",
+			"title": "Testhandläggare"
+		}
+	],
+	"decisionTypes": [
+		{
+			"code": 152,
+			"name": "EK Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, avslag",
+			"type": 10,
+			"isActive": true,
+			"requiresFromDate": false,
+			"requiresToDate": false
+		},
+		{
+			"code": 153,
+			"name": "Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall",
+			"type": 0,
+			"isActive": true,
+			"requiresFromDate": true,
+			"requiresToDate": true
+		}
+	]
+}

@@ -1,6 +1,8 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
@@ -11,6 +13,7 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormIncomeEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 
+import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_EXPENSE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_SPECIAL_EXPENSE;
@@ -28,6 +31,45 @@ class CalculationDraftMapperTest {
 		assertThat(CalculationDraftMapper.effectiveAmount(null, new BigDecimal("9"))).isEqualByComparingTo("9");
 		assertThat(CalculationDraftMapper.effectiveDays(12, 30)).isEqualTo(12);
 		assertThat(CalculationDraftMapper.effectiveDays(null, 30)).isEqualTo(30);
+	}
+
+	@Test
+	void toEffectiveIncomeCarriesTheTypeNameForACaseworkerRowWithoutTypeId() {
+		final var entity = FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeName("Lön efter skatt")
+			.withApplicantCaseworkerAmount(new BigDecimal("5000"));
+
+		final var income = CalculationDraftMapper.toEffectiveIncome(entity);
+
+		assertThat(income.typeId()).isNull();
+		assertThat(income.typeName()).isEqualTo("Lön efter skatt");
+		assertThat(income.applicantAmount()).isEqualByComparingTo("5000");
+	}
+
+	@Test
+	void toEffectiveExpenseTakesTheCaseworkerAmountAsApprovedAndKeepsTheAppliedAmount() {
+		final var entity = FaNormExpenseEntity.create().withCostType("HOUSING_COST").withBucket(BUCKET_EXPENSE).withAppliedAmount(new BigDecimal("7000"))
+			.withProcessAmount(new BigDecimal("6500")).withCaseworkerAmount(new BigDecimal("6800")).withNote("note");
+
+		final var expense = CalculationDraftMapper.toEffectiveExpense(entity);
+
+		assertThat(expense.costType()).isEqualTo("HOUSING_COST");
+		assertThat(expense.bucket()).isEqualTo(BUCKET_EXPENSE);
+		assertThat(expense.appliedAmount()).isEqualByComparingTo("7000");
+		assertThat(expense.approvedAmount()).isEqualByComparingTo("6800");
+		assertThat(expense.note()).isEqualTo("note");
+	}
+
+	@Test
+	void toEffectivePersonFallsBackToTheProcessDays() {
+		final var entity = FaNormPersonEntity.create().withPartyId("party-1").withProcessDays(30)
+			.withDeviationFromDate(LocalDate.of(2026, JUNE, 10)).withDeviationToDate(LocalDate.of(2026, JUNE, 20));
+
+		final var person = CalculationDraftMapper.toEffectivePerson(entity);
+
+		assertThat(person.partyId()).isEqualTo("party-1");
+		assertThat(person.numberOfDays()).isEqualTo(30);
+		assertThat(person.deviationFromDate()).isEqualTo(LocalDate.of(2026, JUNE, 10));
+		assertThat(person.deviationToDate()).isEqualTo(LocalDate.of(2026, JUNE, 20));
 	}
 
 	@Test
@@ -55,6 +97,44 @@ class CalculationDraftMapperTest {
 		final var entity = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withProcessDays(15).withCaseworkerDays(20);
 
 		assertThat(CalculationDraftMapper.toPersonRow(entity).getEffectiveDays()).isEqualTo(20); // caseworker wins
+	}
+
+	@Test
+	void toPersonRowCarriesTheNormAmount() {
+		final var entity = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD).withAmount(new BigDecimal("1431.00"));
+
+		assertThat(CalculationDraftMapper.toPersonRow(entity).getAmount()).isEqualByComparingTo("1431.00");
+	}
+
+	@Test
+	void theViewRowsCarryTheLabelBesideTheCode() {
+		final var expense = FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("RENT");
+		final var person = FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole("CO_APPLICANT");
+
+		assertThat(CalculationDraftMapper.toExpenseRow(expense).getCostTypeDisplayName()).isEqualTo("Boendekostnad");
+		assertThat(CalculationDraftMapper.toPersonRow(person).getRoleDisplayName()).isEqualTo("Medsökande");
+	}
+
+	@Test
+	void theDraftCopiesTheLazyNormTypeCollectionInsteadOfHandingItOn() {
+		final var normTypes = new ArrayList<>(List.of("NATIONAL_NORM"));
+		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormType(normTypes);
+
+		// Handed on as it is, the entity's collection would only be read when the response is written, after the
+		// transaction that loaded it has ended.
+		assertThat(CalculationDraftMapper.toCalculationDraft(header, List.of(), List.of(), List.of()).getNormType()).isEqualTo(normTypes).isNotSameAs(normTypes);
+		assertThat(CalculationDraftMapper.toCalculationDraft(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID), List.of(), List.of(), List.of()).getNormType()).isNull();
+	}
+
+	@Test
+	void theDraftHeaderCarriesTheNormTypeLabels() {
+		final var header = FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withApplicationMonth("2026-06")
+			.withNormType(List.of("NATIONAL_NORM", "UNKNOWN_NORM"));
+
+		final var draft = CalculationDraftMapper.toCalculationDraft(header, List.of(), List.of(), List.of());
+
+		assertThat(draft.getNormType()).containsExactly("NATIONAL_NORM", "UNKNOWN_NORM");
+		assertThat(draft.getNormTypeDisplayNames()).containsExactly("Riksnorm", "UNKNOWN_NORM"); // an unlabelled code keeps its own value
 	}
 
 	@Test

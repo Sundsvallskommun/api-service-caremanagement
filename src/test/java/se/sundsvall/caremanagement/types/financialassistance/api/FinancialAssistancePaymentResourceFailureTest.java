@@ -61,4 +61,22 @@ class FinancialAssistancePaymentResourceFailureTest {
 
 		verifyNoInteractions(paymentServiceMock);
 	}
+
+	@Test
+	void checkPaymentStatusInvalidErrandId() {
+		webTestClient.post()
+			.uri(uri -> uri.path(PATH + "/payment-status").build(Map.of("municipalityId", "2281", "namespace", NAMESPACE)))
+			.contentType(APPLICATION_JSON)
+			.bodyValue(PaymentStatusRequest.create()
+				.withErrandId("not-a-uuid")
+				.withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479")
+				.withApplicationMonth("2026-06"))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("errandId", "not a valid UUID")));
+
+		verifyNoInteractions(paymentServiceMock);
+	}
 }

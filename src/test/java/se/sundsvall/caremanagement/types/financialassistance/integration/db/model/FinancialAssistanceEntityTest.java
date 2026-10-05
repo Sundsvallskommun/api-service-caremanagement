@@ -21,6 +21,7 @@ class FinancialAssistanceEntityTest {
 
 	private static final OffsetDateTime ATTESTED_AT = OffsetDateTime.parse("2026-06-01T09:30:00Z");
 	private static final OffsetDateTime LAST_DAILY_RUN_AT = OffsetDateTime.parse("2026-06-02T09:30:00Z");
+	private static final OffsetDateTime ACTUALISATION_REQUESTED_AT = OffsetDateTime.parse("2026-06-02T09:45:00Z");
 	private static final OffsetDateTime CREATED = OffsetDateTime.parse("2026-06-03T10:00:00Z");
 	private static final OffsetDateTime MODIFIED = OffsetDateTime.parse("2026-06-04T11:00:00Z");
 
@@ -43,7 +44,8 @@ class FinancialAssistanceEntityTest {
 			hasValidBeanToStringExcluding("periodChoice", "otherBenefitDescription", "livelihoodDescription", "hasChildrenUnder21", "childrenResidenceChanged",
 				"childrenResidenceChangeDescription", "housingPersonCount", "housingRoomsPlusKitchen", "housingDescription", "housingChanged",
 				"housingChangeDescription", "hasIncomes", "hasPendingBenefits", "hasAssets", "staysInMunicipality", "stayDescription",
-				"attestedAt", "children", "costs", "incomes", "pendingBenefits", "assets", "persons", "plannings", "plannedActivities", "jobApplications")));
+				"attestedAt", "householdSizeChanged", "notifyMinaSidor", "notifyDigitalMailbox", "notifyLetter",
+				"children", "costs", "incomes", "pendingBenefits", "assets", "persons", "plannings", "plannedActivities", "jobApplications")));
 	}
 
 	@Test
@@ -85,6 +87,15 @@ class FinancialAssistanceEntityTest {
 			.withAttestation(true)
 			.withAttestedAt(ATTESTED_AT)
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withActualisationRequestedAt(ACTUALISATION_REQUESTED_AT)
+			.withLifecareServiceId(7700)
+			.withLifecareDecisionId(4711)
+			.withLifecareCalculationId(4242)
+			.withLifecarePaymentIds(List.of("90210"))
+			.withHouseholdSizeChanged(true)
+			.withNotifyMinaSidor(true)
+			.withNotifyDigitalMailbox(false)
+			.withNotifyLetter(false)
 			.withChildren(children)
 			.withCosts(costs)
 			.withIncomes(incomes)
@@ -97,8 +108,8 @@ class FinancialAssistanceEntityTest {
 			.withCreated(CREATED)
 			.withModified(MODIFIED);
 
-		assertThat(entity).hasNoNullFieldsOrProperties();
 		assertThat(entity)
+			.hasNoNullFieldsOrProperties()
 			.returns("errand-1", FinancialAssistanceEntity::getErrandId)
 			.returns("NEW", FinancialAssistanceEntity::getApplicationType)
 			.returns("SINGLE", FinancialAssistanceEntity::getMaritalStatus)
@@ -125,6 +136,15 @@ class FinancialAssistanceEntityTest {
 			.returns(true, FinancialAssistanceEntity::getAttestation)
 			.returns(ATTESTED_AT, FinancialAssistanceEntity::getAttestedAt)
 			.returns(LAST_DAILY_RUN_AT, FinancialAssistanceEntity::getLastDailyRunAt)
+			.returns(ACTUALISATION_REQUESTED_AT, FinancialAssistanceEntity::getActualisationRequestedAt)
+			.returns(7700, FinancialAssistanceEntity::getLifecareServiceId)
+			.returns(4711, FinancialAssistanceEntity::getLifecareDecisionId)
+			.returns(4242, FinancialAssistanceEntity::getLifecareCalculationId)
+			.returns(List.of("90210"), FinancialAssistanceEntity::getLifecarePaymentIds)
+			.returns(true, FinancialAssistanceEntity::getHouseholdSizeChanged)
+			.returns(true, FinancialAssistanceEntity::getNotifyMinaSidor)
+			.returns(false, FinancialAssistanceEntity::getNotifyDigitalMailbox)
+			.returns(false, FinancialAssistanceEntity::getNotifyLetter)
 			.returns(children, FinancialAssistanceEntity::getChildren)
 			.returns(costs, FinancialAssistanceEntity::getCosts)
 			.returns(incomes, FinancialAssistanceEntity::getIncomes)
