@@ -1,9 +1,5 @@
 package openapi;
 
-import static java.nio.file.Files.writeString;
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -21,6 +17,10 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.dept44.util.ResourceUtils;
 import tools.jackson.core.JacksonException;
 import tools.jackson.dataformat.yaml.YAMLMapper;
+
+import static java.nio.file.Files.writeString;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 
 @ActiveProfiles("it")
 @AutoConfigureTestRestTemplate
