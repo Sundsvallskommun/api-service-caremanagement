@@ -17,7 +17,8 @@ import static org.springframework.http.HttpStatus.NO_CONTENT;
  * Withdrawing a financial assistance errand ends its process, end to end: the status change publishes
  * {@code ErrandStatusChanged}, the listener correlates {@code ErrandWithdrawn} once the change has committed, and a
  * message the engine cannot take is queued for the scheduled retry. What the engine's HTTP contract makes of a
- * {@code 404} — nothing waits for the message — is only visible through the real client, so the last test runs the retry
+ * {@code 404} — nothing waits for the message — is only visible through the real client, so the last test runs the
+ * retry
  * against it: the row is settled and removed instead of retrying for three days. The unit tests cover each half with
  * the other mocked.
  *

@@ -1,12 +1,5 @@
 package apptest;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.http.HttpMethod.DELETE;
-import static org.springframework.http.HttpMethod.GET;
-import static org.springframework.http.HttpMethod.PUT;
-import static org.springframework.http.HttpStatus.NO_CONTENT;
-import static org.springframework.http.HttpStatus.OK;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
@@ -15,6 +8,13 @@ import se.sundsvall.caremanagement.usersettings.integration.db.UserSettingsRepos
 import se.sundsvall.caremanagement.usersettings.integration.db.model.UserSettingsEntity;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpMethod.DELETE;
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.PUT;
+import static org.springframework.http.HttpStatus.NO_CONTENT;
+import static org.springframework.http.HttpStatus.OK;
 
 @WireMockAppTestSuite(files = "classpath:/UserSettingsIT/", classes = Application.class)
 @Sql({
