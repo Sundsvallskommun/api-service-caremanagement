@@ -6,8 +6,8 @@
  * <p>
  * Domain-agnostic and universal across errand types (the same altitude as {@code attachments} / {@code journal} /
  * {@code eventlog}): a type module wires in the exposed {@code service} to capture a snapshot when its errand is
- * created and to read it back for re-display. Write-once — one snapshot per errand, no update path — and removed when
- * the errand is deleted via an {@code ErrandDeleted} listener, so its retention follows the case.
+ * created and to read it back for re-display. Write-once — one snapshot per errand, no update path — and removed with
+ * the errand by the {@code ON DELETE CASCADE} on {@code fk_form_snapshot_errand_id}, so its retention follows the case.
  * </p>
  */
 @ApplicationModule(displayName = "Form Snapshot")
