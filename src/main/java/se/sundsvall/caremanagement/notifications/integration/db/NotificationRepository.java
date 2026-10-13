@@ -8,6 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 import se.sundsvall.caremanagement.notifications.integration.db.model.NotificationEntity;
 
 @CircuitBreaker(name = "notificationRepository")
@@ -51,5 +52,6 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
 	int assignOwnerToUnowned(String namespace, String municipalityId, String errandId, String ownerId);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Transactional
 	long deleteByExpiresBefore(OffsetDateTime cutoff);
 }
