@@ -44,7 +44,9 @@ class ProfessionalWebClientTest {
 
 	@BeforeEach
 	void setUp() {
-		wireMock = new WireMockServer(options().dynamicPort());
+		// Bound to 127.0.0.1 and called there: a dynamic port bound to every address can collide with a local loopback
+		// listener (an IDE plugin), which then answers the calls meant for WireMock.
+		wireMock = new WireMockServer(options().dynamicPort().bindAddress("127.0.0.1"));
 		wireMock.start();
 
 		final var properties = properties("user", "sec ret&1", Duration.ofMinutes(20));
@@ -258,7 +260,7 @@ class ProfessionalWebClientTest {
 	}
 
 	private ProfessionalWebProperties properties(final String username, final String password, final Duration ttl) {
-		return new ProfessionalWebProperties(wireMock.baseUrl() + "/", "Domain", "Actor_Professional", "saml", "Sundsvall_Intra",
+		return new ProfessionalWebProperties("http://127.0.0.1:" + wireMock.port() + "/", "Domain", "Actor_Professional", "saml", "Sundsvall_Intra",
 			username, password, ttl, 1, 5, "decision-template", "calculation-template", "document-template", null);
 	}
 
