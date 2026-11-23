@@ -343,7 +343,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 		prepare();
 		assertThat(draft()).usingRecursiveComparison().isEqualTo(proposed);
 		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> assertThat(entity.getLifecareCalculationId()).isEqualTo(9001));
-		wiremock.verify(1, postRequestedFor(urlPathEqualTo("/api-lifecare-familycare/apifc/v1/Calculations")));
+		wiremock.verify(1, postRequestedFor(urlPathEqualTo("/api-lifecare-integrator/2281/calculations")));
 	}
 
 	/**

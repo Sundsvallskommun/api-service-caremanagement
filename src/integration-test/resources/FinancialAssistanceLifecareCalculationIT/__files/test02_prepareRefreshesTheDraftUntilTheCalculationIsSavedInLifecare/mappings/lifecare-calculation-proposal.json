@@ -1,10 +1,10 @@
 {
 	"request": {
 		"method": "GET",
-		"urlPath": "/api-lifecare-familycare/apifc/v1/Calculations/Proposals",
+		"urlPath": "/api-lifecare-integrator/2281/calculations/proposal",
 		"queryParameters": {
-			"personId": {
-				"equalTo": "199001011234"
+			"partyId": {
+				"equalTo": "aaaaaaaa-0000-4000-8000-000000000001"
 			}
 		}
 	},

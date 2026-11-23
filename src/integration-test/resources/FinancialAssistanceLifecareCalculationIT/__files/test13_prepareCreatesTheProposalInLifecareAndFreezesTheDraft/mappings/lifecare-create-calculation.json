@@ -1,16 +1,19 @@
 {
 	"request": {
 		"method": "POST",
-		"urlPath": "/api-lifecare-familycare/apifc/v1/Calculations",
+		"urlPath": "/api-lifecare-integrator/2281/calculations",
 		"bodyPatterns": [
 			{
-				"matchesJsonPath": "$[?(@.PersonId == '199001011234')]"
+				"matchesJsonPath": "$[?(@.partyId == 'aaaaaaaa-0000-4000-8000-000000000001')]"
 			},
 			{
-				"matchesJsonPath": "$[?(@.ServiceId == 7700)]"
+				"matchesJsonPath": "$[?(@.serviceId == 7700)]"
 			},
 			{
-				"matchesJsonPath": "$.CalculationPersons[?(@.PersonId == '199001011234')]"
+				"matchesJsonPath": "$[?(@.normId == 12)]"
+			},
+			{
+				"matchesJsonPath": "$.persons[?(@.partyId == 'aaaaaaaa-0000-4000-8000-000000000001')]"
 			}
 		]
 	},
@@ -18,7 +21,9 @@
 		"headers": {
 			"Content-Type": "application/json"
 		},
-		"body": "9001",
-		"status": 200
+		"jsonBody": {
+			"id": 9001
+		},
+		"status": 201
 	}
 }
