@@ -32,14 +32,8 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 /**
- * Serves the FamilyCare surface through {@code api-service-lifecare-integrator} instead of calling FamilyCare
- * directly. It is the only implementation.
- *
- * <p>
- * This is the route that works from outside the municipal network — see {@link LifecareFamilyCare} for why the direct
- * one does not. The integrator is keyed on {@code partyId}, which is what this interface takes, so arguments pass
- * straight through; only the responses are translated, mapped back into FamilyCare's DTOs so nothing downstream has
- * to change.
+ * Serves the FamilyCare surface through {@code api-service-lifecare-integrator}. Arguments are party ids and pass
+ * straight through; the responses are mapped back into FamilyCare's DTOs, which the {@code lifecare} services consume.
  */
 @Component
 public class LifecareIntegratorIntegration implements LifecareFamilyCare {
@@ -175,7 +169,7 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 
 	/**
 	 * FamilyCare's {@code documentSenderType} is the integrator's {@code senderType}; the rest of the parts line up by
-	 * name. The content is wrapped as an in-memory PDF part, exactly as the direct client does.
+	 * name. The content is wrapped as an in-memory PDF part.
 	 */
 	@Override
 	public void postActualisationAttachment(final String municipalityId, final Integer actualisationId, final AttachmentUpload attachment) {
@@ -186,7 +180,6 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 			return null;
 		});
 	}
-
 
 	/** One field the integrator declares non-nullable, paired with whatever the assembled request actually holds. */
 	private record RequiredField(String name, Object value) {}
@@ -211,16 +204,16 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	}
 
 	/**
-	 * Runs an integrator call, translating any failure into a {@code BAD_GATEWAY} problem. Mirrors the direct client's
-	 * handling, including the reason it drops the cause's message for anything that is not already a clean problem: a
-	 * transport failure embeds the request line, which here carries a party id and the query window.
+	 * Runs an integrator call, translating any failure into a {@code BAD_GATEWAY} problem. The cause's message is dropped
+	 * for anything that is not already a clean problem: a transport failure embeds the request line, which here carries
+	 * a party id and the query window.
 	 */
 	private <T> T call(final String action, final Supplier<T> operation) {
 		try {
 			return operation.get();
 		} catch (final Exception e) {
 			// Not logged here: the thrown Problem already carries the (payload-free) upstream descriptor and is logged by
-			// the framework — mirrors the direct client's handling, which does the same.
+			// the framework.
 			throw Problem.valueOf(BAD_GATEWAY, "Lifecare integrator failed while %s (%s)".formatted(action, describe(e)));
 		}
 	}

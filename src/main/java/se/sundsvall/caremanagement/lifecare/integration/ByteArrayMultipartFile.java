@@ -16,10 +16,6 @@ import static java.util.Optional.ofNullable;
  * PDF) be sent as the {@code Content} file part of a multipart Feign call without ever touching disk or the
  * (test-scope)
  * {@code MockMultipartFile}. Read-only: the backing bytes are never mutated.
- *
- * <p>
- * Shared by both routes to FamilyCare — the direct client and the one through the integrator — which is why it is
- * visible outside its own package.
  */
 public class ByteArrayMultipartFile implements MultipartFile {
 

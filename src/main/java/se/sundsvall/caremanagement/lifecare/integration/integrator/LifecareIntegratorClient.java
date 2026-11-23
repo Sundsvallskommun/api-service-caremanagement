@@ -32,16 +32,9 @@ import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 import static se.sundsvall.caremanagement.lifecare.integration.integrator.configuration.LifecareIntegratorConfiguration.CLIENT_ID;
 
 /**
- * Reads Lifecare FamilyCare through {@code api-service-lifecare-integrator} rather than from FamilyCare directly.
- *
- * <p>
- * Two differences from the former direct FamilyCare client are worth
- * knowing when reading this. Everything is keyed on {@code partyId} rather than a personal identity number — the
- * integrator refuses to take or return one — and the period parameters are plain {@link LocalDate}s rather than
- * FamilyCare's RFC 3339 timestamps, so no date rendering is needed on this side.
- *
- * <p>
- * Only the operations the financial assistance flow actually uses are declared.
+ * Reads and writes Lifecare FamilyCare through {@code api-service-lifecare-integrator}. Everything is keyed on
+ * {@code partyId}, since the integrator refuses to take or return a personal identity number, and periods are plain
+ * {@link LocalDate}s rather than FamilyCare's RFC 3339 timestamps.
  */
 @FeignClient(name = CLIENT_ID, url = "${integration.lifecare-integrator.url}", configuration = se.sundsvall.caremanagement.lifecare.integration.integrator.configuration.LifecareIntegratorConfiguration.class)
 @CircuitBreaker(name = CLIENT_ID)
