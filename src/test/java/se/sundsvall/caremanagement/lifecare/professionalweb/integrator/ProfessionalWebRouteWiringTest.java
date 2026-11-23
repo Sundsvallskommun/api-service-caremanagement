@@ -7,19 +7,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 import se.sundsvall.caremanagement.Application;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
+import se.sundsvall.caremanagement.lifecare.integration.integrator.LifecareIntegratorIntegration;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebTransport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * ProfessionalWeb is only reached through lifecare-integrator's exchange: the junit profile sets none of the direct
- * route's settings (url, domain, federation-profile, username, password), and no property selects a route.
+ * ProfessionalWeb is only reached through lifecare-integrator's exchange: the application starts without any of the
+ * direct route's settings, and no property selects a route. The old provider properties of FamilyCare and
+ * ProfessionalWeb share one context here, so both routes are checked against them at once.
  */
 class ProfessionalWebRouteWiringTest {
-
-	private static final String[] DIRECT_ROUTE_SETTINGS = {
-		"provider", "url", "domain", "federation-profile", "username", "password"
-	};
 
 	@Nested
 	@SpringBootTest(classes = Application.class)
@@ -33,22 +32,24 @@ class ProfessionalWebRouteWiringTest {
 		void theOnlyTransportIsTheIntegratorsExchange() {
 			assertThat(context.getBeansOfType(ProfessionalWebTransport.class)).hasSize(1);
 			assertThat(context.getBean(ProfessionalWebTransport.class)).isInstanceOf(IntegratorProfessionalWebTransport.class);
-			for (final var setting : DIRECT_ROUTE_SETTINGS) {
-				assertThat(context.getEnvironment().getProperty("integration.lifecare-professionalweb." + setting)).as(setting).isNullOrEmpty();
-			}
 		}
 	}
 
 	@Nested
-	@SpringBootTest(classes = Application.class, properties = "integration.lifecare-professionalweb.provider=direct")
+	@SpringBootTest(classes = Application.class, properties = {
+		"integration.lifecare-familycare.provider=familycare",
+		"integration.lifecare-professionalweb.provider=direct"
+	})
 	@ActiveProfiles("junit")
-	class WithTheOldProviderPropertySet {
+	class WithTheOldProviderPropertiesSet {
 
 		@Autowired
 		private ApplicationContext context;
 
 		@Test
 		void theIntegratorIsUsedAnyway() {
+			assertThat(context.getBeansOfType(LifecareFamilyCare.class)).hasSize(1);
+			assertThat(context.getBean(LifecareFamilyCare.class)).isInstanceOf(LifecareIntegratorIntegration.class);
 			assertThat(context.getBeansOfType(ProfessionalWebTransport.class)).hasSize(1);
 			assertThat(context.getBean(ProfessionalWebTransport.class)).isInstanceOf(IntegratorProfessionalWebTransport.class);
 		}

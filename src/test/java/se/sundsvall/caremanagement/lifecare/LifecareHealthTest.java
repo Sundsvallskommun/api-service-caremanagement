@@ -28,6 +28,5 @@ class LifecareHealthTest {
 			.noneMatch(name -> name.toLowerCase().contains("lifecare"))
 			.noneMatch(name -> name.toLowerCase().contains("professionalweb"))
 			.noneMatch(name -> name.toLowerCase().contains("integrator"));
-		assertThat(context.containsBean("lifecareProfessionalWeb")).isFalse();
 	}
 }

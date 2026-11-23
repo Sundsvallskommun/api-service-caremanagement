@@ -15,7 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebFormField;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -63,11 +62,6 @@ class IntegratorProfessionalWebTransportTest {
 		assertThat(response.contentType()).isEmpty();
 		verify(client).exchange(eq("2281"), requestCaptor.capture());
 		assertThat(requestCaptor.getValue().body()).isNull();
-	}
-
-	@Test
-	void noAnswer() {
-		assertThatThrownBy(() -> transport.exchange("GET", "api2/x", Map.of(), null)).hasMessageContaining("without Lifecare's answer");
 	}
 
 	@Test

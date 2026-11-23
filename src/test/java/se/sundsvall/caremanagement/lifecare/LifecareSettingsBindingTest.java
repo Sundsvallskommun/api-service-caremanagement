@@ -36,7 +36,7 @@ class LifecareSettingsBindingTest {
 	@Nested
 	@SpringBootTest(classes = Application.class)
 	@ActiveProfiles("junit")
-	class WithNothingSet {
+	class WithTheShippedDefaults {
 
 		@MockitoBean
 		private LifecareFamilyCare familyCare;

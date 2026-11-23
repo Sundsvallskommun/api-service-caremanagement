@@ -2,8 +2,10 @@ package se.sundsvall.caremanagement.lifecare;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
@@ -19,13 +21,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class LifecareIntegratorRequiredSettingsTest {
 
+	private static Stream<Arguments> requiredSettings() {
+		return Stream.of(
+			Arguments.of("integration.lifecare-integrator.url", "INTEGRATION_LIFECARE_INTEGRATOR_URL"),
+			Arguments.of("spring.security.oauth2.client.registration.lifecare-integrator.client-id", "INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_ID"),
+			Arguments.of("spring.security.oauth2.client.registration.lifecare-integrator.client-secret", "INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_SECRET"),
+			Arguments.of("spring.security.oauth2.client.provider.lifecare-integrator.token-uri", "INTEGRATION_LIFECARE_INTEGRATOR_TOKEN_URI"));
+	}
+
 	@ParameterizedTest
-	@CsvSource({
-		"integration.lifecare-integrator.url, INTEGRATION_LIFECARE_INTEGRATOR_URL",
-		"spring.security.oauth2.client.registration.lifecare-integrator.client-id, INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_ID",
-		"spring.security.oauth2.client.registration.lifecare-integrator.client-secret, INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_SECRET",
-		"spring.security.oauth2.client.provider.lifecare-integrator.token-uri, INTEGRATION_LIFECARE_INTEGRATOR_TOKEN_URI"
-	})
+	@MethodSource("requiredSettings")
 	void cannotBeResolvedWhenTheEnvironmentDoesNotSetIt(final String property, final String variable) throws IOException {
 		final var environment = applicationYmlWith(Map.of());
 
@@ -35,12 +40,7 @@ class LifecareIntegratorRequiredSettingsTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({
-		"integration.lifecare-integrator.url, INTEGRATION_LIFECARE_INTEGRATOR_URL",
-		"spring.security.oauth2.client.registration.lifecare-integrator.client-id, INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_ID",
-		"spring.security.oauth2.client.registration.lifecare-integrator.client-secret, INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_SECRET",
-		"spring.security.oauth2.client.provider.lifecare-integrator.token-uri, INTEGRATION_LIFECARE_INTEGRATOR_TOKEN_URI"
-	})
+	@MethodSource("requiredSettings")
 	void isTakenFromTheEnvironment(final String property, final String variable) throws IOException {
 		final var environment = applicationYmlWith(Map.of(variable, "from-the-environment"));
 

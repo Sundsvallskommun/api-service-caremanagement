@@ -47,6 +47,7 @@ class LifecareCaseServiceTest {
 	private static final String APPLICANT_PARTY_ID = "3f5ca9a0-1c2d-4e3f-8a9b-0c1d2e3f4a5b";
 	private static final String CO_APPLICANT_PARTY_ID = "7b6a5c4d-3e2f-4a1b-9c8d-7e6f5a4b3c2d";
 	private static final String CHILD_PARTY_ID = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+	private static final String FORMER_MEMBER_PARTY_ID = "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b";
 
 	@Mock
 	private LifecareFamilyCare integrationMock;
@@ -70,7 +71,7 @@ class LifecareCaseServiceTest {
 		final var decision = new PersonBasedDecisionDTO()
 			.fromDate("2026-05-01")
 			.toDate("2026-06-30")
-			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId("198202022397").isCoApplicant(true));
+			.addDecisionPersonDTOsItem(new PersonBasedDecisionPersonDTO().personId(CO_APPLICANT_PARTY_ID).isCoApplicant(true));
 
 		noActualisations();
 		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
@@ -209,7 +210,7 @@ class LifecareCaseServiceTest {
 		noActualisations();
 		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedDecisionDTO()
-				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("198202022397")));
+				.addResultItem(new PersonBasedDecisionDTO().toDate("2026-06-30").coApplicant("Bo Berg")));
 		noCalculations();
 
 		final var summary = service().summarize(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
@@ -220,7 +221,7 @@ class LifecareCaseServiceTest {
 
 	@Test
 	void latestDecisionDrivesPeriodAndConstellation() {
-		final var older = new PersonBasedDecisionDTO().toDate("2026-03-31").coApplicant("197001010000");
+		final var older = new PersonBasedDecisionDTO().toDate("2026-03-31").coApplicant("Karl Karlsson");
 		final var newer = new PersonBasedDecisionDTO().toDate("2026-05-31"); // no co-applicant
 		noActualisations();
 		when(integrationMock.getDecisions(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
@@ -237,7 +238,7 @@ class LifecareCaseServiceTest {
 	@Test
 	void latestRosterReadsLatestCalculationMembersAndFlaggedCoApplicant() {
 		final var olderCalc = new PersonBasedCalculationDTO().toDate("2026-04-30")
-			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("198001019999").name("Old"));
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(FORMER_MEMBER_PARTY_ID).name("Old"));
 		final var newerCalc = new PersonBasedCalculationDTO().toDate("2026-06-30")
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID).name("Anna"))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID).name("Kid"));
@@ -393,7 +394,7 @@ class LifecareCaseServiceTest {
 	@Test
 	void previousHouseholdFromLatestCalcBeforeApplicationMonthWithHousingCostAndNormSum() {
 		final var older = new PersonBasedCalculationDTO().toDate("2026-03-31")
-			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("198001019999"));
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(FORMER_MEMBER_PARTY_ID));
 		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
 			.normSum(12345.0)
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID))
