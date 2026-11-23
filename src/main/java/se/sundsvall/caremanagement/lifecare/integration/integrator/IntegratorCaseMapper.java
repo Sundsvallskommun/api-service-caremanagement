@@ -247,7 +247,7 @@ final class IntegratorCaseMapper {
 			.ownerType(document.getOwnerType());
 	}
 
-	// ---- Person, contacts and the caseworker directory ---------------------------------------------------------------
+	// ---- Person and the caseworker directory -----------------------------------------------------------------------
 
 	/**
 	 * @param partyId the party id the read was made for, placed in {@code personId} for the same reason as everywhere

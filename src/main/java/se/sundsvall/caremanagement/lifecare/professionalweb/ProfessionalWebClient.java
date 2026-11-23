@@ -24,10 +24,8 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
  * </p>
  *
  * <p>
- * How the call reaches Lifecare, session escalation included, is the {@link ProfessionalWebTransport}'s business:
- * directly
- * from inside the municipal network, or through api-service-lifecare-integrator from outside it. Nothing is retried
- * here.
+ * How the call reaches Lifecare, session escalation included, is the {@link ProfessionalWebTransport}'s business: it
+ * goes through api-service-lifecare-integrator. Nothing is retried here.
  * </p>
  *
  * <p>

@@ -47,13 +47,6 @@ class ProfessionalWebResponseTest {
 	}
 
 	@Test
-	void setCookiesReadsEveryValue() {
-		final var response = new ProfessionalWebResponse(200, headers(Map.of("Set-Cookie", List.of("a=1", "b=2"))), null, URI.create("https://example.com"));
-
-		assertThat(response.setCookies()).containsExactly("a=1", "b=2");
-	}
-
-	@Test
 	void bodyAsStringDecodesUtf8() {
 		final var response = new ProfessionalWebResponse(200, headers(Map.of()), "hej".getBytes(StandardCharsets.UTF_8), URI.create("https://example.com"));
 

@@ -16,9 +16,8 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 
 /**
- * Reaches Lifecare ProfessionalWeb through api-service-lifecare-integrator, for a careM that runs outside the
- * municipal network. The integrator holds the integration account's session and does the session escalation; this
- * side only packs the call and unpacks Lifecare's answer.
+ * Reaches Lifecare ProfessionalWeb through api-service-lifecare-integrator. The integrator holds the integration
+ * account's session and does the session escalation; this side only packs the call and unpacks Lifecare's answer.
  */
 @Component
 class IntegratorProfessionalWebTransport implements ProfessionalWebTransport {

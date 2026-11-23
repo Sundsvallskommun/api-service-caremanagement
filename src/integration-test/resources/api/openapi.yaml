@@ -9020,7 +9020,7 @@ paths:
       summary: Renewal pre-fill from Lifecare
       description: Returns the household children from the applicant's most recent
         Lifecare calculation to pre-fill a financial assistance renewal. The applicant
-        is identified by partyId (resolved to a personnummer via the citizen service).
+        is identified by partyId.
         Only children are pre-filled — the applicant is the logged-in citizen and
         the co-applicant comes from the portal. Best-effort — degrades to an empty
         result (lifecareChecked=false) when the partyId cannot be resolved or Lifecare

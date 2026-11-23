@@ -4,7 +4,6 @@ import java.net.URI;
 import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -33,10 +32,6 @@ public record ProfessionalWebResponse(int status, HttpHeaders headers, byte[] bo
 
 	public String contentType() {
 		return headers.firstValue("Content-Type").orElse("");
-	}
-
-	public List<String> setCookies() {
-		return headers.allValues("Set-Cookie");
 	}
 
 	public String bodyAsString() {

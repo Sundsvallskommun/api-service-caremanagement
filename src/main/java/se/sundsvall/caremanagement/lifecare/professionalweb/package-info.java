@@ -2,8 +2,8 @@
  * Lifecare ProfessionalWeb integration.
  *
  * <p>
- * The internal api2 surface Lifecare's own web client uses, reached with a signed-in session of an integration account
- * (SAML via MobilityGuard) rather than an API key. It covers what the public FamilyCare API cannot: editing a
+ * The internal api2 surface Lifecare's own web client uses, reached through lifecare-integrator, which holds the
+ * integration account's session. It covers what the public FamilyCare API cannot: editing a
  * normberäkning, decisions, payments, payees, reminders, journal notes, documents and job stimulus periods.
  * </p>
  *

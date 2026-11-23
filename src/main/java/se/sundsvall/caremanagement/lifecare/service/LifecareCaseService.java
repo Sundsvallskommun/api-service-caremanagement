@@ -434,9 +434,7 @@ public class LifecareCaseService {
 		return flagged || hasText(decision.getCoApplicant());
 	}
 
-	/**
-	 * The co-applicant's partyId on a decision — a flagged participant, falling back to the scalar field.
-	 */
+	/** The partyId of the participant flagged as co-applicant on a decision. */
 	private static Optional<String> flaggedCoApplicant(final PersonBasedDecisionDTO decision) {
 		return ofNullable(decision.getDecisionPersonDTOs()).orElseGet(List::of).stream()
 			.filter(person -> Boolean.TRUE.equals(person.getIsCoApplicant()))
