@@ -11,20 +11,13 @@ import se.sundsvall.dept44.configuration.feign.FeignConfiguration;
 import se.sundsvall.dept44.configuration.feign.FeignMultiCustomizer;
 
 /**
- * Builds the customizer for the lifecare-integrator client. Unlike the direct FamilyCare client, which authenticates
- * with a {@code domain} + {@code key} pair in the query string, the integrator is an ordinary dept44 service behind the
- * API gateway and takes OAuth2 client credentials — so there is no secret in the URL here.
+ * Builds the customizer for the lifecare-integrator client, which authenticates with OAuth2 client credentials.
  *
  * <p>
  * Feign logging is pinned to {@link feign.Logger.Level#NONE}, overriding the dept44 default of {@code FULL}. The
  * reads carry a {@code partyId} and return calculation, decision and payment payloads; raising the client logger to
  * {@code DEBUG} at any other level would put those in the log. Pinning it here keeps that impossible regardless of the
- * configured log level, exactly as the direct FamilyCare client does.
- *
- * <p>
- * Note the {@code partyId} rather than a personal identity number: routing through the integrator means careM stops
- * handing a personnummer to the integration layer at all for these calls, which is a small privacy gain over the direct
- * route and not merely a change of address.
+ * configured log level.
  */
 @Import(FeignConfiguration.class)
 @EnableConfigurationProperties(LifecareIntegratorProperties.class)

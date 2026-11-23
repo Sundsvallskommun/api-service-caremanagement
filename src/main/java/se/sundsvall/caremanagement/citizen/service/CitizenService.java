@@ -35,19 +35,6 @@ public class CitizenService {
 	}
 
 	/**
-	 * Resolve the partyId (personId GUID) behind a personnummer — the reverse of
-	 * {@link #getPersonalNumber(String, String)}, used to hand personnummer-bearing data from external systems back to the
-	 * frontend as partyIds.
-	 *
-	 * @param  municipalityId the id of the municipality
-	 * @param  personalNumber the citizen's personnummer
-	 * @return                the partyId, or empty when the citizen service has none (204 No Content)
-	 */
-	public Optional<String> getPartyId(final String municipalityId, final String personalNumber) {
-		return Optional.ofNullable(citizenClient.getGuid(municipalityId, personalNumber)).filter(value -> hasText(value));
-	}
-
-	/**
 	 * Whether the citizen has skyddad identitet in folkbokföring — a sekretessmarkering ({@code protectedNR}) or skyddad
 	 * folkbokföring/classification ({@code classified}). Citizen v3 answers both flags for every person, {@code "N"} when
 	 * the flag is not set, so a flag counts only when it holds something other than {@code "N"} (the reading Open

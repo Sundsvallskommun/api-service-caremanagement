@@ -1,6 +1,6 @@
 # Citizen
 
-api-service-citizen v3. Translates between the partyId the API uses and the personnummer that Lifecare and SSBTEK
+api-service-citizen v3. Translates the partyId the API uses into the personnummer that Lifecare and SSBTEK
 need, and tells whether a person has a protected identity.
 
 ## Used by
@@ -10,7 +10,6 @@ Other modules call it through `CitizenService`. See [architecture.md](../archite
 | Method | Callers |
 |---|---|
 | `getPersonalNumber` (partyId → personnummer) | `FinancialAssistanceCalculationService`, `FinancialAssistanceSsbtekService`, `HouseholdIdentifiersService`, `LifecareErrandService`, `NormberakningDraftReader` |
-| `getPartyId` (personnummer → partyId) | `LifecareCaseService` |
 | `hasProtectedIdentity` | `EligibilityService`, `ProtectedIdentityGate` |
 
 ## Calls
@@ -18,7 +17,6 @@ Other modules call it through `CitizenService`. See [architecture.md](../archite
 | Call | Purpose |
 |---|---|
 | `GET /{municipalityId}/{personId}/personnumber` | partyId → personnummer |
-| `GET /{municipalityId}/{personNumber}/guid` | personnummer → partyId |
 | `GET /{municipalityId}/{personId}?ShowClassified=false` | The person's protection flags |
 
 ## Authentication

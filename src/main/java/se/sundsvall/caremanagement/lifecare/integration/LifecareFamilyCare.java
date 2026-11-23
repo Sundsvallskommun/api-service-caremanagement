@@ -17,55 +17,15 @@ import java.util.List;
 import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 
 /**
- * The Lifecare FamilyCare surface careM depends on, separated from who answers it.
+ * The Lifecare FamilyCare surface careM depends on, served through lifecare-integrator. The types are FamilyCare's own
+ * DTOs, so the {@code lifecare} services do not depend on the integrator's models. Every person-scoped argument, and
+ * every {@code personId} in a response, is a {@code partyId}.
  *
  * <p>
- * There are two ways to reach FamilyCare from here, and which one is usable depends entirely on where the service runs.
- * {@code lifecare.sundsvall.se} has no public DNS record at all, so a deployment outside the municipal network — Drakel
- * on its Hetzner host, for one — cannot resolve it, let alone call it. {@code lifecare-ext.sundsvall.se} is reachable
- * from anywhere but answers {@code 401 "No client certificate."} without mTLS, which this client cannot do.
- * {@code api-service-lifecare-integrator} sits inside the network, reaches the internal host without a client
- * certificate, and is published on the WSO2 test gateway — so it is the route that works from outside.
- *
- * <p>
- * The interface exists so that choice stays a configuration decision rather than a code change. The response types
- * are FamilyCare's own: an implementation that talks to the integrator is responsible for translating its models back
- * into these, which keeps the ~180 references to FamilyCare DTOs across the {@code lifecare} package untouched. Pick an
- * implementation with {@code integration.lifecare-familycare.provider}.
- *
- * <p>
- * Every person-scoped argument is a {@code partyId} — the identity careM holds for a person. The integrator is keyed
- * on it and takes it as-is; the direct route resolves it to the personal identity number FamilyCare keys on, once, at
- * the edge. Arguments used to be personal identity numbers, which made the integrator route resolve a number the
- * caller had itself just resolved from the very same partyId: two citizen lookups that cancelled each other out on
- * every read.
- *
- * <p>
- * Every method leads with {@code municipalityId}. FamilyCare itself has no notion of one — the direct client talks to
- * a single Lifecare instance — but the integrator is an ordinary multi-tenant dept44 service that takes it in the path,
- * and it is also what {@code CitizenService} needs to turn a {@code partyId} into a personal identity number. Carrying
- * it on the interface keeps the tenant explicit rather than pinned in configuration.
- *
- * <p>
- * Every implementation is expected to hold the same two guarantees the direct one does: failures surface as
- * {@code BAD_GATEWAY} problems, and no {@code personId}, API key or payload is ever logged — FamilyCare carries
- * personal identity numbers and income data.
+ * Failures surface as {@code BAD_GATEWAY} problems, and no {@code personId} or payload is ever logged — FamilyCare
+ * carries income data.
  */
 public interface LifecareFamilyCare {
-
-	/**
-	 * Whether the {@code personId} fields in this route's <em>responses</em> hold a {@code partyId} rather than a
-	 * personal identity number. Arguments are always party ids, on both routes; it is what comes back that differs,
-	 * because the direct route hands FamilyCare's own personal identity numbers back untranslated.
-	 *
-	 * <p>
-	 * Anything that compares a person in a response against one it passed in, or resolves a person in a response
-	 * further, has to know which of the two it is holding — see {@code LifecareCaseService.latestRoster}. Getting it
-	 * wrong is silent: the comparison simply never matches.
-	 */
-	default boolean respondsWithPartyId() {
-		return false;
-	}
 
 	// ---- Person-based reads ------------------------------------------------------------------------------------------
 
@@ -104,11 +64,6 @@ public interface LifecareFamilyCare {
 	/**
 	 * Create a calculation. The body's own {@code personId} and every {@code calculationPersons} row carry a
 	 * {@code partyId}, as everywhere else on this interface.
-	 *
-	 * <p>
-	 * Each implementation translates what its route needs and nothing more: the integrator passes the party ids
-	 * through, the direct client resolves them to personal identity numbers. Nothing upstream of here has to know which
-	 * route is wired.
 	 */
 	Integer createCalculation(String municipalityId, PostCalculationBodyRequest body);
 

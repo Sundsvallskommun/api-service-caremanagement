@@ -418,7 +418,7 @@ public class ApplicationRuleFeeder {
 	}
 
 	/**
-	 * A party id as a comparison key: the direct route resolves them and the integrator passes them on, so case may differ.
+	 * A party id as a comparison key, so a difference in case or surrounding whitespace is not taken for another person.
 	 */
 	private static String partyIdKey(final String partyId) {
 		return partyId.trim().toLowerCase(Locale.ROOT);

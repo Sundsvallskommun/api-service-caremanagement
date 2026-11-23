@@ -52,12 +52,6 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 		this.client = client;
 	}
 
-	/** Everything this route hands back identifies a person by {@code partyId}; see {@link IntegratorCaseMapper}. */
-	@Override
-	public boolean respondsWithPartyId() {
-		return true;
-	}
-
 	@Override
 	public ApiPaginationCompositePersonBasedCalculationDTO getCalculations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
 		return call("fetching calculations", () -> IntegratorCalculationMapper.toFamilyCare(

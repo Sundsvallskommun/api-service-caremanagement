@@ -9,10 +9,7 @@ import java.util.List;
  * name only; everything else on the form the citizen fills in.
  *
  * <p>
- * Everyone here is identified by {@code partyId}, never by personal identity number. Lifecare itself answers with one
- * or the other depending on which route served the call, so {@link LifecareCaseService} resolves both onto party ids
- * before building this record — which keeps the personnummer out of the model and makes the two routes comparable.
- * A person the citizen service cannot resolve carries a {@code null} party id; the name is still worth showing.
+ * Everyone here is identified by {@code partyId}, never by personal identity number.
  *
  * @param applicant   the queried person's partyId (the applicant)
  * @param coApplicant the co-applicant from the latest decision, or {@code null} when applying alone. A partyId when
