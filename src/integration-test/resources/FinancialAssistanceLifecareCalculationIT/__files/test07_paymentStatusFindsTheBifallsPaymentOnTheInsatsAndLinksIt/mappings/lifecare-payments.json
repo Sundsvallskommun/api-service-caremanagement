@@ -1,10 +1,10 @@
 {
 	"request": {
 		"method": "GET",
-		"urlPath": "/api-lifecare-familycare/apifc/v1/Payments",
+		"urlPath": "/api-lifecare-integrator/2281/payments",
 		"queryParameters": {
-			"personId": {
-				"equalTo": "199001011234"
+			"partyId": {
+				"equalTo": "aaaaaaaa-0000-4000-8000-000000000001"
 			}
 		}
 	},
@@ -13,27 +13,27 @@
 			"Content-Type": "application/json"
 		},
 		"jsonBody": {
-			"Result": [
+			"payments": [
 				{
-					"Id": 90210,
-					"ServiceId": 7700,
-					"ConcernedMonth": "2026-10",
-					"PayDate": "2026-09-28",
-					"Amount": 5200
+					"id": 90210,
+					"serviceId": 7700,
+					"concernedMonth": "2026-10",
+					"payDate": "2026-09-28",
+					"amount": 5200
 				},
 				{
-					"Id": 90211,
-					"ServiceId": 8800,
-					"ConcernedMonth": "2026-10",
-					"PayDate": "2026-09-28",
-					"Amount": 1000
+					"id": 90211,
+					"serviceId": 8800,
+					"concernedMonth": "2026-10",
+					"payDate": "2026-09-28",
+					"amount": 1000
 				},
 				{
-					"Id": 90212,
-					"ServiceId": 7700,
-					"ConcernedMonth": "2026-09",
-					"PayDate": "2026-08-28",
-					"Amount": 5100
+					"id": 90212,
+					"serviceId": 7700,
+					"concernedMonth": "2026-09",
+					"payDate": "2026-08-28",
+					"amount": 5100
 				}
 			]
 		},
