@@ -1,0 +1,34 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/exchange",
+		"bodyPatterns": [
+			{
+				"matchesJsonPath": "$[?(@.method == 'POST')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.path == 'RenderPdf/PrintDecision')]"
+			},
+			{
+				"matchesJsonPath": "$.params[?(@.decisionId == '815')]"
+			},
+			{
+				"matchesJsonPath": "$.form[?(@.name == 'X-LEGACY-TOKEN' && @.value == 'legacy-token')]"
+			},
+			{
+				"matchesJsonPath": "$.form[?(@.name == '51_0_2_1' && @.value == 'true')]"
+			}
+		]
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"status": 200,
+			"contentType": "application/pdf",
+			"body": "JVBERi0xLjQgYmVzbHV0IDgxNSAlJUVPRg=="
+		},
+		"status": 200
+	}
+}

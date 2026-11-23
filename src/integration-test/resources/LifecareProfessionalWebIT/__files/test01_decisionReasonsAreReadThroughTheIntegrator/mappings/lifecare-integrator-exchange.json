@@ -1,0 +1,28 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/exchange",
+		"bodyPatterns": [
+			{
+				"matchesJsonPath": "$[?(@.method == 'GET')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.path == 'api2/Decision/GetMappedDecisionReasons')]"
+			},
+			{
+				"matchesJsonPath": "$.params[?(@.id == '153')]"
+			}
+		]
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"status": 200,
+			"contentType": "application/json",
+			"body": "W3sibmFtZSI6IkFyYmV0YXIgZGVsdGlkLCBvZnJpdmlsbGlndCIsIm9wdGlvbnMiOlt7InJlYXNvbkNvZGUiOjE5LCJuYW1lIjoiQXJiZXRhciBkZWx0aWQgb2ZyaXZpbGxpZ3QsIG90aWxscsOkY2tsaWcgaW5rb21zdCJ9XX1d"
+		},
+		"status": 200
+	}
+}
