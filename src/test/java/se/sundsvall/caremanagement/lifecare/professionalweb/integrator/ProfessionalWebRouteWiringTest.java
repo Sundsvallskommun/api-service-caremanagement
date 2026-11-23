@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * ProfessionalWeb is only reached through lifecare-integrator's exchange: the junit profile sets none of the direct
  * route's settings (url, domain, federation-profile, username, password), and no property selects a route.
  */
-class IntegratorProviderWiringTest {
+class ProfessionalWebRouteWiringTest {
 
 	private static final String[] DIRECT_ROUTE_SETTINGS = {
 		"provider", "url", "domain", "federation-profile", "username", "password"

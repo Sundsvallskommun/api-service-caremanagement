@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 
@@ -56,6 +58,11 @@ class ProfessionalWebClientThroughIntegratorTest {
 	@BeforeEach
 	void setUp() {
 		client = new ProfessionalWebClient(new IntegratorProfessionalWebTransport(integratorClient));
+	}
+
+	@AfterEach
+	void verifyNoFurtherExchanges() {
+		verifyNoMoreInteractions(integratorClient);
 	}
 
 	@Test
@@ -126,6 +133,7 @@ class ProfessionalWebClientThroughIntegratorTest {
 				assertThat(problem.getStatus().value()).isEqualTo(422);
 				assertThat(problem.getDetail()).isEqualTo("Datum i framtiden");
 			});
+		verify(integratorClient).exchange(eq(MUNICIPALITY_ID), any());
 	}
 
 	@Test
@@ -135,6 +143,7 @@ class ProfessionalWebClientThroughIntegratorTest {
 		assertThatThrownBy(() -> client.get("api2/Thing/Get", Map.of()))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY))
 			.hasMessageContaining("not JSON");
+		verify(integratorClient).exchange(eq(MUNICIPALITY_ID), any());
 	}
 
 	@Test
@@ -144,6 +153,7 @@ class ProfessionalWebClientThroughIntegratorTest {
 		assertThatThrownBy(() -> client.get("api2/Thing/Get", Map.of()))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY))
 			.hasMessageContaining("without Lifecare's answer");
+		verify(integratorClient).exchange(eq(MUNICIPALITY_ID), any());
 	}
 
 	@Test
@@ -151,6 +161,7 @@ class ProfessionalWebClientThroughIntegratorTest {
 		when(integratorClient.exchange(eq(MUNICIPALITY_ID), any())).thenReturn(answer(200, "application/pdf", "%PDF-1.7 x"));
 
 		assertThat(client.getPdf("RenderPdf/Print", Map.of("id", "1"))).isEqualTo("%PDF-1.7 x".getBytes(StandardCharsets.UTF_8));
+		verify(integratorClient).exchange(eq(MUNICIPALITY_ID), any());
 	}
 
 	@Test
@@ -158,6 +169,7 @@ class ProfessionalWebClientThroughIntegratorTest {
 		when(integratorClient.exchange(eq(MUNICIPALITY_ID), any())).thenReturn(answer(200, "application/json", "{}"));
 
 		assertThatThrownBy(() -> client.getPdf("RenderPdf/Print", Map.of())).hasMessageContaining("did not answer with a PDF");
+		verify(integratorClient).exchange(eq(MUNICIPALITY_ID), any());
 	}
 
 	@Test
@@ -197,6 +209,7 @@ class ProfessionalWebClientThroughIntegratorTest {
 
 		assertThatThrownBy(() -> client.getPdf("RenderPdf/PrintDecision", printParams()))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getDetail()).isEqualTo("Ogiltig parameter"));
+		verify(integratorClient, times(2)).exchange(eq(MUNICIPALITY_ID), any());
 	}
 
 	private static ProfessionalWebExchangeResponse answer(final int status, final String contentType, final String body) {
