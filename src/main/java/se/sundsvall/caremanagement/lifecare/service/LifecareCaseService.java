@@ -199,7 +199,6 @@ public class LifecareCaseService {
 		return new LifecareRoster(partyId, coApplicant, members);
 	}
 
-
 	/**
 	 * The distinct FamilyCare income-type names on the person's most recent calculation strictly before {@code
 	 * applicationMonth} — the baseline for the financial assistance "all last month's values present" completeness
