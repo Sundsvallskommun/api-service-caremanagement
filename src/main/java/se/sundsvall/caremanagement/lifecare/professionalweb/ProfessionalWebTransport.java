@@ -7,15 +7,12 @@ import java.util.Map;
  * How a ProfessionalWeb call reaches Lifecare.
  *
  * <p>
- * Chosen by {@code integration.lifecare-professionalweb.provider}: {@code direct} signs careM in and talks to Lifecare
- * itself, which only works from inside the municipal network; {@code integrator} hands the call to
- * api-service-lifecare-integrator, which does the same from inside it. Either way the answer is Lifecare's final one
- * after any session escalation, whatever its status; interpreting it is the client's job.
+ * The call is handed to api-service-lifecare-integrator, which holds the integration account's session inside the
+ * municipal network. The answer is Lifecare's final one after any session escalation, whatever its status;
+ * interpreting it is the client's job.
  * </p>
  */
 public interface ProfessionalWebTransport {
-
-	String PROVIDER_PROPERTY = "integration.lifecare-professionalweb.provider";
 
 	/**
 	 * Makes one call.

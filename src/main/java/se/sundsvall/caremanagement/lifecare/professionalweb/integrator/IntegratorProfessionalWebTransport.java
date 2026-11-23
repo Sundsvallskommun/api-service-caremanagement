@@ -6,7 +6,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebFormField;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebResponse;
@@ -22,7 +21,6 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
  * side only packs the call and unpacks Lifecare's answer.
  */
 @Component
-@ConditionalOnProperty(name = ProfessionalWebTransport.PROVIDER_PROPERTY, havingValue = "integrator")
 class IntegratorProfessionalWebTransport implements ProfessionalWebTransport {
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();

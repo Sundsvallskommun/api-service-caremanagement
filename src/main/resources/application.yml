@@ -123,18 +123,9 @@ integration:
     # direct: careM signs in and talks to Lifecare itself (inside the municipal network only). integrator: through
     # api-service-lifecare-integrator's POST /{municipalityId}/professional-web/exchange, using the lifecare-integrator
     # url and OAuth2 registration above; the integrator then holds the account and the url/credentials below are unused.
-    provider: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_PROVIDER:direct}
-    url: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_URL:}
-    domain: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_DOMAIN:}
-    federation-profile: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_FEDERATION_PROFILE:}
-    username: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_USERNAME:}
-    password: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_PASSWORD:}
     # Test environments only: the decision maker to put on every decision while the caseworkers are not yet in
     # Lifecare's list of decision makers. Unset means the signed-in caseworker (X-Sent-By).
     test-decision-maker: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_TEST_DECISION_MAKER:}
-    session-ttl: 20m
-    connect-timeout: 5
-    read-timeout: 30
   # financial-aid (SSBTEK proxy). OAuth2 client-credentials via the financial-aid Spring security registration above.
   financial-aid:
     url: ${INTEGRATION_FINANCIAL_AID_URL}
