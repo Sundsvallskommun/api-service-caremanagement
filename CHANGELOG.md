@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-23
 
+- Keep household members without a partyId in the Lifecare roster, previous family and previous household, and mark the household incomplete.
 - Reach Lifecare FamilyCare and ProfessionalWeb only through lifecare-integrator, and drop the direct route with its settings.
 - Add docs/ with architecture, data model and integration notes, AGENTS.md and CHANGELOG.md.
 

@@ -15,8 +15,8 @@ import java.util.Set;
  * <p>
  * {@code partyIds} are compared against the errand's own members, which careM holds by party id.
  * {@code partyIdsComplete} is {@code false} when the set is short of a member it cannot name, so a caller comparing
- * households member by member has to skip rather than report the difference as a real one. {@code memberCount} is the
- * previous calculation's own member count.
+ * households member by member has to skip rather than report the difference as a real one. {@code memberCount} counts
+ * every member on the previous calculation, also one without a party id.
  */
 public record PreviousHousehold(
 	Set<String> partyIds,

@@ -15,7 +15,8 @@ import java.util.List;
  * @param coApplicant the co-applicant from the latest decision, or {@code null} when applying alone. A partyId when
  *                    the decision flagged a person; FamilyCare's own free-text co-applicant field otherwise, which is
  *                    not an identity at all — compare it against a party id only as a best effort.
- * @param members     every person on the latest calculation (partyId + name), applicant and co-applicant included
+ * @param members     every person on the latest calculation (partyId + name), applicant and co-applicant included; a
+ *                    person lifecare-integrator could not resolve keeps the name with a {@code null} partyId
  */
 public record LifecareRoster(String applicant, String coApplicant, List<Member> members) {
 

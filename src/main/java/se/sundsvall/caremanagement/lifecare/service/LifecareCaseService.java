@@ -186,7 +186,6 @@ public class LifecareCaseService {
 		final var members = latestCalculation(calculations)
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
 			.orElseGet(List::of).stream()
-			.filter(person -> hasText(person.getPersonId()))
 			.map(person -> new LifecareRoster.Member(person.getPersonId(), person.getName()))
 			.toList();
 
@@ -305,14 +304,14 @@ public class LifecareCaseService {
 	 */
 	public PreviousHousehold previousHousehold(final String municipalityId, final String partyId, final YearMonth applicationMonth) {
 		final var latest = latestCalculationBefore(municipalityId, partyId, applicationMonth);
-		final var identities = latest
+		final var persons = latest
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
-			.orElseGet(List::of).stream()
+			.orElseGet(List::of);
+		final var partyIds = persons.stream()
 			.map(PersonBasedCalculationPersonDTO::getPersonId)
 			.filter(StringUtils::hasText)
-			.distinct()
-			.toList();
-		final var partyIds = identities.stream().collect(toSet());
+			.collect(toSet());
+		final var partyIdsComplete = persons.stream().allMatch(person -> hasText(person.getPersonId()));
 		final var normSum = toAmount(latest.map(PersonBasedCalculationDTO::getNormSum).orElse(null));
 		final var housingCost = latest
 			.map(PersonBasedCalculationDTO::getCalculationExpensesDTOs)
@@ -323,7 +322,7 @@ public class LifecareCaseService {
 			.reduce(BigDecimal::add)
 			.orElse(null);
 
-		return new PreviousHousehold(partyIds, partyIds.size() == identities.size(), identities.size(), normSum, housingCost,
+		return new PreviousHousehold(partyIds, partyIdsComplete, persons.size(), normSum, housingCost,
 			latest.map(PersonBasedCalculationDTO::getNorm).orElse(null));
 	}
 
@@ -342,7 +341,6 @@ public class LifecareCaseService {
 		final var members = latest
 			.map(PersonBasedCalculationDTO::getCalculationPersonDTOs)
 			.orElseGet(List::of).stream()
-			.filter(person -> hasText(person.getPersonId()))
 			.map(person -> new PreviousFamily.Member(person.getPersonId(), person.getName(),
 				toDate(person.getDeviationFromDate()), toDate(person.getDeviationToDate())))
 			.toList();

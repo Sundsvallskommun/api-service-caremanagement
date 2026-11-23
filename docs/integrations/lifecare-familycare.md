@@ -45,7 +45,9 @@ careM holds no FamilyCare key. It authenticates to the integrator, which holds F
 ## Behaviour worth knowing
 
 - **Arguments and responses carry partyIds.** No personnummer crosses the contract in either direction, so
-  `LifecareCaseService` passes the party ids in a response on without a citizen lookup.
+  `LifecareCaseService` passes the party ids in a response on without a citizen lookup. A person the integrator cannot
+  resolve comes back with a `null` partyId. `LifecareCaseService` keeps that person and marks the previous household
+  and family as incomplete.
 - **Every failure becomes 502.** `LifecareIntegratorIntegration.call` wraps anything thrown in a `BAD_GATEWAY` problem
   that names the action and the upstream status. For a failure that is not already a problem only the exception class
   is kept, since a transport error carries the request URL with the partyId.

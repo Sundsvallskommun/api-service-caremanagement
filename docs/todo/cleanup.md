@@ -46,12 +46,3 @@ Done when they are removed, or a caller uses them.
 describes no real configuration. `AGENTS.md` sends configuration changes there.
 
 Done when the README names the service, its dependencies and the environment variables `application.yml` requires.
-
-## Household completeness flags that cannot be false
-
-`lifecare/service/model/PreviousHousehold.java` has `partyIdsComplete` and `lifecare/service/model/PreviousFamily.java`
-has `complete`. Both meant that a member's personnummer could not be resolved to a partyId. Lifecare now answers with
-party ids and `LifecareCaseService` drops members without one, so both are always `true`, and the branches that check
-them in `types/financialassistance/service/ApplicationRuleFeeder.java` and `CalculationFeeder.java` never run.
-
-Done when the flags and the branches are removed, or something can make them false again.

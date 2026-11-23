@@ -258,10 +258,10 @@ class LifecareCaseServiceTest {
 	}
 
 	@Test
-	void latestRosterFiltersBlankPersonIdsAndFallsBackToScalarCoApplicant() {
+	void latestRosterKeepsAPersonWithoutAPartyIdByNameAndFallsBackToScalarCoApplicant() {
 		final var calc = new PersonBasedCalculationDTO().toDate("2026-06-30")
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID).name("Anna"))
-			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("  ").name("Blank"));
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(null).name("Kid"));
 
 		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().addResultItem(calc));
@@ -271,7 +271,9 @@ class LifecareCaseServiceTest {
 
 		final var roster = service().latestRoster(MUNICIPALITY_ID, APPLICANT_PARTY_ID, REFERENCE);
 
-		assertThat(roster.members()).extracting(LifecareRoster.Member::partyId).containsExactly(APPLICANT_PARTY_ID);
+		assertThat(roster.members()).containsExactly(
+			new LifecareRoster.Member(APPLICANT_PARTY_ID, "Anna"),
+			new LifecareRoster.Member(null, "Kid"));
 		// FamilyCare's own co-applicant field is free text, not an identity, so it is passed through as it came.
 		assertThat(roster.coApplicant()).isEqualTo("Bo Berg");
 	}
@@ -332,8 +334,7 @@ class LifecareCaseServiceTest {
 			.commonHouseholdCost(1234.0)
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID).name("NILSSON KARIN"))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID).name("NILSSON OLLE")
-				.deviationFromDate("2026-05-01T00:00:00").deviationToDate("2026-05-15"))
-			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(" ")); // blank filtered out
+				.deviationFromDate("2026-05-01T00:00:00").deviationToDate("2026-05-15"));
 		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
 
@@ -346,6 +347,22 @@ class LifecareCaseServiceTest {
 			new PreviousFamily.Member(CHILD_PARTY_ID, "NILSSON OLLE", LocalDate.of(2026, Month.MAY, 1), LocalDate.of(2026, Month.MAY, 15)));
 		assertThat(family.members().get(1).hasDeviation()).isTrue();
 		assertThat(family.members().getFirst().hasDeviation()).isFalse();
+	}
+
+	@Test
+	void previousFamilyKeepsAMemberWithoutAPartyIdAndIsIncomplete() {
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID).name("NILSSON KARIN"))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(null).name("NILSSON OLLE"));
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
+
+		final var family = service().previousFamily(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
+
+		assertThat(family.complete()).isFalse();
+		assertThat(family.members()).containsExactly(
+			new PreviousFamily.Member(APPLICANT_PARTY_ID, "NILSSON KARIN", null, null),
+			new PreviousFamily.Member(null, "NILSSON OLLE", null, null));
 	}
 
 	@Test
@@ -381,7 +398,6 @@ class LifecareCaseServiceTest {
 			.normSum(12345.0)
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID))
-			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId("  ")) // blank filtered out
 			// Lifecare's own catalogue names: "Boendekostnad" is the housing cost, "El 1" is not.
 			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Boendekostnad").approvedAmount(6000.0))
 			.addCalculationExpensesDTOsItem(new CommonCalculationExpenseDTO().type("Boendekostnad").appliedAmount(1500.0)) // approved null -> applied
@@ -402,6 +418,21 @@ class LifecareCaseServiceTest {
 		assertThat(household.norm()).isEqualTo("Riksnorm 2026");
 	}
 
+	@Test
+	void previousHouseholdCountsAMemberWithoutAPartyIdAndIsIncomplete() {
+		final var previous = new PersonBasedCalculationDTO().toDate("2026-05-31")
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID))
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(null));
+		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
+			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(previous)));
+
+		final var household = service().previousHousehold(MUNICIPALITY_ID, APPLICANT_PARTY_ID, YearMonth.of(2026, JUNE));
+
+		assertThat(household.partyIds()).containsExactly(APPLICANT_PARTY_ID);
+		assertThat(household.partyIdsComplete()).isFalse();
+		assertThat(household.memberCount()).isEqualTo(2);
+	}
+
 	/** Keyed by the party ids careM's own draft person rows carry, so the Belopp column matches each member. */
 	@Test
 	void previousPersonAmountsKeyedByPartyId() {
@@ -411,7 +442,7 @@ class LifecareCaseServiceTest {
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(APPLICANT_PARTY_ID).amount(1431.0))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CHILD_PARTY_ID).amount(2100.0))
 			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(CO_APPLICANT_PARTY_ID)) // no amount -> skipped
-			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(" ").amount(50.0)); // no party id -> skipped
+			.addCalculationPersonDTOsItem(new PersonBasedCalculationPersonDTO().personId(null).amount(50.0)); // no party id -> skipped
 		when(integrationMock.getCalculations(eq(MUNICIPALITY_ID), eq(APPLICANT_PARTY_ID), any(), any()))
 			.thenReturn(new ApiPaginationCompositePersonBasedCalculationDTO().result(List.of(older, previous)));
 
