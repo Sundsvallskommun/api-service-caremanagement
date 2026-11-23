@@ -13,9 +13,8 @@ Done when both say what they need in their own words and name no docs file.
 
 ## Comments that point at another repository
 
-`financialaid/integration/FinancialAidClient.java`, `financialaid/integration/FinancialAidIntegration.java`,
-`lifecare/integration/LifecareFamilyCareClient.java` and `lifecare/integration/LifecareFamilyCareIntegration.java`
-point at files in `vof-ekonomiskt-bistand`. `types/financialassistance/service/FinancialAssistanceSsbtekService.java`
+`financialaid/integration/FinancialAidClient.java` and `financialaid/integration/FinancialAidIntegration.java` point
+at files in `vof-ekonomiskt-bistand`. `types/financialassistance/service/FinancialAssistanceSsbtekService.java`
 points at `docs/ssbtek-regelverk.txt in the sprint workspace`. A reader of this repo may not be able to open them.
 
 Done when each comment states the fact it relies on, or the fact moves into `docs/`.
@@ -25,8 +24,6 @@ Done when each comment states the fact it relies on, or the fact moves into `doc
 - `lifecare/integration/integrator/configuration/LifecareIntegratorProperties.java` calls its read timeout "more
   generous than the five-second default used elsewhere". The other read timeouts are 30 s, the record defaults to
   60 s and `application.yml` sets 90 s.
-- `types/financialassistance/service/lifecare/LifecarePaymentRegistrationService.java` says Payment/Create "is never
-  retried". `DirectProfessionalWebTransport` sends it again after a session refusal (360).
 - `core/integration/db/model/ErrandEntity.java` says each module has "a plain `errand_id` FK". `stakeholder`,
   `decision`, `attachment`, `permit`, `referral` and `errand_event` have an index on `errand_id` but no foreign key.
 - `operaton/package-info.java` says type modules "terminate a BPMN flow" through it. There is no terminate call; a
@@ -38,9 +35,8 @@ Done when each comment says what the code does.
 
 ## Unused client operations
 
-`operaton/integration/OperatonClient.java` has `getProcessInstance` and `modifyProcessInstanceVariables`, and
-`lifecare/integration/LifecareFamilyCare.java` has `getContacts`, `getInvestigations`, `getExecutions` and
-`getResourceAllocations`. Nothing in `src/main` calls them. On the integrator route the last three answer 501.
+`operaton/integration/OperatonClient.java` has `getProcessInstance` and `modifyProcessInstanceVariables`. Nothing in
+`src/main` calls them.
 
 Done when they are removed, or a caller uses them.
 

@@ -9,7 +9,7 @@ Other modules call it through `CitizenService`. See [architecture.md](../archite
 
 | Method | Callers |
 |---|---|
-| `getPersonalNumber` (partyId → personnummer) | `LifecareFamilyCareIntegration`, `FinancialAssistanceCalculationService`, `FinancialAssistanceSsbtekService`, `HouseholdIdentifiersService`, `LifecareErrandService`, `NormberakningDraftReader` |
+| `getPersonalNumber` (partyId → personnummer) | `FinancialAssistanceCalculationService`, `FinancialAssistanceSsbtekService`, `HouseholdIdentifiersService`, `LifecareErrandService`, `NormberakningDraftReader` |
 | `getPartyId` (personnummer → partyId) | `LifecareCaseService` |
 | `hasProtectedIdentity` | `EligibilityService`, `ProtectedIdentityGate` |
 

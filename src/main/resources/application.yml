@@ -66,8 +66,6 @@ spring:
             client-secret: ${INTEGRATION_FINANCIAL_AID_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             provider: financial-aid
-          # The opt-in integration below keeps placeholder credentials, so a deploy that does not use it needs no
-          # secrets for it: lifecare-integrator only wakes up when integration.lifecare-familycare.provider=integrator.
           lifecare-integrator:
             client-id: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_ID}
             client-secret: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_SECRET}
@@ -102,9 +100,8 @@ integration:
   operaton:
     connect-timeout: 5
     read-timeout: 30
-  # lifecare-integrator — the route to FamilyCare that works from outside the municipal network. Only used when
-  # integration.lifecare-familycare.provider=integrator; the credentials carry placeholders so a deploy on the direct
-  # route needs none of them.
+  # lifecare-integrator, careM's only way to Lifecare: FamilyCare reads and writes, and the ProfessionalWeb exchange.
+  # OAuth2 client credentials via the lifecare-integrator Spring security registration above.
   # read-timeout 90: an attachment upload onto a Lifecare actualisation measured 41.5 s against the live API on
   # 2026-09-23, and the integrator's own read timeout to FamilyCare is raised to 90 to match. The two are equal rather
   # than staggered, so a FamilyCare call that runs the full 90 s may be cut here first; raise this above the
@@ -114,15 +111,11 @@ integration:
     url: ${INTEGRATION_LIFECARE_INTEGRATOR_URL}
     connect-timeout: 5
     read-timeout: 90
-  # Lifecare ProfessionalWeb — the internal api2 surface Lifecare's own web client uses (normberäkning editing, decisions,
-  # payments, payees, reminders, journal notes, documents, job stimulus). Reached with a signed-in session of an
-  # integration account (SAML via MobilityGuard), not an API key. url is the Lifecare host without a module path; leave it
-  # unset and every ProfessionalWeb call answers 502 instead of the application failing to start. username/password are
-  # secrets: environment only. Only reachable from a network that resolves the internal Lifecare host.
+  # Lifecare ProfessionalWeb, the internal api2 endpoints Lifecare's own web client uses (normberäkning editing,
+  # decisions, payments, payees, reminders, journal notes, documents, job stimulus). Every call goes through
+  # lifecare-integrator's POST /{municipalityId}/professional-web/exchange, and the integrator holds the integration
+  # account. The print template ids default in ProfessionalWebProperties.
   lifecare-professionalweb:
-    # direct: careM signs in and talks to Lifecare itself (inside the municipal network only). integrator: through
-    # api-service-lifecare-integrator's POST /{municipalityId}/professional-web/exchange, using the lifecare-integrator
-    # url and OAuth2 registration above; the integrator then holds the account and the url/credentials below are unused.
     # Test environments only: the decision maker to put on every decision while the caseworkers are not yet in
     # Lifecare's list of decision makers. Unset means the signed-in caseworker (X-Sent-By).
     test-decision-maker: ${INTEGRATION_LIFECARE_PROFESSIONALWEB_TEST_DECISION_MAKER:}
@@ -143,9 +136,8 @@ integration:
     url: ${INTEGRATION_CITIZEN_URL}
     connect-timeout: 5
     read-timeout: 30
-  # Lifecare FamilyCare — financial assistance write-back (actualisation + calculation) + proposal lookups. Auth is domain + key
-  # (query params / X-API-Key header); url is the FamilyCare base path (host + /WESE.FC.Api.FC). The key is sensitive — inject
-  # via secret and keep it out of request logging.
+  # Lifecare FamilyCare, read and written through lifecare-integrator. What is left here is how far back careM reads and
+  # how it reads the answers. caseworker-lookback-months (36) and users-limit (1000) default in CaseworkerResolver.
   lifecare-familycare:
     # Lookback (months, ending at the reference date) for the financial assistance eligibility reads — actualisations, decisions, calculations.
     lookback-months: 13

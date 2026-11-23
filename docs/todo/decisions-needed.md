@@ -18,7 +18,7 @@ Done when it is configuration, or an ADR records why it stays in code.
 
 ## Circuit breaker settings for the Lifecare clients
 
-`application.yml` configures a circuit breaker only for `operaton`. The `lifecare-familycare`, `lifecare-integrator`
+`application.yml` configures a circuit breaker only for `operaton`. The `lifecare-integrator`
 and `lifecare-integrator-professionalweb` breakers run on whatever dept44 gives them by default. Not checked what that
 is.
 
