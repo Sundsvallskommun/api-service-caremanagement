@@ -69,8 +69,8 @@ spring:
           # The opt-in integration below keeps placeholder credentials, so a deploy that does not use it needs no
           # secrets for it: lifecare-integrator only wakes up when integration.lifecare-familycare.provider=integrator.
           lifecare-integrator:
-            client-id: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_ID:placeholder}
-            client-secret: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_SECRET:placeholder}
+            client-id: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_ID}
+            client-secret: ${INTEGRATION_LIFECARE_INTEGRATOR_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             provider: lifecare-integrator
         provider:
@@ -83,7 +83,7 @@ spring:
           financial-aid:
             token-uri: ${INTEGRATION_FINANCIAL_AID_TOKEN_URI}
           lifecare-integrator:
-            token-uri: ${INTEGRATION_LIFECARE_INTEGRATOR_TOKEN_URI:http://localhost/token}
+            token-uri: ${INTEGRATION_LIFECARE_INTEGRATOR_TOKEN_URI}
 #========================================
 # Circuit breakers
 #========================================
@@ -111,7 +111,7 @@ integration:
   # integrator's if that shows up. A cut here is not free — the timeout throws past the error decoder, so the failure
   # arrives without Lifecare's explanation.
   lifecare-integrator:
-    url: ${INTEGRATION_LIFECARE_INTEGRATOR_URL:http://localhost/lifecare-integrator}
+    url: ${INTEGRATION_LIFECARE_INTEGRATOR_URL}
     connect-timeout: 5
     read-timeout: 90
   # Lifecare ProfessionalWeb — the internal api2 surface Lifecare's own web client uses (normberäkning editing, decisions,

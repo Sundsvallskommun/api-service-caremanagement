@@ -32,10 +32,8 @@ integration:
     url: http://localhost:${wiremock.server.port:}/api-templating
   citizen:
     url: http://localhost:${wiremock.server.port:}/api-citizen
-  lifecare-familycare:
-    url: http://localhost:${wiremock.server.port:}/api-lifecare-familycare
-    domain: it-domain
-    key: it-key
+  lifecare-integrator:
+    url: http://localhost:${wiremock.server.port:}/api-lifecare-integrator
 spring:
   datasource:
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
@@ -63,6 +61,8 @@ spring:
             token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
           financial-aid:
             token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
+          lifecare-integrator:
+            token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
         registration:
           operaton:
             client-id: the-client-id
@@ -77,5 +77,8 @@ spring:
             client-id: the-client-id
             client-secret: the-client-secret
           financial-aid:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          lifecare-integrator:
             client-id: the-client-id
             client-secret: the-client-secret

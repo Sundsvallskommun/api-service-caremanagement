@@ -12,6 +12,8 @@ logging:
   level:
     root: INFO
 integration:
+  lifecare-integrator:
+    url: http://lifecareintegrator.url
   operaton:
     url: http://operaton.url
   financial-aid:
@@ -73,6 +75,8 @@ spring:
             token-uri: http://token.url
           financial-aid:
             token-uri: http://token.url
+          lifecare-integrator:
+            token-uri: http://token.url
         registration:
           operaton:
             client-id: the-client-id
@@ -87,5 +91,8 @@ spring:
             client-id: the-client-id
             client-secret: the-client-secret
           financial-aid:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          lifecare-integrator:
             client-id: the-client-id
             client-secret: the-client-secret
