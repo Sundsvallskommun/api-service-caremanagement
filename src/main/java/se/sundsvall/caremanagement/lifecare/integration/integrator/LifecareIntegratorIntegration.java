@@ -4,14 +4,10 @@ import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBas
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDocumentDTO;
-import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedExecutionDTO;
-import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedInvestigationDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedPaymentDTO;
-import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedResourceAllocationDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
-import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
@@ -33,24 +29,17 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.NOT_IMPLEMENTED;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 /**
  * Serves the FamilyCare surface through {@code api-service-lifecare-integrator} instead of calling FamilyCare
- * directly. Selected with {@code integration.lifecare-familycare.provider=integrator}; the direct client remains the
- * default.
+ * directly. It is the only implementation.
  *
  * <p>
  * This is the route that works from outside the municipal network — see {@link LifecareFamilyCare} for why the direct
  * one does not. The integrator is keyed on {@code partyId}, which is what this interface takes, so arguments pass
  * straight through; only the responses are translated, mapped back into FamilyCare's DTOs so nothing downstream has
  * to change.
- *
- * <p>
- * Operations that are not translated yet fail loudly with {@code NOT_IMPLEMENTED} rather than returning an empty
- * result. An empty calculation list is indistinguishable from "this person has no calculations", and quietly answering
- * that would put a wrong normberäkning in front of a handläggare.
  */
 @Component
 public class LifecareIntegratorIntegration implements LifecareFamilyCare {
@@ -61,7 +50,6 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 	 * {@code No person number found} when Party cannot resolve the partyId, and that must stay a failure.
 	 */
 	static final String PERSON_NOT_FOUND = "No person found for partyId";
-	private static final String NOT_PORTED = "Operation '%s' is not available through the lifecare-integrator route yet";
 	private static final String MISSING_FIELDS = "The assembled %s is missing required field(s): %s";
 
 	private final LifecareIntegratorClient client;
@@ -139,11 +127,6 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 		}
 	}
 
-	@Override
-	public List<PersonBasedContactDTO> getContacts(final String municipalityId, final String partyId) {
-		return call("fetching contacts", () -> IntegratorCaseMapper.toContacts(client.getContacts(municipalityId, partyId)));
-	}
-
 	/** The caseworker directory is the one read that is not person-scoped, so there is no party id to resolve. */
 	@Override
 	public List<User> getUsers(final String municipalityId, final Integer limit, final Integer offset, final String modifiedAfter, final String modifiedBefore) {
@@ -204,27 +187,6 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 		});
 	}
 
-	// ---- Not translated ----------------------------------------------------------------------------------------------
-	//
-	// Investigations, executions and resource allocations sit on the interface but are called from nowhere in careM,
-	// so they are left alone rather than translated on spec. Everything careM actually calls is ported.
-
-	@Override
-	public ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
-		throw notPorted("getInvestigations");
-	}
-
-	@Override
-	public ApiPaginationCompositePersonBasedExecutionDTO getExecutions(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
-		throw notPorted("getExecutions");
-	}
-
-	@Override
-	public ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(final String municipalityId, final String partyId, final LocalDate startDate, final LocalDate endDate) {
-		throw notPorted("getResourceAllocations");
-	}
-
-	// ---- Plumbing --------------------------------------------------------------------------------------------------
 
 	/** One field the integrator declares non-nullable, paired with whatever the assembled request actually holds. */
 	private record RequiredField(String name, Object value) {}
@@ -246,10 +208,6 @@ public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 
 	private static Integer createdId(final CreatedResource created) {
 		return ofNullable(created).map(CreatedResource::getId).orElse(null);
-	}
-
-	private static ThrowableProblem notPorted(final String operation) {
-		return Problem.valueOf(NOT_IMPLEMENTED, NOT_PORTED.formatted(operation));
 	}
 
 	/**

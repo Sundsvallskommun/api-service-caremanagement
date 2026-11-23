@@ -4,14 +4,10 @@ import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBas
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedCalculationDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDocumentDTO;
-import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedExecutionDTO;
-import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedInvestigationDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedPaymentDTO;
-import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedResourceAllocationDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringProposalDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
-import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PostAktualiseringsBodyRequest;
 import generated.se.sundsvall.lifecarefamilycare.PostCalculationBodyRequest;
@@ -81,8 +77,6 @@ public interface LifecareFamilyCare {
 	 */
 	PersonBasedPersonDTO getPerson(String municipalityId, String partyId);
 
-	List<PersonBasedContactDTO> getContacts(String municipalityId, String partyId);
-
 	ApiPaginationCompositePersonBasedAktualiseringDTO getActualisations(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
 	ApiPaginationCompositePersonBasedCalculationDTO getCalculations(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
@@ -91,13 +85,7 @@ public interface LifecareFamilyCare {
 
 	ApiPaginationCompositePersonBasedPaymentDTO getPayments(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
-	ApiPaginationCompositePersonBasedInvestigationDTO getInvestigations(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
-
 	ApiPaginationCompositePersonBasedServiceDTO getServices(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
-
-	ApiPaginationCompositePersonBasedExecutionDTO getExecutions(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
-
-	ApiPaginationCompositePersonBasedResourceAllocationDTO getResourceAllocations(String municipalityId, String partyId, LocalDate startDate, LocalDate endDate);
 
 	List<User> getUsers(String municipalityId, Integer limit, Integer offset, String modifiedAfter, String modifiedBefore);
 

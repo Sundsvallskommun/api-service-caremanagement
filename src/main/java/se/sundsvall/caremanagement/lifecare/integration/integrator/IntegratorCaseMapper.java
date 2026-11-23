@@ -5,9 +5,7 @@ import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBas
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedDocumentDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedPaymentDTO;
 import generated.se.sundsvall.lifecarefamilycare.ApiPaginationCompositePersonBasedServiceDTO;
-import generated.se.sundsvall.lifecarefamilycare.PersonBasedAddressDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
-import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDocumentDTO;
@@ -18,10 +16,8 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedServicePersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.User;
 import generated.se.sundsvall.lifecareintegrator.Actualisation;
-import generated.se.sundsvall.lifecareintegrator.Address;
 import generated.se.sundsvall.lifecareintegrator.CaseService;
 import generated.se.sundsvall.lifecareintegrator.Caseworker;
-import generated.se.sundsvall.lifecareintegrator.Contact;
 import generated.se.sundsvall.lifecareintegrator.Decision;
 import generated.se.sundsvall.lifecareintegrator.DecisionsResponse;
 import generated.se.sundsvall.lifecareintegrator.DocumentMetadata;
@@ -274,28 +270,6 @@ final class IntegratorCaseMapper {
 				.addressProtection(source.getAddressProtection())
 				.secretPhone(source.getSecretPhone())
 				.protectedRegistration(source.getProtectedRegistration()))
-			.orElse(null);
-	}
-
-	static List<PersonBasedContactDTO> toContacts(final List<Contact> contacts) {
-		return mapEach(contacts, contact -> new PersonBasedContactDTO()
-			.id(contact.getId())
-			.name(contact.getName())
-			.employmentTitle(contact.getEmploymentTitle())
-			.organizationName(contact.getOrganizationName())
-			.phone(contact.getPhone())
-			.email(contact.getEmail())
-			.typeOfContact(contact.getTypeOfContact())
-			.address(toAddress(contact.getAddress())));
-	}
-
-	private static PersonBasedAddressDTO toAddress(final Address address) {
-		return ofNullable(address)
-			.map(source -> new PersonBasedAddressDTO()
-				.visitingAddress(source.getVisitingAddress())
-				.streetAddress(source.getStreetAddress())
-				.postalCode(source.getPostalCode())
-				.postalAddress(source.getPostalAddress()))
 			.orElse(null);
 	}
 

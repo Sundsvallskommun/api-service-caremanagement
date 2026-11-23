@@ -6,10 +6,8 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedPaymentPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedServicePersonDTO;
 import generated.se.sundsvall.lifecareintegrator.Actualisation;
-import generated.se.sundsvall.lifecareintegrator.Address;
 import generated.se.sundsvall.lifecareintegrator.CaseService;
 import generated.se.sundsvall.lifecareintegrator.Caseworker;
-import generated.se.sundsvall.lifecareintegrator.Contact;
 import generated.se.sundsvall.lifecareintegrator.Decision;
 import generated.se.sundsvall.lifecareintegrator.DecisionsResponse;
 import generated.se.sundsvall.lifecareintegrator.DocumentMetadata;
@@ -376,43 +374,6 @@ class IntegratorCaseMapperTest {
 	@Test
 	void noPersonMapsToNull() {
 		assertThat(IntegratorCaseMapper.toPerson(null, PARTY_ID)).isNull();
-	}
-
-	@Test
-	void contactsAreMappedIncludingTheAddress() {
-		final var contacts = List.of(
-			new Contact()
-				.id("c-1")
-				.name("Anna Andersson")
-				.employmentTitle("Socialsekreterare")
-				.organizationName("IFO")
-				.phone("060-111111")
-				.email("anna@example.com")
-				.typeOfContact("Handläggare")
-				.address(new Address().visitingAddress("Norrmalmsgatan 4").streetAddress("Box 10").postalCode("85185").postalAddress("Sundsvall")),
-			new Contact().id("c-2").name("Bertil Bertilsson"));
-
-		assertThat(IntegratorCaseMapper.toContacts(contacts)).satisfiesExactly(
-			first -> {
-				assertThat(first.getId()).isEqualTo("c-1");
-				assertThat(first.getName()).isEqualTo("Anna Andersson");
-				assertThat(first.getEmploymentTitle()).isEqualTo("Socialsekreterare");
-				assertThat(first.getOrganizationName()).isEqualTo("IFO");
-				assertThat(first.getPhone()).isEqualTo("060-111111");
-				assertThat(first.getEmail()).isEqualTo("anna@example.com");
-				assertThat(first.getTypeOfContact()).isEqualTo("Handläggare");
-				assertThat(first.getAddress()).isNotNull();
-				assertThat(first.getAddress().getVisitingAddress()).isEqualTo("Norrmalmsgatan 4");
-				assertThat(first.getAddress().getStreetAddress()).isEqualTo("Box 10");
-				assertThat(first.getAddress().getPostalCode()).isEqualTo("85185");
-				assertThat(first.getAddress().getPostalAddress()).isEqualTo("Sundsvall");
-			},
-			second -> assertThat(second.getAddress()).isNull());
-	}
-
-	@Test
-	void noContactsMapToAnEmptyList() {
-		assertThat(IntegratorCaseMapper.toContacts(null)).isEmpty();
 	}
 
 	@Test

@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.lifecare.integration.integrator;
 import generated.se.sundsvall.lifecareintegrator.ActualisationProposal;
 import generated.se.sundsvall.lifecareintegrator.CalculationProposal;
 import generated.se.sundsvall.lifecareintegrator.Caseworker;
-import generated.se.sundsvall.lifecareintegrator.Contact;
 import generated.se.sundsvall.lifecareintegrator.CreateActualisationRequest;
 import generated.se.sundsvall.lifecareintegrator.CreateCalculationRequest;
 import generated.se.sundsvall.lifecareintegrator.CreatedResource;
@@ -42,9 +41,7 @@ import static se.sundsvall.caremanagement.lifecare.integration.integrator.config
  * FamilyCare's RFC 3339 timestamps, so no date rendering is needed on this side.
  *
  * <p>
- * Only the operations the financial assistance flow actually uses are declared. FamilyCare's investigations,
- * executions and resource allocations are on the direct client but called from nowhere, so they are left out rather
- * than carried along.
+ * Only the operations the financial assistance flow actually uses are declared.
  */
 @FeignClient(name = CLIENT_ID, url = "${integration.lifecare-integrator.url}", configuration = se.sundsvall.caremanagement.lifecare.integration.integrator.configuration.LifecareIntegratorConfiguration.class)
 @CircuitBreaker(name = CLIENT_ID)
@@ -97,9 +94,6 @@ public interface LifecareIntegratorClient {
 		@RequestParam final String partyId,
 		@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
 		@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to);
-
-	@GetMapping(path = "/{municipalityId}/contacts", produces = APPLICATION_JSON_VALUE)
-	List<Contact> getContacts(@PathVariable final String municipalityId, @RequestParam final String partyId);
 
 	/** The only read that is not person-scoped: the caseworker directory, used to resolve a name to a user id. */
 	@GetMapping(path = "/{municipalityId}/users", produces = APPLICATION_JSON_VALUE)

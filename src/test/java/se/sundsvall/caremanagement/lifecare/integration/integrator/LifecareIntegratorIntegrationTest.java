@@ -2,7 +2,6 @@ package se.sundsvall.caremanagement.lifecare.integration.integrator;
 
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedAktualiseringsOrganizationDTO;
-import generated.se.sundsvall.lifecarefamilycare.PersonBasedContactDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedDecisionDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedPersonDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedServiceDTO;
@@ -18,7 +17,6 @@ import generated.se.sundsvall.lifecareintegrator.CalculationPerson;
 import generated.se.sundsvall.lifecareintegrator.CalculationProposal;
 import generated.se.sundsvall.lifecareintegrator.CaseService;
 import generated.se.sundsvall.lifecareintegrator.Caseworker;
-import generated.se.sundsvall.lifecareintegrator.Contact;
 import generated.se.sundsvall.lifecareintegrator.CreateActualisationRequest;
 import generated.se.sundsvall.lifecareintegrator.CreateCalculationRequest;
 import generated.se.sundsvall.lifecareintegrator.CreatedResource;
@@ -59,12 +57,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.NOT_IMPLEMENTED;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static se.sundsvall.caremanagement.lifecare.integration.DecodedProblems.decode;
 import static se.sundsvall.caremanagement.lifecare.integration.integrator.configuration.LifecareIntegratorConfiguration.CLIENT_ID;
@@ -367,14 +363,6 @@ class LifecareIntegratorIntegrationTest {
 			.hasMessageNotContaining(PARTY_ID);
 	}
 
-	@Test
-	void getContactsGoesThroughTheIntegrator() {
-		when(clientMock.getContacts(MUNICIPALITY_ID, PARTY_ID)).thenReturn(List.of(new Contact().name("Anna Andersson")));
-
-		assertThat(integration.getContacts(MUNICIPALITY_ID, PARTY_ID))
-			.singleElement().extracting(PersonBasedContactDTO::getName).isEqualTo("Anna Andersson");
-	}
-
 	/** The caseworker directory is the one read with no person behind it. */
 	@Test
 	void getUsersNeedsNoPartyId() {
@@ -519,22 +507,5 @@ class LifecareIntegratorIntegrationTest {
 			.calculationDate("2026-06-01T00:00:00")
 			.calculationFromDate("2026-06-01T00:00:00")
 			.calculationToDate("2026-06-30T00:00:00");
-	}
-
-	/**
-	 * The three reads careM never makes are the only thing left unported, and they must fail loudly rather than answer
-	 * empty: an empty result is indistinguishable from "this person has nothing".
-	 */
-	@Test
-	void unportedOperationsFailInsteadOfAnsweringEmpty() {
-		assertThatThrownBy(() -> integration.getInvestigations(MUNICIPALITY_ID, PARTY_ID, START, END))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", NOT_IMPLEMENTED)
-			.hasMessageContaining("getInvestigations");
-
-		assertThatThrownBy(() -> integration.getExecutions(MUNICIPALITY_ID, PARTY_ID, START, END)).isInstanceOf(ThrowableProblem.class);
-		assertThatThrownBy(() -> integration.getResourceAllocations(MUNICIPALITY_ID, PARTY_ID, START, END)).isInstanceOf(ThrowableProblem.class);
-
-		verifyNoInteractions(clientMock);
 	}
 }
