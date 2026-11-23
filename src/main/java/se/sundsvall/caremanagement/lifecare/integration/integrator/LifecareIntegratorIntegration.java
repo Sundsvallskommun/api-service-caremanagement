@@ -22,7 +22,6 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.integration.ByteArrayMultipartFile;
 import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
@@ -54,7 +53,6 @@ import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
  * that would put a wrong normberäkning in front of a handläggare.
  */
 @Component
-@ConditionalOnProperty(name = "integration.lifecare-familycare.provider", havingValue = "integrator")
 public class LifecareIntegratorIntegration implements LifecareFamilyCare {
 
 	/**

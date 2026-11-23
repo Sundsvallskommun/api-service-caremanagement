@@ -36,7 +36,7 @@ import static se.sundsvall.caremanagement.lifecare.integration.integrator.config
  * Reads Lifecare FamilyCare through {@code api-service-lifecare-integrator} rather than from FamilyCare directly.
  *
  * <p>
- * Two differences from {@link se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareClient} are worth
+ * Two differences from the former direct FamilyCare client are worth
  * knowing when reading this. Everything is keyed on {@code partyId} rather than a personal identity number — the
  * integrator refuses to take or return one — and the period parameters are plain {@link LocalDate}s rather than
  * FamilyCare's RFC 3339 timestamps, so no date rendering is needed on this side.

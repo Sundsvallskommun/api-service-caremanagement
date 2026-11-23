@@ -21,7 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 
 import static java.time.Month.JANUARY;
 import static java.time.Month.JUNE;
@@ -39,7 +39,7 @@ class LifecareCaseHistoryServiceTest {
 	private static final LocalDate TO = LocalDate.of(2026, JUNE, 30);
 
 	@Mock
-	private LifecareFamilyCareIntegration lifecareFamilyCareIntegrationMock;
+	private LifecareFamilyCare lifecareFamilyCareIntegrationMock;
 
 	@InjectMocks
 	private LifecareCaseHistoryService service;

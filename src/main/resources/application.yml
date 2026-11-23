@@ -156,21 +156,6 @@ integration:
   # (query params / X-API-Key header); url is the FamilyCare base path (host + /WESE.FC.Api.FC). The key is sensitive — inject
   # via secret and keep it out of request logging.
   lifecare-familycare:
-    # Which route answers the FamilyCare surface: `familycare` talks to Lifecare directly (only reachable from inside
-    # the municipal network), `integrator` goes through api-service-lifecare-integrator. Declared explicitly so the
-    # environment variable that switches it is named here rather than left to relaxed binding — the env form of
-    # `lifecare-familycare` collapses the hyphen (INTEGRATION_LIFECAREFAMILYCARE_PROVIDER), which is easy to get wrong
-    # and fails silently: a misspelled name binds some other property and the direct route just stays on.
-    provider: ${INTEGRATION_LIFECARE_FAMILYCARE_PROVIDER:familycare}
-    url: ${INTEGRATION_LIFECARE_FAMILYCARE_URL}
-    domain: ${INTEGRATION_LIFECARE_FAMILYCARE_DOMAIN}
-    key: ${INTEGRATION_LIFECARE_FAMILYCARE_KEY}
-    # Separate licence key for the FamilyCare user directory (Users/*), which is licensed to its own consumer
-    # ("Användarinformation IFO"). Optional — leave unset where one consumer covers both surfaces (and in mocked
-    # environments) and `key` is used for every call.
-    user-key: ${INTEGRATION_LIFECARE_FAMILYCARE_USER_KEY:}
-    connect-timeout: 5
-    read-timeout: 30
     # Lookback (months, ending at the reference date) for the financial assistance eligibility reads — actualisations, decisions, calculations.
     lookback-months: 13
     # FamilyCare actualisation Status values that count as an open case ("öppet ärende"), matched case-insensitively.

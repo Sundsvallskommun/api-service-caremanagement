@@ -17,7 +17,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.CalculationHeader;
@@ -52,7 +52,7 @@ class CalculationServiceTest {
 	private static final YearMonth MONTH = YearMonth.of(2026, JUNE);
 
 	@Mock
-	private LifecareFamilyCareIntegration lifecareFamilyCareIntegrationMock;
+	private LifecareFamilyCare lifecareFamilyCareIntegrationMock;
 
 	@Mock
 	private LifecareCaseService lifecareCaseServiceMock;

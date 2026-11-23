@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 
 import static java.time.Month.JUNE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,7 +32,7 @@ class CaseworkerResolverTest {
 	private static final int USERS_LIMIT = 1000;
 
 	@Mock
-	private LifecareFamilyCareIntegration lifecareFamilyCareIntegrationMock;
+	private LifecareFamilyCare lifecareFamilyCareIntegrationMock;
 
 	private CaseworkerResolver resolver;
 

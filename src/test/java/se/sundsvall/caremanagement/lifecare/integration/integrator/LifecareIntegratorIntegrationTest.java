@@ -43,7 +43,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.multipart.MultipartFile;
 import se.sundsvall.caremanagement.lifecare.service.AttachmentUpload;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -537,19 +536,5 @@ class LifecareIntegratorIntegrationTest {
 		assertThatThrownBy(() -> integration.getResourceAllocations(MUNICIPALITY_ID, PARTY_ID, START, END)).isInstanceOf(ThrowableProblem.class);
 
 		verifyNoInteractions(clientMock);
-	}
-
-	/**
-	 * The direct FamilyCare client stays the default; this route only takes over when the property explicitly selects
-	 * it. Without {@code matchIfMissing = false} both implementations would be beans and the context would not start.
-	 */
-	@Test
-	void theRouteIsOptInOnly() {
-		final var condition = LifecareIntegratorIntegration.class.getAnnotation(ConditionalOnProperty.class);
-
-		assertThat(condition).isNotNull();
-		assertThat(condition.name()).containsExactly("integration.lifecare-familycare.provider");
-		assertThat(condition.havingValue()).isEqualTo("integrator");
-		assertThat(condition.matchIfMissing()).isFalse();
 	}
 }

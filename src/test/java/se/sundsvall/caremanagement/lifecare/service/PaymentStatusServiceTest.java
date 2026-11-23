@@ -15,7 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -35,7 +35,7 @@ class PaymentStatusServiceTest {
 	private static final String MUNICIPALITY_ID = "2281";
 
 	@Mock
-	private LifecareFamilyCareIntegration lifecareFamilyCareIntegrationMock;
+	private LifecareFamilyCare lifecareFamilyCareIntegrationMock;
 
 	@InjectMocks
 	private PaymentStatusService service;

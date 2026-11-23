@@ -18,7 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCareIntegration;
+import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
@@ -45,7 +45,7 @@ class ActualisationServiceTest {
 	private static final IntPredicate CLAIMED_NOWHERE = id -> false;
 
 	@Mock
-	private LifecareFamilyCareIntegration lifecareFamilyCareIntegrationMock;
+	private LifecareFamilyCare lifecareFamilyCareIntegrationMock;
 
 	@Mock
 	private CaseworkerResolver caseworkerResolverMock;
