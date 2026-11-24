@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.lifecare.professionalweb.integrator;
 
 import feign.Request;
 import feign.Response;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
@@ -12,6 +13,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ProfessionalWebIntegratorErrorDecoderTest {
 
@@ -61,15 +64,31 @@ class ProfessionalWebIntegratorErrorDecoderTest {
 		assertThat(problem.getDetail()).isEqualTo("Fel datum");
 	}
 
+	@Test
+	void aBodyThatCannotBeReadGetsAStandardTextWithTheStatus() throws IOException {
+		final var unreadable = mock(Response.Body.class);
+		when(unreadable.asInputStream()).thenThrow(new IOException("socket gone"));
+
+		final var problem = decode(responseBuilder(422).body(unreadable).build());
+
+		assertThat(problem.getStatus().value()).isEqualTo(422);
+		assertThat(problem.getDetail()).isEqualTo("lifecare-integrator answered 422");
+	}
+
 	private ThrowableProblem decode(final int status, final String body) {
 		final var bytes = Optional.ofNullable(body).map(text -> text.getBytes(StandardCharsets.UTF_8)).orElse(null);
-		final var response = Response.builder()
+		return decode(responseBuilder(status).body(bytes).build());
+	}
+
+	private static Response.Builder responseBuilder(final int status) {
+		return Response.builder()
 			.status(status)
 			.reason("reason")
 			.request(Request.create(Request.HttpMethod.GET, "http://integrator/2281/professional-web/x", Map.of(), null, StandardCharsets.UTF_8, null))
-			.headers(Map.of())
-			.body(bytes)
-			.build();
+			.headers(Map.of());
+	}
+
+	private ThrowableProblem decode(final Response response) {
 		final var exception = decoder.decode("ProfessionalWebIntegratorClient#x()", response);
 		assertThat(exception).isInstanceOf(ThrowableProblem.class);
 		return (ThrowableProblem) exception;
