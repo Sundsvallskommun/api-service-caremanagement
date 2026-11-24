@@ -79,7 +79,7 @@ public class LifecarePaymentRegistrationService {
 		final var body = buildPaymentCreate(underlag, request);
 		// Lifecare's web app checks the person has a hushåll on the payment date before it saves; so does this.
 		final var personId = text(field(underlag, "payment"), "susPersonId");
-		if (!StringUtils.hasText(personId) || !paymentApi.hasHouseholdOn(personId, textOrEmpty(body, "payDate"))) {
+		if (!StringUtils.hasText(personId) || !paymentApi.hasHouseholdOn(serviceId, textOrEmpty(body, "payDate"))) {
 			throw refuse("Personen har inget hushåll i Lifecare på utbetalningsdagen.");
 		}
 

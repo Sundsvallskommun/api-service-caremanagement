@@ -167,6 +167,49 @@ class ProfessionalWebClientTest {
 		assertThat(client.updateDecision(98, body)).isEqualTo(answer);
 	}
 
+	// Payments
+
+	@Test
+	void readPaymentProposalReadsTheInsatsUnderlag() {
+		final var answer = json("{\"payment\":{}}");
+		when(integrator.readPaymentProposal(MUNICIPALITY_ID, 24)).thenReturn(answer);
+
+		assertThat(client.readPaymentProposal(24)).isEqualTo(answer);
+	}
+
+	@Test
+	void readLatestPaymentsReadsTheInsatsPayments() {
+		final var answer = json("[{\"paymentId\":4}]");
+		when(integrator.readLatestPayments(MUNICIPALITY_ID, 24)).thenReturn(answer);
+
+		assertThat(client.readLatestPayments(24)).isEqualTo(answer);
+	}
+
+	@Test
+	void hasHouseholdAsksForTheInsatsOnTheDate() {
+		when(integrator.hasHousehold(MUNICIPALITY_ID, 24, "2026-09-21")).thenReturn(json("true"));
+
+		assertThat(client.hasHousehold(24, "2026-09-21")).isEqualTo(json("true"));
+	}
+
+	@Test
+	void createPaymentPostsTheBodyOnTheInsats() {
+		final var body = json("{\"amount\":1.0}");
+		final var answer = json("{\"paymentId\":4}");
+		when(integrator.createPayment(MUNICIPALITY_ID, 24, body)).thenReturn(answer);
+
+		assertThat(client.createPayment(24, body)).isEqualTo(answer);
+	}
+
+	@Test
+	void createPayeePostsTheBodyAsItIs() {
+		final var body = json("{\"name\":\"Hyresvärden\"}");
+		final var answer = json("{\"payeeId\":3}");
+		when(integrator.createPayee(MUNICIPALITY_ID, body)).thenReturn(answer);
+
+		assertThat(client.createPayee(body)).isEqualTo(answer);
+	}
+
 	// Answers and errors
 
 	@Test

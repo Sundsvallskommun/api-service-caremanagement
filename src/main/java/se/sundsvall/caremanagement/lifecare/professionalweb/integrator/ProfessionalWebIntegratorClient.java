@@ -68,4 +68,19 @@ public interface ProfessionalWebIntegratorClient {
 
 	@PutMapping(path = "/{municipalityId}/professional-web/decisions/{decisionId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	JsonNode updateDecision(@PathVariable final String municipalityId, @PathVariable final int decisionId, @RequestBody final JsonNode body);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/payments/proposal", produces = APPLICATION_JSON_VALUE)
+	JsonNode readPaymentProposal(@PathVariable final String municipalityId, @PathVariable final int serviceId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/payments/latest", produces = APPLICATION_JSON_VALUE)
+	JsonNode readLatestPayments(@PathVariable final String municipalityId, @PathVariable final int serviceId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/household", produces = APPLICATION_JSON_VALUE)
+	JsonNode hasHousehold(@PathVariable final String municipalityId, @PathVariable final int serviceId, @RequestParam final String date);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/payments", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode createPayment(@PathVariable final String municipalityId, @PathVariable final int serviceId, @RequestBody final JsonNode body);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/payees", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode createPayee(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
 }

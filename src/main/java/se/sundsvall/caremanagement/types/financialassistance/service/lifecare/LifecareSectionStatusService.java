@@ -24,7 +24,6 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 public class LifecareSectionStatusService {
 
 	static final String PATH_LIST_CALCULATIONS = "api2/Calculation/ListCalculations";
-	static final String PATH_LATEST_PAYMENTS = "api2/Payment/GetLatestPayments";
 
 	private static final Logger LOG = LoggerFactory.getLogger(LifecareSectionStatusService.class);
 	private static final String BUSINESS_TYPE = "businessType";
@@ -86,10 +85,7 @@ public class LifecareSectionStatusService {
 		}
 		final var month = "%04d%02d".formatted(errand.periodYear(), errand.periodMonth());
 		try {
-			final var params = new LinkedHashMap<String, String>();
-			params.put(BUSINESS_TYPE, SERVICE_BUSINESS_TYPE);
-			params.put(BUSINESS_ID, String.valueOf(errand.serviceId()));
-			final var registered = client.get(PATH_LATEST_PAYMENTS, params);
+			final var registered = client.readLatestPayments(errand.serviceId());
 			accessRecorder.read(errand, "PAYMENTS", "Läste utbetalningar i Lifecare");
 			return elements(registered).stream()
 				.filter(payment -> month.equals(LifecarePaymentNodes.text(payment, "concernedMonth")))

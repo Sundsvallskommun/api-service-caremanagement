@@ -11,8 +11,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -34,7 +33,6 @@ class LifecareSectionStatusServiceTest {
 
 	private static final Map<String, String> LIST_PARAMS = Map.of("businessType", "8", "businessId", "1", "investigationId", "0", "serviceId", "1",
 		"onlylatest", "true");
-	private static final Map<String, String> PAYMENT_PARAMS = Map.of("businessType", "8", "businessId", "1");
 
 	private static final String CALCULATIONS = """
 		[{"calculationId": 31, "date": "2026-09-24", "startDate": "2026-09-01", "endDate": "2026-09-30", "isFinalized": true},
@@ -66,7 +64,7 @@ class LifecareSectionStatusServiceTest {
 	void checksEachSectionByItsStateInLifecare() {
 		final var errand = errand(1, 31, 98, 2026, 9);
 		when(clientMock.get("api2/Calculation/ListCalculations", LIST_PARAMS)).thenReturn(tree(CALCULATIONS));
-		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree(PAYMENTS));
+		when(clientMock.readLatestPayments(1)).thenReturn(tree(PAYMENTS));
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareSectionStatus(true, true, true));
 		verify(accessRecorderMock).read(errand, "CALCULATION", "Läste insatsens normberäkningar i Lifecare");
@@ -77,7 +75,7 @@ class LifecareSectionStatusServiceTest {
 	void leavesABerakningStillBeingWorkedOnABeslutNotYetSavedAndAnotherMonthUnchecked() {
 		errand(1, 29, null, 2026, 10);
 		when(clientMock.get("api2/Calculation/ListCalculations", LIST_PARAMS)).thenReturn(tree(CALCULATIONS));
-		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree(PAYMENTS));
+		when(clientMock.readLatestPayments(1)).thenReturn(tree(PAYMENTS));
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareSectionStatus(false, false, false));
 	}
@@ -85,7 +83,7 @@ class LifecareSectionStatusServiceTest {
 	@Test
 	void doesNotCountAMakuleradUtbetalningOrOneForAnotherMonth() {
 		errand(1, null, null, 2026, 9);
-		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree("""
+		when(clientMock.readLatestPayments(1)).thenReturn(tree("""
 			[{"paymentId": 1, "payDate": "2026-09-25", "concernedMonth": "202609", "cancellationDate": "2026-09-26"},
 			 {"paymentId": 3, "payDate": "2026-09-25", "concernedMonth": null, "cancellationDate": ""}]"""));
 
@@ -95,12 +93,12 @@ class LifecareSectionStatusServiceTest {
 	@Test
 	void countsAnUtbetalningWithANullOrMissingCancellationDateAsStanding() {
 		errand(1, null, null, 2026, 9);
-		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree("""
+		when(clientMock.readLatestPayments(1)).thenReturn(tree("""
 			[{"paymentId": 2, "payDate": "2026-09-25", "concernedMonth": "202609", "cancellationDate": null}]"""));
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).paymentRegistered()).isTrue();
 
-		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree("""
+		when(clientMock.readLatestPayments(1)).thenReturn(tree("""
 			[{"paymentId": 4, "payDate": "2026-09-25", "concernedMonth": "202609"}]"""));
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).paymentRegistered()).isTrue();
@@ -110,7 +108,7 @@ class LifecareSectionStatusServiceTest {
 	void leavesACheckOffWhenLifecareCannotBeReadWithoutFailingTheOthers() {
 		errand(1, 31, 98, 2026, 9);
 		when(clientMock.get("api2/Calculation/ListCalculations", LIST_PARAMS)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
-		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree(PAYMENTS));
+		when(clientMock.readLatestPayments(1)).thenReturn(tree(PAYMENTS));
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareSectionStatus(false, true, true));
 	}
@@ -128,7 +126,7 @@ class LifecareSectionStatusServiceTest {
 	@Test
 	void leavesTheUtbetalningOffWhenItsReadCannotBeLogged() {
 		final var errand = errand(1, null, null, 2026, 9);
-		when(clientMock.get("api2/Payment/GetLatestPayments", PAYMENT_PARAMS)).thenReturn(tree(PAYMENTS));
+		when(clientMock.readLatestPayments(1)).thenReturn(tree(PAYMENTS));
 		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "PAYMENTS", "Läste utbetalningar i Lifecare");
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareSectionStatus(false, false, false));
@@ -147,6 +145,6 @@ class LifecareSectionStatusServiceTest {
 		errand(1, null, null, 2026, null);
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).paymentRegistered()).isFalse();
-		verify(clientMock, never()).get(anyString(), any());
+		verify(clientMock, never()).readLatestPayments(anyInt());
 	}
 }

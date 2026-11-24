@@ -1,17 +1,11 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import tools.jackson.databind.JsonNode;
 
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.SERVICE_BUSINESS_TYPE;
-
 /**
- * Lifecare's utbetalning endpoints, with paths and query strings copied from captures of its own web app, down to the
- * trailing slash on HasHouseholdThisDate and its absence on Payee/Create: its paths are not consistent, and
- * correcting them breaks them.
+ * Lifecare's utbetalningar, betalningsmottagare and hushåll, through lifecare-integrator's resources.
  *
  * <p>
  * The answers carry personnummer, names and bank accounts. Nothing here is logged.
@@ -28,39 +22,29 @@ class LifecarePaymentApi {
 
 	/** The underlag for a new utbetalning on the insats: blank payment, payees, betalsätt, saldon and months. */
 	JsonNode readPaymentForCreate(final int serviceId) {
-		return client.get("api2/Payment/GetPaymentForCreate", serviceParams(serviceId));
+		return client.readPaymentProposal(serviceId);
 	}
 
 	/** The latest utbetalningar registered on the insats; Lifecare's own word, so the list may not reach far back. */
 	JsonNode readLatestPayments(final int serviceId) {
-		return client.get("api2/Payment/GetLatestPayments", serviceParams(serviceId));
+		return client.readLatestPayments(serviceId);
 	}
 
 	/**
-	 * Whether the person has a hushåll on the date, the check Lifecare's web app makes before it saves an utbetalning.
-	 * The personnummer goes in the query string because that is where Lifecare reads it.
+	 * Whether the person of the insats has a hushåll on the date, the check Lifecare's web app makes before it saves an
+	 * utbetalning. An empty answer is no hushåll.
 	 */
-	boolean hasHouseholdOn(final String personId, final String date) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put("personId", personId);
-		params.put("date", date);
-		return client.get("api2/Household/HasHouseholdThisDate/", params).asBoolean(false);
+	boolean hasHouseholdOn(final int serviceId, final String date) {
+		return client.hasHousehold(serviceId, date).asBoolean(false);
 	}
 
 	/** Registers an utbetalning on the insats. Not idempotent and it moves money: never retry it. */
 	JsonNode createPayment(final int serviceId, final JsonNode payment) {
-		return client.post("api2/Payment/Create", serviceParams(serviceId), payment);
+		return client.createPayment(serviceId, payment);
 	}
 
 	/** Creates a betalningsmottagare. Not idempotent: a second call creates a second payee. */
 	JsonNode createPayee(final JsonNode payee) {
-		return client.post("api2/Payee/Create", Map.of(), payee);
-	}
-
-	private static Map<String, String> serviceParams(final int serviceId) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put("businessType", SERVICE_BUSINESS_TYPE);
-		params.put("businessId", String.valueOf(serviceId));
-		return params;
+		return client.createPayee(payee);
 	}
 }

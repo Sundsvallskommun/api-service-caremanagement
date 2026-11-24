@@ -134,6 +134,31 @@ public class ProfessionalWebClient {
 		return read(() -> integrator.updateDecision(MUNICIPALITY_ID, decisionId, body));
 	}
 
+	/** The underlag for a new utbetalning on an insats: blank payment, payees, betalsätt, saldon and months. */
+	public JsonNode readPaymentProposal(final int serviceId) {
+		return read(() -> integrator.readPaymentProposal(MUNICIPALITY_ID, serviceId));
+	}
+
+	/** The latest utbetalningar registered on an insats. */
+	public JsonNode readLatestPayments(final int serviceId) {
+		return read(() -> integrator.readLatestPayments(MUNICIPALITY_ID, serviceId));
+	}
+
+	/** Whether the person of the insats has a hushåll on the date (ISO), as a JSON boolean. */
+	public JsonNode hasHousehold(final int serviceId, final String date) {
+		return read(() -> integrator.hasHousehold(MUNICIPALITY_ID, serviceId, date));
+	}
+
+	/** Registers an utbetalning on an insats. Not idempotent and it moves money: never retried. */
+	public JsonNode createPayment(final int serviceId, final JsonNode body) {
+		return read(() -> integrator.createPayment(MUNICIPALITY_ID, serviceId, body));
+	}
+
+	/** Creates a betalningsmottagare. Not idempotent. */
+	public JsonNode createPayee(final JsonNode body) {
+		return read(() -> integrator.createPayee(MUNICIPALITY_ID, body));
+	}
+
 	/** An answer from the integrator; a missing node when it answered without a body. */
 	private static JsonNode read(final Supplier<JsonNode> call) {
 		return Optional.ofNullable(ProfessionalWebErrors.call(call)).orElse(MissingNode.getInstance());

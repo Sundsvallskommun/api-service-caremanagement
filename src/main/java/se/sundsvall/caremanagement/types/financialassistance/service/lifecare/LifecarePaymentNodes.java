@@ -24,9 +24,6 @@ import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
  */
 final class LifecarePaymentNodes {
 
-	/** Lifecare's businessType for: the businessId is an insats. */
-	static final String SERVICE_BUSINESS_TYPE = "8";
-
 	/** Lifecare's sentinel payee Adress (Int32.MaxValue - 1): pays to the client's registered address. */
 	static final int ADDRESS_PAYEE_ID = 2147483646;
 

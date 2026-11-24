@@ -33,6 +33,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentFixtures.json;
@@ -78,7 +79,7 @@ class LifecarePaymentRegistrationServiceTest {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
 		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
 		when(paymentApi.readLatestPayments(1)).thenReturn(json("[]"));
-		when(paymentApi.hasHouseholdOn("19800101T001", "2026-09-21")).thenReturn(true);
+		when(paymentApi.hasHouseholdOn(1, "2026-09-21")).thenReturn(true);
 	}
 
 	@Test
@@ -138,7 +139,7 @@ class LifecarePaymentRegistrationServiceTest {
 
 	@Test
 	void doesNotSendAnUtbetalningForAPersonWithoutHushallOnThePaymentDate() {
-		when(paymentApi.hasHouseholdOn("19800101T001", "2026-09-21")).thenReturn(false);
+		when(paymentApi.hasHouseholdOn(1, "2026-09-21")).thenReturn(false);
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), UNPROCESSABLE_CONTENT,
 			"inget hushåll");
@@ -153,7 +154,7 @@ class LifecarePaymentRegistrationServiceTest {
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), UNPROCESSABLE_CONTENT,
 			"inget hushåll");
-		verify(paymentApi, never()).hasHouseholdOn(anyString(), anyString());
+		verify(paymentApi, never()).hasHouseholdOn(anyInt(), anyString());
 		verify(paymentApi, never()).createPayment(anyInt(), any());
 	}
 
@@ -169,6 +170,15 @@ class LifecarePaymentRegistrationServiceTest {
 	@Test
 	void passesARefusalFromLifecareOnInLifecaresWords() {
 		final var refusal = Problem.valueOf(UNPROCESSABLE_CONTENT, "Lifecare godtog inte uppgifterna.");
+		when(paymentApi.createPayment(eq(1), any())).thenThrow(refusal);
+
+		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())).isSameAs(refusal);
+		verify(errandService, never()).linkPayment(any(), anyString());
+	}
+
+	@Test
+	void passesABadRequestFromLifecareOnInLifecaresWords() {
+		final var refusal = Problem.valueOf(BAD_REQUEST, "Ogiltigt konto");
 		when(paymentApi.createPayment(eq(1), any())).thenThrow(refusal);
 
 		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())).isSameAs(refusal);

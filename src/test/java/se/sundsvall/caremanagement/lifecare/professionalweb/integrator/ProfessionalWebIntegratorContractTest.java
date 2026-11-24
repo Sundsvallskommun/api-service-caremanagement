@@ -43,7 +43,12 @@ class ProfessionalWebIntegratorContractTest {
 		Map.entry("readDecisionReasons", "GET decision-codes/{decisionCode}/reasons"),
 		Map.entry("readDecision", "GET decisions/{decisionId}"),
 		Map.entry("createDecision", "POST services/{serviceId}/decisions"),
-		Map.entry("updateDecision", "PUT decisions/{decisionId}"));
+		Map.entry("updateDecision", "PUT decisions/{decisionId}"),
+		Map.entry("readPaymentProposal", "GET services/{serviceId}/payments/proposal"),
+		Map.entry("readLatestPayments", "GET services/{serviceId}/payments/latest"),
+		Map.entry("hasHousehold", "GET services/{serviceId}/household"),
+		Map.entry("createPayment", "POST services/{serviceId}/payments"),
+		Map.entry("createPayee", "POST payees"));
 
 	private static Map<String, Object> paths;
 
