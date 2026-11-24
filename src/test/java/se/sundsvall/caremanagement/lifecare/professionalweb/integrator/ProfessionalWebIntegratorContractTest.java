@@ -1,11 +1,13 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb.integrator;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -137,9 +139,9 @@ class ProfessionalWebIntegratorContractTest {
 		return result;
 	}
 
-	private static java.util.Optional<String> parameterName(final Parameter parameter, final Class<? extends java.lang.annotation.Annotation> type) {
+	private static Optional<String> parameterName(final Parameter parameter, final Class<? extends Annotation> type) {
 		if (!parameter.isAnnotationPresent(type)) {
-			return java.util.Optional.empty();
+			return Optional.empty();
 		}
 		final String value;
 		if (type == PathVariable.class) {
@@ -148,9 +150,9 @@ class ProfessionalWebIntegratorContractTest {
 			value = parameter.getAnnotation(RequestParam.class).value();
 		}
 		if (value.isEmpty()) {
-			return java.util.Optional.of(parameter.getName());
+			return Optional.of(parameter.getName());
 		}
-		return java.util.Optional.of(value);
+		return Optional.of(value);
 	}
 
 	private static String verb(final Method method) {

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb;
 
 import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -38,6 +40,11 @@ class ProfessionalWebClientTest {
 	@BeforeEach
 	void setUp() {
 		client = new ProfessionalWebClient(integrator);
+	}
+
+	@AfterEach
+	void verifyNoUnexpectedCalls() {
+		verifyNoMoreInteractions(integrator);
 	}
 
 	private static JsonNode json(final String text) {

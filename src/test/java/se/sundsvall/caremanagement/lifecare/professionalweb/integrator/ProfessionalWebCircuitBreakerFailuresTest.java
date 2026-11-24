@@ -12,6 +12,8 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 
 @SpringBootTest(classes = Application.class)
 @ActiveProfiles("junit")
@@ -32,7 +34,7 @@ class ProfessionalWebCircuitBreakerFailuresTest {
 
 	@Test
 	void aBadGatewayOrAnythingElseIsAFailure() {
-		assertThat(failures.test(Problem.valueOf(HttpStatus.BAD_GATEWAY, "x"))).isTrue();
+		assertThat(failures.test(Problem.valueOf(BAD_GATEWAY, "x"))).isTrue();
 		assertThat(failures.test(new IllegalStateException("connection reset"))).isTrue();
 	}
 
@@ -40,7 +42,7 @@ class ProfessionalWebCircuitBreakerFailuresTest {
 	void theProfessionalWebBreakerUsesIt() {
 		final var config = registry.circuitBreaker(ProfessionalWebIntegratorClient.CLIENT_ID).getCircuitBreakerConfig();
 
-		assertThat(config.getRecordExceptionPredicate().test(Problem.valueOf(HttpStatus.UNPROCESSABLE_CONTENT, "x"))).isFalse();
-		assertThat(config.getRecordExceptionPredicate().test(Problem.valueOf(HttpStatus.BAD_GATEWAY, "x"))).isTrue();
+		assertThat(config.getRecordExceptionPredicate().test(Problem.valueOf(UNPROCESSABLE_CONTENT, "x"))).isFalse();
+		assertThat(config.getRecordExceptionPredicate().test(Problem.valueOf(BAD_GATEWAY, "x"))).isTrue();
 	}
 }
