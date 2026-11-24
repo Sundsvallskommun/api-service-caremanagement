@@ -83,4 +83,38 @@ public interface ProfessionalWebIntegratorClient {
 
 	@PostMapping(path = "/{municipalityId}/professional-web/payees", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	JsonNode createPayee(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/calculations/proposal", produces = APPLICATION_JSON_VALUE)
+	JsonNode readCalculationProposal(@PathVariable final String municipalityId, @PathVariable final int serviceId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/calculations/latest", produces = APPLICATION_JSON_VALUE)
+	JsonNode listLatestCalculations(@PathVariable final String municipalityId, @PathVariable final int serviceId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/calculations/{calculationId}", produces = APPLICATION_JSON_VALUE)
+	JsonNode readCalculation(@PathVariable final String municipalityId, @PathVariable final int calculationId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/calculations/{calculationId}/edit", produces = APPLICATION_JSON_VALUE)
+	JsonNode readCalculationForEdit(@PathVariable final String municipalityId, @PathVariable final int calculationId);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/calculations/place-persons", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode placePersons(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/calculations/amount", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode readAmount(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/calculations/shared-cost", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode readSharedCost(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/calculations/job-stimuli", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode readJobStimuliForCalculation(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/calculations", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode createCalculation(@PathVariable final String municipalityId, @PathVariable final int serviceId, @RequestBody final JsonNode body);
+
+	@PutMapping(path = "/{municipalityId}/professional-web/calculations/{calculationId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode updateCalculation(@PathVariable final String municipalityId, @PathVariable final int calculationId, @RequestBody final JsonNode body);
+
+	@DeleteMapping(path = "/{municipalityId}/professional-web/calculations/{calculationId}")
+	void deleteCalculation(@PathVariable final String municipalityId, @PathVariable final int calculationId);
+
 }

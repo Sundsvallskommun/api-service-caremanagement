@@ -1,7 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
@@ -10,18 +9,12 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Lifecare's normberäkning endpoints, with paths and query strings copied from captures of Lifecare's web app (via
- * Drakel's BFF, 2026-09-24). Every answer and body is a JSON tree: Lifecare's create and update take its own whole
+ * Lifecare's normberäkning, through lifecare-integrator's resources. Every answer and body is a JSON tree: Lifecare's
+ * create and update take its own whole
  * object back, and a typed round trip would drop the fields no type knows.
  */
 @Component
 class LifecareCalculationClient {
-
-	/** Lifecare's businessType for: businessId is an insats. */
-	static final String SERVICE_BUSINESS_TYPE = "8";
-
-	/** Lifecare's businessType for: businessId is a beräkning. */
-	static final String CALCULATION_BUSINESS_TYPE = "3";
 
 	/**
 	 * The print container's owner for a beräkning, as Lifecare's web app asks for it. The owner code is the one the web
@@ -30,8 +23,6 @@ class LifecareCalculationClient {
 	static final String CALCULATION_OWNER_TYPE = "BERAK";
 	static final String CALCULATION_OWNER_CODE = "999999999";
 
-	private static final String BUSINESS_TYPE = "businessType";
-	private static final String BUSINESS_ID = "businessId";
 	private static final String START_DATE = "startDate";
 	private static final String END_DATE = "endDate";
 
@@ -50,7 +41,7 @@ class LifecareCalculationClient {
 	 * @return           GetProposalService's answer
 	 */
 	JsonNode readProposal(final int serviceId) {
-		return client.get("api2/Calculation/GetProposalService", params(BUSINESS_TYPE, SERVICE_BUSINESS_TYPE, BUSINESS_ID, String.valueOf(serviceId)));
+		return client.readCalculationProposal(serviceId);
 	}
 
 	/**
@@ -60,11 +51,7 @@ class LifecareCalculationClient {
 	 * @return           ListCalculations' answer, an array
 	 */
 	JsonNode listForService(final int serviceId) {
-		final var params = params(BUSINESS_TYPE, SERVICE_BUSINESS_TYPE, BUSINESS_ID, String.valueOf(serviceId));
-		params.put("investigationId", "0");
-		params.put("serviceId", String.valueOf(serviceId));
-		params.put("onlylatest", "true");
-		return client.get("api2/Calculation/ListCalculations", params);
+		return client.listLatestCalculations(serviceId);
 	}
 
 	/**
@@ -74,7 +61,7 @@ class LifecareCalculationClient {
 	 * @return               GetCalculation's answer
 	 */
 	JsonNode read(final int calculationId) {
-		return client.get("api2/Calculation/GetCalculation", params(BUSINESS_TYPE, CALCULATION_BUSINESS_TYPE, BUSINESS_ID, String.valueOf(calculationId)));
+		return client.readCalculation(calculationId);
 	}
 
 	/**
@@ -84,7 +71,7 @@ class LifecareCalculationClient {
 	 * @return               GetCalculationForEdit's answer
 	 */
 	JsonNode readForEdit(final int calculationId) {
-		return client.get("api2/Calculation/GetCalculationForEdit", params(BUSINESS_TYPE, CALCULATION_BUSINESS_TYPE, BUSINESS_ID, String.valueOf(calculationId)));
+		return client.readCalculationForEdit(calculationId);
 	}
 
 	/**
@@ -94,7 +81,7 @@ class LifecareCalculationClient {
 	 * @return           GetJobStimulusForService's answer
 	 */
 	JsonNode readJobStimulus(final int serviceId) {
-		return client.get("api2/Calculation/GetJobStimulusForService", params(BUSINESS_TYPE, SERVICE_BUSINESS_TYPE, BUSINESS_ID, String.valueOf(serviceId)));
+		return client.readJobStimulus(serviceId);
 	}
 
 	/**
@@ -104,7 +91,7 @@ class LifecareCalculationClient {
 	 * @return      PlacePersons' answer: calculationPersons and, when it sends it, the norm
 	 */
 	JsonNode placePersons(final ObjectNode body) {
-		return client.post("api2/Calculation/PlacePersons", Map.of(), body);
+		return client.placePersons(body);
 	}
 
 	/**
@@ -123,7 +110,7 @@ class LifecareCalculationClient {
 		body.set("normRow", normRow);
 		body.set(START_DATE, startDate);
 		body.set(END_DATE, endDate);
-		return client.post("api2/Calculation/GetAmount", Map.of(), body).path("amount");
+		return client.readAmount(body).path("amount");
 	}
 
 	/**
@@ -139,7 +126,7 @@ class LifecareCalculationClient {
 		body.set(START_DATE, startDate);
 		body.set(END_DATE, endDate);
 		body.set("normShared", normShared);
-		return client.post("api2/Calculation/GetSharedCost", Map.of(), body);
+		return client.readSharedCost(body);
 	}
 
 	/**
@@ -153,7 +140,7 @@ class LifecareCalculationClient {
 		final var body = JsonNodeFactory.instance.objectNode();
 		body.set("calculation", calculation);
 		body.set("jobStimulus", jobStimulus);
-		return client.post("api2/Calculation/GetJobStimuliForCalculation", Map.of(), body);
+		return client.readJobStimuliForCalculation(body);
 	}
 
 	/**
@@ -164,7 +151,7 @@ class LifecareCalculationClient {
 	 * @return           the created beräkning
 	 */
 	JsonNode create(final int serviceId, final ObjectNode body) {
-		return client.post("api2/Calculation/Create", params(BUSINESS_TYPE, SERVICE_BUSINESS_TYPE, BUSINESS_ID, String.valueOf(serviceId)), body);
+		return client.createCalculation(serviceId, body);
 	}
 
 	/**
@@ -175,7 +162,7 @@ class LifecareCalculationClient {
 	 * @return               the saved beräkning
 	 */
 	JsonNode update(final int calculationId, final ObjectNode body) {
-		return client.post("api2/Calculation/Update", params(BUSINESS_TYPE, CALCULATION_BUSINESS_TYPE, BUSINESS_ID, String.valueOf(calculationId)), body);
+		return client.updateCalculation(calculationId, body);
 	}
 
 	/**
@@ -186,7 +173,7 @@ class LifecareCalculationClient {
 	 * @param calculationId the beräkning
 	 */
 	void delete(final int calculationId) {
-		client.delete("api2/Calculation/Delete", params(BUSINESS_TYPE, CALCULATION_BUSINESS_TYPE, BUSINESS_ID, String.valueOf(calculationId)), null);
+		client.deleteCalculation(calculationId);
 	}
 
 	/**
@@ -205,10 +192,4 @@ class LifecareCalculationClient {
 		return client.getPdf("RenderPdf/PrintContainer", params);
 	}
 
-	private static LinkedHashMap<String, String> params(final String firstKey, final String firstValue, final String secondKey, final String secondValue) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put(firstKey, firstValue);
-		params.put(secondKey, secondValue);
-		return params;
-	}
 }

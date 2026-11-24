@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,9 +30,6 @@ class LifecareSectionStatusServiceTest {
 	private static final String NAMESPACE = "FINANCIAL_ASSISTANCE";
 	private static final String ERRAND_ID = "errand-1";
 
-	private static final Map<String, String> LIST_PARAMS = Map.of("businessType", "8", "businessId", "1", "investigationId", "0", "serviceId", "1",
-		"onlylatest", "true");
-
 	private static final String CALCULATIONS = """
 		[{"calculationId": 31, "date": "2026-09-24", "startDate": "2026-09-01", "endDate": "2026-09-30", "isFinalized": true},
 		 {"calculationId": 29, "date": "2026-09-23", "startDate": "2026-12-01", "endDate": "2026-12-31", "isFinalized": false}]""";
@@ -63,7 +59,7 @@ class LifecareSectionStatusServiceTest {
 	@Test
 	void checksEachSectionByItsStateInLifecare() {
 		final var errand = errand(1, 31, 98, 2026, 9);
-		when(clientMock.get("api2/Calculation/ListCalculations", LIST_PARAMS)).thenReturn(tree(CALCULATIONS));
+		when(clientMock.listLatestCalculations(1)).thenReturn(tree(CALCULATIONS));
 		when(clientMock.readLatestPayments(1)).thenReturn(tree(PAYMENTS));
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareSectionStatus(true, true, true));
@@ -74,7 +70,7 @@ class LifecareSectionStatusServiceTest {
 	@Test
 	void leavesABerakningStillBeingWorkedOnABeslutNotYetSavedAndAnotherMonthUnchecked() {
 		errand(1, 29, null, 2026, 10);
-		when(clientMock.get("api2/Calculation/ListCalculations", LIST_PARAMS)).thenReturn(tree(CALCULATIONS));
+		when(clientMock.listLatestCalculations(1)).thenReturn(tree(CALCULATIONS));
 		when(clientMock.readLatestPayments(1)).thenReturn(tree(PAYMENTS));
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareSectionStatus(false, false, false));
@@ -107,7 +103,7 @@ class LifecareSectionStatusServiceTest {
 	@Test
 	void leavesACheckOffWhenLifecareCannotBeReadWithoutFailingTheOthers() {
 		errand(1, 31, 98, 2026, 9);
-		when(clientMock.get("api2/Calculation/ListCalculations", LIST_PARAMS)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
+		when(clientMock.listLatestCalculations(1)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare down"));
 		when(clientMock.readLatestPayments(1)).thenReturn(tree(PAYMENTS));
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareSectionStatus(false, true, true));
@@ -116,7 +112,7 @@ class LifecareSectionStatusServiceTest {
 	@Test
 	void leavesTheBerakningOffWhenItsReadCannotBeLogged() {
 		final var errand = errand(1, 31, null, null, null);
-		when(clientMock.get("api2/Calculation/ListCalculations", LIST_PARAMS)).thenReturn(tree(CALCULATIONS));
+		when(clientMock.listLatestCalculations(1)).thenReturn(tree(CALCULATIONS));
 		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "CALCULATION", "Läste insatsens normberäkningar i Lifecare");
 
 		// Calculation 31 is slutlig in Lifecare, and the check stays off because the read that showed it was not logged.

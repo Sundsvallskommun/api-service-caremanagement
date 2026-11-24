@@ -159,6 +159,61 @@ public class ProfessionalWebClient {
 		return read(() -> integrator.createPayee(MUNICIPALITY_ID, body));
 	}
 
+	/** The underlag for a new beräkning on an insats: a blank one with the household, and the catalogues. */
+	public JsonNode readCalculationProposal(final int serviceId) {
+		return read(() -> integrator.readCalculationProposal(MUNICIPALITY_ID, serviceId));
+	}
+
+	/** Every beräkning on an insats, without rows, as an array. */
+	public JsonNode listLatestCalculations(final int serviceId) {
+		return read(() -> integrator.listLatestCalculations(MUNICIPALITY_ID, serviceId));
+	}
+
+	/** A saved beräkning as Lifecare shows it. */
+	public JsonNode readCalculation(final int calculationId) {
+		return read(() -> integrator.readCalculation(MUNICIPALITY_ID, calculationId));
+	}
+
+	/** A saved beräkning whole, what an update takes back, with the catalogues. */
+	public JsonNode readCalculationForEdit(final int calculationId) {
+		return read(() -> integrator.readCalculationForEdit(MUNICIPALITY_ID, calculationId));
+	}
+
+	/** Places the members on the norm's rows. Changes nothing in Lifecare. */
+	public JsonNode placePersons(final JsonNode body) {
+		return read(() -> integrator.placePersons(MUNICIPALITY_ID, body));
+	}
+
+	/** A member's amount for a period. Changes nothing in Lifecare. */
+	public JsonNode readAmount(final JsonNode body) {
+		return read(() -> integrator.readAmount(MUNICIPALITY_ID, body));
+	}
+
+	/** The gemensamma kostnader for a period, a bare number. Changes nothing in Lifecare. */
+	public JsonNode readSharedCost(final JsonNode body) {
+		return read(() -> integrator.readSharedCost(MUNICIPALITY_ID, body));
+	}
+
+	/** Marks which members have jobbstimulans during a beräkning's period. Changes nothing in Lifecare. */
+	public JsonNode readJobStimuliForCalculation(final JsonNode body) {
+		return read(() -> integrator.readJobStimuliForCalculation(MUNICIPALITY_ID, body));
+	}
+
+	/** Creates a beräkning on an insats. Not idempotent. */
+	public JsonNode createCalculation(final int serviceId, final JsonNode body) {
+		return read(() -> integrator.createCalculation(MUNICIPALITY_ID, serviceId, body));
+	}
+
+	/** Saves a changed beräkning; Lifecare answers with it recounted. */
+	public JsonNode updateCalculation(final int calculationId, final JsonNode body) {
+		return read(() -> integrator.updateCalculation(MUNICIPALITY_ID, calculationId, body));
+	}
+
+	/** Removes a beräkning. */
+	public void deleteCalculation(final int calculationId) {
+		write(() -> integrator.deleteCalculation(MUNICIPALITY_ID, calculationId));
+	}
+
 	/** An answer from the integrator; a missing node when it answered without a body. */
 	private static JsonNode read(final Supplier<JsonNode> call) {
 		return Optional.ofNullable(ProfessionalWebErrors.call(call)).orElse(MissingNode.getInstance());

@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation;
 
-import java.util.ArrayList;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,14 +10,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.json;
@@ -35,7 +32,7 @@ class LifecareCalculationClientTest {
 	@Captor
 	private ArgumentCaptor<Map<String, String>> paramsCaptor;
 	@Captor
-	private ArgumentCaptor<Object> bodyCaptor;
+	private ArgumentCaptor<JsonNode> bodyCaptor;
 
 	private LifecareCalculationClient client;
 
@@ -44,66 +41,65 @@ class LifecareCalculationClientTest {
 		client = new LifecareCalculationClient(professionalWeb, properties);
 	}
 
-	private Map<String, String> readWith(final String path) {
-		verify(professionalWeb).get(eq(path), paramsCaptor.capture());
-		return paramsCaptor.getValue();
-	}
-
 	@Test
 	void deletesABeräkning() {
 		client.delete(53);
 
-		verify(professionalWeb).delete(eq("api2/Calculation/Delete"), paramsCaptor.capture(), isNull());
-		assertThat(paramsCaptor.getValue()).containsExactly(entry("businessType", "3"), entry("businessId", "53"));
+		verify(professionalWeb).deleteCalculation(53);
 	}
 
 	@Test
 	void readsTheUnderlagForANewBeräkningOnTheInsats() {
-		when(professionalWeb.get(any(), anyMap())).thenReturn(json("{\"calculation\":{}}"));
+		final var answer = json("{\"calculation\":{}}");
+		when(professionalWeb.readCalculationProposal(24)).thenReturn(answer);
 
-		assertThat(client.readProposal(24).has("calculation")).isTrue();
-
-		assertThat(new ArrayList<>(readWith("api2/Calculation/GetProposalService").entrySet())).containsExactly(entry("businessType", "8"), entry("businessId", "24"));
+		assertThat(client.readProposal(24)).isSameAs(answer);
 	}
 
 	@Test
 	void listsTheInsatssBeräkningar() {
-		client.listForService(24);
+		final var answer = tree("[{\"calculationId\":31}]");
+		when(professionalWeb.listLatestCalculations(24)).thenReturn(answer);
 
-		assertThat(new ArrayList<>(readWith("api2/Calculation/ListCalculations").entrySet())).containsExactly(entry("businessType", "8"), entry("businessId", "24"),
-			entry("investigationId", "0"), entry("serviceId", "24"), entry("onlylatest", "true"));
+		assertThat(client.listForService(24)).isSameAs(answer);
 	}
 
 	@Test
 	void readsASavedBeräkning() {
-		client.read(31);
-		assertThat(readWith("api2/Calculation/GetCalculation")).containsExactly(entry("businessType", "3"), entry("businessId", "31"));
+		final var answer = json("{\"calculationId\":31}");
+		when(professionalWeb.readCalculation(31)).thenReturn(answer);
+
+		assertThat(client.read(31)).isSameAs(answer);
 	}
 
 	@Test
 	void readsASavedBeräkningForEdit() {
-		client.readForEdit(31);
-		assertThat(readWith("api2/Calculation/GetCalculationForEdit")).containsExactly(entry("businessType", "3"), entry("businessId", "31"));
+		final var answer = json("{\"calculation\":{\"calculationId\":31}}");
+		when(professionalWeb.readCalculationForEdit(31)).thenReturn(answer);
+
+		assertThat(client.readForEdit(31)).isSameAs(answer);
 	}
 
 	@Test
 	void readsTheInsatssJobbstimulans() {
-		client.readJobStimulus(24);
-		assertThat(readWith("api2/Calculation/GetJobStimulusForService")).containsExactly(entry("businessType", "8"), entry("businessId", "24"));
+		final var answer = json("{\"applicant\":null}");
+		when(professionalWeb.readJobStimulus(24)).thenReturn(answer);
+
+		assertThat(client.readJobStimulus(24)).isSameAs(answer);
 	}
 
 	@Test
 	void placesPersons() {
 		final var body = json("{\"normId\":1}");
+		final var answer = json("{\"calculationPersons\":[]}");
+		when(professionalWeb.placePersons(body)).thenReturn(answer);
 
-		client.placePersons(body);
-
-		verify(professionalWeb).post("api2/Calculation/PlacePersons", Map.of(), body);
+		assertThat(client.placePersons(body)).isSameAs(answer);
 	}
 
 	@Test
 	void countsAMembersAmount() {
-		when(professionalWeb.post(eq("api2/Calculation/GetAmount"), eq(Map.of()), bodyCaptor.capture())).thenReturn(json("{\"amount\":1300}"));
+		when(professionalWeb.readAmount(bodyCaptor.capture())).thenReturn(json("{\"amount\":1300}"));
 
 		final var amount = client.amountFor(json("{\"personId\":\"a\"}"), json("{\"rowId\":2}"), tree("\"2026-09-01\""), tree("\"2026-09-30\""));
 
@@ -114,7 +110,7 @@ class LifecareCalculationClientTest {
 
 	@Test
 	void countsTheGemensammaKostnader() {
-		when(professionalWeb.post(eq("api2/Calculation/GetSharedCost"), eq(Map.of()), bodyCaptor.capture())).thenReturn(tree("2030"));
+		when(professionalWeb.readSharedCost(bodyCaptor.capture())).thenReturn(tree("2030"));
 
 		assertThat(client.sharedCost(tree("\"2026-09-01\""), tree("\"2026-09-30\""), json("{\"noOfMembers\":4}")).intValue()).isEqualTo(2030);
 		assertThat(bodyCaptor.getValue()).isEqualTo(json("{\"startDate\":\"2026-09-01\",\"endDate\":\"2026-09-30\",\"normShared\":{\"noOfMembers\":4}}"));
@@ -122,23 +118,29 @@ class LifecareCalculationClientTest {
 
 	@Test
 	void marksJobbstimulans() {
-		client.withJobStimuli(json("{\"calculationId\":1}"), json("{\"applicant\":null}"));
+		final var answer = json("{\"calculationId\":1,\"hasApplicantJobStimuli\":true}");
+		when(professionalWeb.readJobStimuliForCalculation(bodyCaptor.capture())).thenReturn(answer);
 
-		verify(professionalWeb).post(eq("api2/Calculation/GetJobStimuliForCalculation"), eq(Map.of()), bodyCaptor.capture());
+		assertThat(client.withJobStimuli(json("{\"calculationId\":1}"), json("{\"applicant\":null}"))).isSameAs(answer);
 		assertThat(bodyCaptor.getValue()).isEqualTo(json("{\"calculation\":{\"calculationId\":1},\"jobStimulus\":{\"applicant\":null}}"));
 	}
 
 	@Test
-	void createsOnTheInsatsAndUpdatesTheBeräkning() {
+	void createsOnTheInsats() {
 		final ObjectNode body = json("{}");
+		final var answer = json("{\"calculationId\":31}");
+		when(professionalWeb.createCalculation(24, body)).thenReturn(answer);
 
-		client.create(24, body);
-		client.update(31, body);
+		assertThat(client.create(24, body)).isSameAs(answer);
+	}
 
-		verify(professionalWeb).post(eq("api2/Calculation/Create"), paramsCaptor.capture(), eq(body));
-		assertThat(paramsCaptor.getValue()).containsExactly(entry("businessType", "8"), entry("businessId", "24"));
-		verify(professionalWeb).post(eq("api2/Calculation/Update"), paramsCaptor.capture(), eq(body));
-		assertThat(paramsCaptor.getValue()).containsExactly(entry("businessType", "3"), entry("businessId", "31"));
+	@Test
+	void updatesTheBeräkning() {
+		final ObjectNode body = json("{}");
+		final var answer = json("{\"calculationId\":31}");
+		when(professionalWeb.updateCalculation(31, body)).thenReturn(answer);
+
+		assertThat(client.update(31, body)).isSameAs(answer);
 	}
 
 	@Test

@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
-import java.util.LinkedHashMap;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,7 +7,6 @@ import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareSectionStatus;
 
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionClient.SERVICE_BUSINESS_TYPE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.elements;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.integer;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.isTrue;
@@ -23,11 +21,7 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 @Service
 public class LifecareSectionStatusService {
 
-	static final String PATH_LIST_CALCULATIONS = "api2/Calculation/ListCalculations";
-
 	private static final Logger LOG = LoggerFactory.getLogger(LifecareSectionStatusService.class);
-	private static final String BUSINESS_TYPE = "businessType";
-	private static final String BUSINESS_ID = "businessId";
 
 	private final LifecareErrandService errandService;
 	private final ProfessionalWebClient client;
@@ -58,13 +52,7 @@ public class LifecareSectionStatusService {
 			return false;
 		}
 		try {
-			final var params = new LinkedHashMap<String, String>();
-			params.put(BUSINESS_TYPE, SERVICE_BUSINESS_TYPE);
-			params.put(BUSINESS_ID, String.valueOf(errand.serviceId()));
-			params.put("investigationId", "0");
-			params.put("serviceId", String.valueOf(errand.serviceId()));
-			params.put("onlylatest", "true");
-			final var listed = client.get(PATH_LIST_CALCULATIONS, params);
+			final var listed = client.listLatestCalculations(errand.serviceId());
 			accessRecorder.read(errand, "CALCULATION", "Läste insatsens normberäkningar i Lifecare");
 			return elements(listed).stream()
 				.anyMatch(calculation -> Objects.equals(integer(calculation.path("calculationId")).orElse(null), errand.calculationId())

@@ -210,6 +210,79 @@ class ProfessionalWebClientTest {
 		assertThat(client.createPayee(body)).isEqualTo(answer);
 	}
 
+	// Calculations
+
+	@Test
+	void readCalculationProposalReadsTheInsatsUnderlag() {
+		final var answer = json("{\"calculation\":{}}");
+		when(integrator.readCalculationProposal(MUNICIPALITY_ID, 24)).thenReturn(answer);
+
+		assertThat(client.readCalculationProposal(24)).isEqualTo(answer);
+	}
+
+	@Test
+	void listLatestCalculationsReadsTheInsatsCalculations() {
+		final var answer = json("[{\"calculationId\":31}]");
+		when(integrator.listLatestCalculations(MUNICIPALITY_ID, 24)).thenReturn(answer);
+
+		assertThat(client.listLatestCalculations(24)).isEqualTo(answer);
+	}
+
+	@Test
+	void readCalculationReadsTheCalculation() {
+		final var answer = json("{\"calculationId\":31}");
+		when(integrator.readCalculation(MUNICIPALITY_ID, 31)).thenReturn(answer);
+
+		assertThat(client.readCalculation(31)).isEqualTo(answer);
+	}
+
+	@Test
+	void readCalculationForEditReadsTheCalculationForEdit() {
+		final var answer = json("{\"calculation\":{\"calculationId\":31}}");
+		when(integrator.readCalculationForEdit(MUNICIPALITY_ID, 31)).thenReturn(answer);
+
+		assertThat(client.readCalculationForEdit(31)).isEqualTo(answer);
+	}
+
+	@Test
+	void theComputationsPostTheirBodiesAsTheyAre() {
+		final var body = json("{\"normId\":1}");
+		when(integrator.placePersons(MUNICIPALITY_ID, body)).thenReturn(json("{\"placed\":1}"));
+		when(integrator.readAmount(MUNICIPALITY_ID, body)).thenReturn(json("{\"amount\":1300}"));
+		when(integrator.readSharedCost(MUNICIPALITY_ID, body)).thenReturn(json("2030"));
+		when(integrator.readJobStimuliForCalculation(MUNICIPALITY_ID, body)).thenReturn(json("{\"marked\":1}"));
+
+		assertThat(client.placePersons(body)).isEqualTo(json("{\"placed\":1}"));
+		assertThat(client.readAmount(body)).isEqualTo(json("{\"amount\":1300}"));
+		assertThat(client.readSharedCost(body)).isEqualTo(json("2030"));
+		assertThat(client.readJobStimuliForCalculation(body)).isEqualTo(json("{\"marked\":1}"));
+	}
+
+	@Test
+	void createCalculationPostsTheBodyOnTheInsats() {
+		final var body = json("{\"calculation\":{}}");
+		final var answer = json("{\"calculationId\":31}");
+		when(integrator.createCalculation(MUNICIPALITY_ID, 24, body)).thenReturn(answer);
+
+		assertThat(client.createCalculation(24, body)).isEqualTo(answer);
+	}
+
+	@Test
+	void updateCalculationPutsTheBodyOnTheCalculation() {
+		final var body = json("{\"calculation\":{}}");
+		final var answer = json("{\"calculationId\":31}");
+		when(integrator.updateCalculation(MUNICIPALITY_ID, 31, body)).thenReturn(answer);
+
+		assertThat(client.updateCalculation(31, body)).isEqualTo(answer);
+	}
+
+	@Test
+	void deleteCalculationDeletesTheCalculation() {
+		client.deleteCalculation(31);
+
+		verify(integrator).deleteCalculation(MUNICIPALITY_ID, 31);
+	}
+
 	// Answers and errors
 
 	@Test

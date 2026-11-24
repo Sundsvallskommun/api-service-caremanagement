@@ -16,9 +16,6 @@ import tools.jackson.databind.JsonNode;
 @Component
 class LifecareDecisionClient {
 
-	/** Lifecare's businessType for a businessId that is an insats. */
-	static final String SERVICE_BUSINESS_TYPE = "8";
-
 	/**
 	 * The amountType Lifecare's calculation view sends when a beslut is made from a normberäkning: its "Besluta" button
 	 * at Resultat, the only one of the three Sundsvall's configuration shows (capture 2026-09-30).
