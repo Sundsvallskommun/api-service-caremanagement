@@ -43,7 +43,6 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 
 	@Test
 	void test02_decisionPdfIsPrintedThroughTheIntegrator() throws IOException {
-		// The print first asks its parameter questions as a form; the form is posted back through the exchange too.
 		setupCall()
 			.withServicePath(PATH + "/" + ERRAND_ID + "/lifecare/decision/pdf")
 			.withHttpMethod(GET)
