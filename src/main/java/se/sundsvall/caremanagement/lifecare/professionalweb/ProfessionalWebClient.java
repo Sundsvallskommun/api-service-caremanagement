@@ -3,9 +3,12 @@ package se.sundsvall.caremanagement.lifecare.professionalweb;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import se.sundsvall.caremanagement.lifecare.professionalweb.integrator.ProfessionalWebIntegratorClient;
 import se.sundsvall.dept44.problem.Problem;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -47,11 +50,58 @@ public class ProfessionalWebClient {
 	static final String ERROR_NOT_A_PDF = "Lifecare did not answer with a PDF";
 	static final String ERROR_ASKED_AGAIN = "Lifecare ställde en parameterfråga som careM inte kunde besvara";
 
+	/** The integrator's path takes a municipality; there is one Lifecare, Sundsvall's. */
+	private static final String MUNICIPALITY_ID = "2281";
+
 	private final ProfessionalWebTransport transport;
+	private final ProfessionalWebIntegratorClient integrator;
 	private final JsonMapper json = JsonMapper.builder().build();
 
-	public ProfessionalWebClient(final ProfessionalWebTransport transport) {
+	public ProfessionalWebClient(final ProfessionalWebTransport transport, final ProfessionalWebIntegratorClient integrator) {
 		this.transport = transport;
+		this.integrator = integrator;
+	}
+
+	/** The bevakningar on an insats. */
+	public JsonNode listReminders(final int serviceId) {
+		return read(() -> integrator.listReminders(MUNICIPALITY_ID, serviceId));
+	}
+
+	/** The blank bevakning and the options for a new one on an insats. */
+	public JsonNode readReminderProposal(final int serviceId) {
+		return read(() -> integrator.readReminderProposal(MUNICIPALITY_ID, serviceId));
+	}
+
+	/** A bevakning, as Lifecare's editor reads it. */
+	public JsonNode readReminder(final int reminderId) {
+		return read(() -> integrator.readReminder(MUNICIPALITY_ID, reminderId));
+	}
+
+	/** Creates a bevakning. Not idempotent. */
+	public JsonNode createReminder(final JsonNode body) {
+		return read(() -> integrator.createReminder(MUNICIPALITY_ID, body));
+	}
+
+	/** Saves a changed bevakning; the body's reminderId is the one given. */
+	public void updateReminder(final int reminderId, final JsonNode body) {
+		write(() -> integrator.updateReminder(MUNICIPALITY_ID, reminderId, body));
+	}
+
+	/** Removes a bevakning. */
+	public void removeReminder(final int reminderId) {
+		write(() -> integrator.removeReminder(MUNICIPALITY_ID, reminderId));
+	}
+
+	/** An answer from the integrator; a missing node when it answered without a body. */
+	private static JsonNode read(final Supplier<JsonNode> call) {
+		return Optional.ofNullable(ProfessionalWebErrors.call(call)).orElse(MissingNode.getInstance());
+	}
+
+	private static void write(final Runnable call) {
+		ProfessionalWebErrors.call(() -> {
+			call.run();
+			return null;
+		});
 	}
 
 	/**

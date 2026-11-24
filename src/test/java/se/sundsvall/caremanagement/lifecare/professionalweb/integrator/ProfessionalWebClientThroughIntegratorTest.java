@@ -57,7 +57,7 @@ class ProfessionalWebClientThroughIntegratorTest {
 
 	@BeforeEach
 	void setUp() {
-		client = new ProfessionalWebClient(new IntegratorProfessionalWebTransport(integratorClient));
+		client = new ProfessionalWebClient(new IntegratorProfessionalWebTransport(integratorClient), integratorClient);
 	}
 
 	@AfterEach

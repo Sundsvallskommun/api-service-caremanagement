@@ -2,9 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -49,12 +47,8 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 @Service
 public class LifecareReminderService {
 
-	static final String PATH_LIST = "api2/Reminders/ListRemindersByServiceId";
-	static final String PATH_PROPOSAL = "api2/Reminders/GetProposalForService";
-	static final String PATH_EDIT = "api2/Reminders/GetReminderEditComposite";
-	static final String PATH_CREATE = "api2/Reminders/CreateReminder/";
-	static final String PATH_UPDATE = "api2/Reminders/UpdateReminder/";
-	static final String PATH_REMOVE = "api2/Reminders/RemoveReminder/";
+	static final String PATH_PROPOSAL = "services/{serviceId}/reminders/proposal";
+	static final String PATH_EDIT = "reminders/{reminderId}";
 
 	static final String TARGET_REMINDERS = "REMINDERS";
 	static final String TARGET_REMINDER = "REMINDER";
@@ -139,7 +133,7 @@ public class LifecareReminderService {
 		resolveCodeTexts(proposal.path(FIELD_OPTIONS), request);
 
 		final var body = toReminderCreateBody(blank, target, errandService.applicantPersonalNumber(errand), applicantName(errand), request);
-		client.post(PATH_CREATE, Map.of(), body);
+		client.createReminder(body);
 		recorder.written(errand, LifecareAccessEntry.CREATE, TARGET_REMINDER, "Lade till en bevakning i Lifecare", null);
 	}
 
@@ -159,8 +153,7 @@ public class LifecareReminderService {
 		final var serviceId = errand.requireServiceId();
 		assertOnInsats(serviceId, reminderId);
 		final var proposal = readProposal(serviceId);
-		final var current = requireObject(client.get(PATH_EDIT, params("reminderId", String.valueOf(reminderId), "readOptions", "false")).path("reminder"),
-			PATH_EDIT);
+		final var current = requireObject(client.readReminder(reminderId).path("reminder"), PATH_EDIT);
 
 		final var dateChanged = !Objects.equals(text(current.path("reminderDate")), request.getReminderDate());
 		if (dateChanged && isPast(request.getReminderDate())) {
@@ -168,7 +161,7 @@ public class LifecareReminderService {
 		}
 		final var texts = resolveCodeTexts(proposal.path(FIELD_OPTIONS), request);
 
-		client.post(PATH_UPDATE, Map.of(), toReminderUpdateBody(current, request, dateChanged, texts.get(0), texts.get(1)));
+		client.updateReminder(reminderId, toReminderUpdateBody(current, request, dateChanged, texts.get(0), texts.get(1)));
 		recorder.written(errand, LifecareAccessEntry.UPDATE, TARGET_REMINDER, "Ändrade en bevakning i Lifecare", String.valueOf(reminderId));
 	}
 
@@ -183,16 +176,16 @@ public class LifecareReminderService {
 	public void remove(final String municipalityId, final String namespace, final String errandId, final int reminderId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		assertOnInsats(errand.requireServiceId(), reminderId);
-		client.delete(PATH_REMOVE, Map.of("id", reminderId));
+		client.removeReminder(reminderId);
 		recorder.written(errand, LifecareAccessEntry.DELETE, TARGET_REMINDER, "Tog bort en bevakning i Lifecare", String.valueOf(reminderId));
 	}
 
 	private JsonNode readList(final int serviceId) {
-		return client.get(PATH_LIST, Map.of("id", String.valueOf(serviceId)));
+		return client.listReminders(serviceId);
 	}
 
 	private JsonNode readProposal(final int serviceId) {
-		return client.get(PATH_PROPOSAL, Map.of("id", String.valueOf(serviceId)));
+		return client.readReminderProposal(serviceId);
 	}
 
 	private void assertOnInsats(final int serviceId, final int reminderId) {
@@ -277,12 +270,5 @@ public class LifecareReminderService {
 			return object;
 		}
 		throw Problem.valueOf(BAD_GATEWAY, UNEXPECTED_ANSWER.formatted(path));
-	}
-
-	private static Map<String, String> params(final String firstKey, final String firstValue, final String secondKey, final String secondValue) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put(firstKey, firstValue);
-		params.put(secondKey, secondValue);
-		return params;
 	}
 }

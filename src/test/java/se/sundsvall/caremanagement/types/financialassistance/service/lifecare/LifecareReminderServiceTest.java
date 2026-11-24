@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +20,7 @@ import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
 import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareReminder;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareReminderRequest;
+import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -29,7 +29,7 @@ import tools.jackson.databind.node.ObjectNode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -41,12 +41,8 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareReminderService.PATH_CREATE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareReminderService.PATH_EDIT;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareReminderService.PATH_LIST;
+import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareReminderService.PATH_PROPOSAL;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareReminderService.PATH_REMOVE;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareReminderService.PATH_UPDATE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareReminderFixtures.CURRENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.mapper.LifecareReminderFixtures.PROPOSAL;
 
@@ -58,7 +54,6 @@ class LifecareReminderServiceTest {
 	private static final String NAMESPACE = "FINANCIAL_ASSISTANCE";
 	private static final String ERRAND_ID = "cb20c51f-fcf3-42c0-b613-de563634a8ec";
 	private static final LifecareErrand ERRAND = new LifecareErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 2, null, null, null, 2026, 9);
-	private static final Map<String, String> BY_SERVICE = Map.of("id", "2");
 
 	/** Today is pinned so the dates below stay in the future however long the tests live. */
 	private static final Clock TODAY = Clock.fixed(LocalDateTime.of(2026, Month.SEPTEMBER, 23, 0, 30).atZone(ZoneId.of("Europe/Stockholm")).toInstant(),
@@ -109,7 +104,7 @@ class LifecareReminderServiceTest {
 	@Test
 	void list() {
 		givenErrand();
-		when(client.get(PATH_LIST, BY_SERVICE)).thenReturn(json(LIST));
+		when(client.listReminders(2)).thenReturn(json(LIST));
 
 		final var result = service.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -120,7 +115,7 @@ class LifecareReminderServiceTest {
 	@Test
 	void listIsNotServedWhenTheReadCannotBeLogged() {
 		givenErrand();
-		when(client.get(PATH_LIST, BY_SERVICE)).thenReturn(json(LIST));
+		when(client.listReminders(2)).thenReturn(json(LIST));
 		doThrow(new IllegalStateException("log down")).when(recorder).read(any(), anyString(), anyString());
 
 		assertThatThrownBy(() -> service.list(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
@@ -139,7 +134,7 @@ class LifecareReminderServiceTest {
 	@Test
 	void options() {
 		givenErrand();
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal());
+		when(client.readReminderProposal(2)).thenReturn(proposal());
 
 		final var options = service.options(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -151,7 +146,7 @@ class LifecareReminderServiceTest {
 	@Test
 	void optionsAreNotServedWhenTheReadCannotBeLogged() {
 		givenErrand();
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal());
+		when(client.readReminderProposal(2)).thenReturn(proposal());
 		doThrow(new IllegalStateException("log down")).when(recorder).read(any(), anyString(), anyString());
 
 		assertThatThrownBy(() -> service.options(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
@@ -160,7 +155,7 @@ class LifecareReminderServiceTest {
 	@Test
 	void createHangsTheBevakningOnTheInsatsForTheApplicant() {
 		givenErrand();
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal());
+		when(client.readReminderProposal(2)).thenReturn(proposal());
 		when(errandService.applicantPersonalNumber(ERRAND)).thenReturn("199001122390");
 		when(stakeholderService.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
 			Stakeholder.create().withRole("CO_APPLICANT").withFirstName("Other").withLastName("Person"),
@@ -168,7 +163,7 @@ class LifecareReminderServiceTest {
 
 		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request("2026-09-30"));
 
-		verify(client).post(eq(PATH_CREATE), eq(Map.of()), bodyCaptor.capture());
+		verify(client).createReminder(bodyCaptor.capture());
 		final var body = bodyCaptor.getValue();
 		assertThat(body.path("objectType").intValue()).isEqualTo(7083);
 		assertThat(body.path("objectTypeName").stringValue()).isEqualTo("IFO.Insats");
@@ -185,14 +180,26 @@ class LifecareReminderServiceTest {
 	@Test
 	void createTakesTodayAndAnApplicantWithoutAName() {
 		givenErrand();
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal());
+		when(client.readReminderProposal(2)).thenReturn(proposal());
 		when(errandService.applicantPersonalNumber(ERRAND)).thenReturn("199001122390");
 		when(stakeholderService.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
 
 		service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request("2026-09-23"));
 
-		verify(client).post(eq(PATH_CREATE), eq(Map.of()), bodyCaptor.capture());
+		verify(client).createReminder(bodyCaptor.capture());
 		assertThat(bodyCaptor.getValue().path("personName").stringValue()).isEmpty();
+	}
+
+	@Test
+	void createPassesLifecaresRefusalOnWithItsText() {
+		givenErrand();
+		when(client.readReminderProposal(2)).thenReturn(proposal());
+		when(errandService.applicantPersonalNumber(ERRAND)).thenReturn("199001122390");
+		when(stakeholderService.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		when(client.createReminder(any())).thenThrow(Problem.valueOf(UNPROCESSABLE_CONTENT, "Bevakningsdatum saknas"));
+
+		assertRefused(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request("2026-09-30")), UNPROCESSABLE_CONTENT, "Bevakningsdatum saknas");
+		verifyNoInteractions(recorder);
 	}
 
 	@Test
@@ -208,10 +215,11 @@ class LifecareReminderServiceTest {
 		givenErrand();
 		final var proposal = proposal();
 		((ObjectNode) proposal.path("reminderTypeObjects").path(1).path("associations").path(0)).put("caseworkerId", "");
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal);
+		when(client.readReminderProposal(2)).thenReturn(proposal);
 
 		assertRefused(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request("2026-09-30")), BAD_REQUEST, LifecareReminderService.NO_CASEWORKER);
-		verify(client, never()).post(anyString(), anyMap(), any());
+		verify(client, never()).createReminder(any());
+		verify(client, never()).updateReminder(anyInt(), any());
 	}
 
 	@Test
@@ -219,7 +227,7 @@ class LifecareReminderServiceTest {
 		givenErrand();
 		final var proposal = proposal();
 		((ObjectNode) proposal.path("reminderTypeObjects").path(1)).put("text", "IFO.Beslut");
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal);
+		when(client.readReminderProposal(2)).thenReturn(proposal);
 
 		assertRefused(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request("2026-09-30")), BAD_REQUEST, LifecareReminderService.NO_MANUAL_REMINDER);
 	}
@@ -229,7 +237,7 @@ class LifecareReminderServiceTest {
 		givenErrand();
 		final var proposal = proposal();
 		((ObjectNode) proposal.path("reminderForAdd")).put("mainObjectId", "99");
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal);
+		when(client.readReminderProposal(2)).thenReturn(proposal);
 
 		assertRefused(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request("2026-09-30")), BAD_REQUEST, LifecareReminderService.NO_MANUAL_REMINDER);
 	}
@@ -239,7 +247,7 @@ class LifecareReminderServiceTest {
 		givenErrand();
 		final var proposal = proposal();
 		((ObjectNode) proposal.path("reminderTypeObjects").path(1).path("associations").path(0).path("reminderTypes").path(0)).put("isActive", false);
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal);
+		when(client.readReminderProposal(2)).thenReturn(proposal);
 
 		assertRefused(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request("2026-09-30")), BAD_REQUEST, LifecareReminderService.NO_MANUAL_REMINDER);
 	}
@@ -247,7 +255,7 @@ class LifecareReminderServiceTest {
 	@Test
 	void createRefusesAPriorityOrStatusLifecareDoesNotOffer() {
 		givenErrand();
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal());
+		when(client.readReminderProposal(2)).thenReturn(proposal());
 
 		assertRefused(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request("2026-09-30").withPriority(9)), BAD_REQUEST,
 			LifecareReminderService.UNKNOWN_CODES);
@@ -258,7 +266,7 @@ class LifecareReminderServiceTest {
 	@Test
 	void createOnAProposalWithoutABlankBevakning() {
 		givenErrand();
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(json("{}"));
+		when(client.readReminderProposal(2)).thenReturn(json("{}"));
 
 		assertRefused(() -> service.create(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, request("2026-09-30")), BAD_GATEWAY,
 			LifecareReminderService.UNEXPECTED_ANSWER.formatted(PATH_PROPOSAL));
@@ -267,14 +275,14 @@ class LifecareReminderServiceTest {
 	@Test
 	void updateSavesTheChangeAndLogsIt() {
 		givenErrand();
-		when(client.get(PATH_LIST, BY_SERVICE)).thenReturn(json(LIST));
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal());
-		when(client.get(PATH_EDIT, Map.of("reminderId", "40", "readOptions", "false")))
+		when(client.listReminders(2)).thenReturn(json(LIST));
+		when(client.readReminderProposal(2)).thenReturn(proposal());
+		when(client.readReminder(40))
 			.thenReturn(json("{\"reminder\": " + CURRENT + "}"));
 
 		service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 40, request("2026-09-23").withText("Hejsdfdsf"));
 
-		verify(client).post(eq(PATH_UPDATE), eq(Map.of()), bodyCaptor.capture());
+		verify(client).updateReminder(eq(40), bodyCaptor.capture());
 		assertThat(bodyCaptor.getValue().path("reminderId").intValue()).isEqualTo(40);
 		assertThat(bodyCaptor.getValue().path("text").stringValue()).isEqualTo("Hejsdfdsf");
 		assertThat(bodyCaptor.getValue().path("isDateDirty").booleanValue()).isFalse();
@@ -284,58 +292,60 @@ class LifecareReminderServiceTest {
 	@Test
 	void updateMarksAnOverdueBevakningDoneWithoutTouchingItsDate() {
 		givenErrand();
-		when(client.get(PATH_LIST, BY_SERVICE)).thenReturn(json(LIST));
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal());
+		when(client.listReminders(2)).thenReturn(json(LIST));
+		when(client.readReminderProposal(2)).thenReturn(proposal());
 		final var overdue = (ObjectNode) json(CURRENT);
 		overdue.put("reminderDate", "2026-09-01");
-		when(client.get(PATH_EDIT, Map.of("reminderId", "40", "readOptions", "false"))).thenReturn(JSON.createObjectNode().set("reminder", overdue));
+		when(client.readReminder(40)).thenReturn(JSON.createObjectNode().set("reminder", overdue));
 
 		service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 40, request("2026-09-01").withStatus(2));
 
-		verify(client).post(eq(PATH_UPDATE), eq(Map.of()), bodyCaptor.capture());
+		verify(client).updateReminder(eq(40), bodyCaptor.capture());
 		assertThat(bodyCaptor.getValue().path("statusText").stringValue()).isEqualTo("Klar");
 	}
 
 	@Test
 	void updateRefusesMovingTheDateIntoThePast() {
 		givenErrand();
-		when(client.get(PATH_LIST, BY_SERVICE)).thenReturn(json(LIST));
-		when(client.get(PATH_PROPOSAL, BY_SERVICE)).thenReturn(proposal());
-		when(client.get(PATH_EDIT, Map.of("reminderId", "40", "readOptions", "false")))
+		when(client.listReminders(2)).thenReturn(json(LIST));
+		when(client.readReminderProposal(2)).thenReturn(proposal());
+		when(client.readReminder(40))
 			.thenReturn(json("{\"reminder\": " + CURRENT + "}"));
 
 		assertRefused(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 40, request("2026-09-01")), BAD_REQUEST, LifecareReminderService.PAST_DATE);
-		verify(client, never()).post(anyString(), anyMap(), any());
+		verify(client, never()).createReminder(any());
+		verify(client, never()).updateReminder(anyInt(), any());
 	}
 
 	@Test
 	void updateRefusesABevakningNotOnTheInsats() {
 		givenErrand();
-		when(client.get(PATH_LIST, BY_SERVICE)).thenReturn(json(LIST));
+		when(client.listReminders(2)).thenReturn(json(LIST));
 
 		assertRefused(() -> service.update(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 99, request("2026-09-30")), NOT_FOUND, LifecareReminderService.NOT_ON_INSATS);
-		verify(client, never()).post(anyString(), anyMap(), any());
+		verify(client, never()).createReminder(any());
+		verify(client, never()).updateReminder(anyInt(), any());
 		verifyNoInteractions(recorder);
 	}
 
 	@Test
 	void removeRemovesAndLogs() {
 		givenErrand();
-		when(client.get(PATH_LIST, BY_SERVICE)).thenReturn(json(LIST));
+		when(client.listReminders(2)).thenReturn(json(LIST));
 
 		service.remove(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 40);
 
-		verify(client).delete(PATH_REMOVE, Map.of("id", 40));
+		verify(client).removeReminder(40);
 		verify(recorder).written(ERRAND, LifecareAccessEntry.DELETE, "REMINDER", "Tog bort en bevakning i Lifecare", "40");
 	}
 
 	@Test
 	void removeRefusesABevakningNotOnTheInsats() {
 		givenErrand();
-		when(client.get(PATH_LIST, BY_SERVICE)).thenReturn(json(LIST));
+		when(client.listReminders(2)).thenReturn(json(LIST));
 
 		assertRefused(() -> service.remove(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 99), NOT_FOUND, LifecareReminderService.NOT_ON_INSATS);
-		verify(client, never()).delete(anyString(), any());
+		verify(client, never()).removeReminder(anyInt());
 	}
 
 	private static void assertRefused(final ThrowingCallable call, final HttpStatus status,
