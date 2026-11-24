@@ -104,7 +104,7 @@ integration:
   operaton:
     connect-timeout: 5
     read-timeout: 30
-  # lifecare-integrator, careM's only way to Lifecare: FamilyCare reads and writes, and the ProfessionalWeb exchange.
+  # lifecare-integrator, careM's only way to Lifecare: FamilyCare reads and writes, and the ProfessionalWeb resources.
   # OAuth2 client credentials via the lifecare-integrator Spring security registration above.
   # read-timeout 90: an attachment upload onto a Lifecare actualisation measured 41.5 s against the live API on
   # 2026-09-23, and the integrator's own read timeout to FamilyCare is raised to 90 to match. The two are equal rather
@@ -268,8 +268,8 @@ financial-assistance:
     # decision read has no balance, so a claim since repaid or forgiven is shown too and the caseworker checks it.
     recovery-claim-lookback-months: ${FINANCIAL_ASSISTANCE_RECOVERY_CLAIM_LOOKBACK_MONTHS:36}
 
-# The ProfessionalWeb exchange through lifecare-integrator carries whatever the caseworker wrote and Lifecare's answers,
-# personnummer included. Keep it out of dept44's request/response payload logging entirely.
+# The ProfessionalWeb resources of lifecare-integrator carry whatever the caseworker wrote and Lifecare's answers,
+# personnummer included. Keep them out of dept44's request/response payload logging entirely.
 logbook:
   excluded:
     paths: /**/professional-web/**

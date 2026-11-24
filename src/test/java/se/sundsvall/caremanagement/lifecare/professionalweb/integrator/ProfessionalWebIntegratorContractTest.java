@@ -117,9 +117,7 @@ class ProfessionalWebIntegratorContractTest {
 	}
 
 	private static List<Method> resourceMethods() {
-		return Arrays.stream(ProfessionalWebIntegratorClient.class.getDeclaredMethods())
-			.filter(method -> !"exchange".equals(method.getName()))
-			.toList();
+		return Arrays.stream(ProfessionalWebIntegratorClient.class.getDeclaredMethods()).toList();
 	}
 
 	@SuppressWarnings("unchecked")

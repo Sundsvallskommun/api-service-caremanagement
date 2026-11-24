@@ -24,9 +24,6 @@ public interface ProfessionalWebIntegratorClient {
 
 	String CLIENT_ID = "lifecare-integrator-professionalweb";
 
-	@PostMapping(path = "/{municipalityId}/professional-web/exchange", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	ProfessionalWebExchangeResponse exchange(@PathVariable final String municipalityId, @RequestBody final ProfessionalWebExchangeRequest request);
-
 	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/reminders", produces = APPLICATION_JSON_VALUE)
 	JsonNode listReminders(@PathVariable final String municipalityId, @PathVariable final int serviceId);
 

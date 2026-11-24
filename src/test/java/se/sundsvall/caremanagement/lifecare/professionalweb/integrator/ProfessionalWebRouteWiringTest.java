@@ -1,57 +1,48 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb.integrator;
 
-import org.junit.jupiter.api.Nested;
+import java.util.Arrays;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.web.bind.annotation.RequestMapping;
 import se.sundsvall.caremanagement.Application;
-import se.sundsvall.caremanagement.lifecare.integration.LifecareFamilyCare;
-import se.sundsvall.caremanagement.lifecare.integration.integrator.LifecareIntegratorIntegration;
-import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebTransport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * ProfessionalWeb is only reached through lifecare-integrator's exchange: the application starts without any of the
- * direct route's settings, and no property selects a route. The old provider properties of FamilyCare and
- * ProfessionalWeb share one context here, so both routes are checked against them at once.
+ * ProfessionalWeb is reached only through lifecare-integrator's resources: no Feign client in the application calls the
+ * integrator's generic exchange.
  */
+@SpringBootTest(classes = Application.class)
+@ActiveProfiles("junit")
 class ProfessionalWebRouteWiringTest {
 
-	@Nested
-	@SpringBootTest(classes = Application.class)
-	@ActiveProfiles("junit")
-	class WithoutAnyRouteSettings {
+	@Autowired
+	private ApplicationContext context;
 
-		@Autowired
-		private ApplicationContext context;
-
-		@Test
-		void theOnlyTransportIsTheIntegratorsExchange() {
-			assertThat(context.getBeansOfType(ProfessionalWebTransport.class)).hasSize(1);
-			assertThat(context.getBean(ProfessionalWebTransport.class)).isInstanceOf(IntegratorProfessionalWebTransport.class);
-		}
+	@Test
+	void theProfessionalWebClientIsTheIntegratorsResources() {
+		assertThat(context.getBeansOfType(ProfessionalWebIntegratorClient.class)).hasSize(1);
 	}
 
-	@Nested
-	@SpringBootTest(classes = Application.class, properties = {
-		"integration.lifecare-familycare.provider=familycare",
-		"integration.lifecare-professionalweb.provider=direct"
-	})
-	@ActiveProfiles("junit")
-	class WithTheOldProviderPropertiesSet {
+	@Test
+	void noClientCallsTheExchange() {
+		final var paths = Arrays.stream(context.getBeanNamesForAnnotation(FeignClient.class))
+			.map(context::getType)
+			.flatMap(type -> Stream.concat(Stream.of(type), Arrays.stream(type.getInterfaces())))
+			.filter(type -> type.isAnnotationPresent(FeignClient.class))
+			.distinct()
+			.flatMap(type -> Arrays.stream(type.getMethods()))
+			.map(method -> AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class))
+			.filter(mapping -> mapping != null)
+			.flatMap(mapping -> Arrays.stream(mapping.path()))
+			.toList();
 
-		@Autowired
-		private ApplicationContext context;
-
-		@Test
-		void theIntegratorIsUsedAnyway() {
-			assertThat(context.getBeansOfType(LifecareFamilyCare.class)).hasSize(1);
-			assertThat(context.getBean(LifecareFamilyCare.class)).isInstanceOf(LifecareIntegratorIntegration.class);
-			assertThat(context.getBeansOfType(ProfessionalWebTransport.class)).hasSize(1);
-			assertThat(context.getBean(ProfessionalWebTransport.class)).isInstanceOf(IntegratorProfessionalWebTransport.class);
-		}
+		assertThat(paths).isNotEmpty().noneMatch(path -> path.contains("/professional-web/exchange"));
 	}
 }

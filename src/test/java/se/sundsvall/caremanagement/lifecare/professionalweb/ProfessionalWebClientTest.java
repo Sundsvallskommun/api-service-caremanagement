@@ -32,14 +32,12 @@ class ProfessionalWebClientTest {
 
 	@Mock
 	private ProfessionalWebIntegratorClient integrator;
-	@Mock
-	private ProfessionalWebTransport transport;
 
 	private ProfessionalWebClient client;
 
 	@BeforeEach
 	void setUp() {
-		client = new ProfessionalWebClient(transport, integrator);
+		client = new ProfessionalWebClient(integrator);
 	}
 
 	private static JsonNode json(final String text) {
