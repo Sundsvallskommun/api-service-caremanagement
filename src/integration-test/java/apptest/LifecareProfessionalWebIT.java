@@ -12,12 +12,17 @@ import se.sundsvall.caremanagement.types.financialassistance.integration.db.mode
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpMethod.PUT;
 import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 
@@ -35,6 +40,7 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 	private static final String PATH = "/2281/MY_NAMESPACE/errands/financial-assistance";
 	private static final String SENT_BY = "X-Sent-By";
 	private static final String CASEWORKER = "joe01doe; type=adAccount";
+	private static final String APPLICANT_DOCUMENTS = "/api-lifecare-integrator/2281/professional-web/persons/aaaaaaaa-0000-4000-8000-000000000001/documents";
 	private static final String REQUEST_FILE = "request.json";
 	private static final String RESPONSE_FILE = "response.json";
 
@@ -106,5 +112,33 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getAction, ErrandEventEntity::getTarget)
 			.contains(tuple(ERRAND_WITHOUT_DECISION_ID, "READ", "DECISION"))
 			.doesNotContain(tuple(ERRAND_WITHOUT_DECISION_ID, "CREATE", "DECISION"));
+	}
+
+	@Test
+	void test05_documentsAreListedByTheApplicantsPartyId() {
+		setupCall()
+			.withServicePath(PATH + "/" + ERRAND_ID + "/lifecare/documents")
+			.withHttpMethod(GET)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withExpectedResponseStatus(OK)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequest();
+
+		wiremock.verify(1, getRequestedFor(urlPathEqualTo(APPLICANT_DOCUMENTS)));
+		wiremock.verify(0, anyRequestedFor(urlPathMatching("/api-citizen/.*")));
+		assertThat(errandEventRepository.findAll())
+			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getAction, ErrandEventEntity::getTarget)
+			.contains(tuple(ERRAND_ID, "READ", "JOURNAL_AND_DOCUMENTS"));
+	}
+
+	@Test
+	void test06_documentsOfAnApplicantTheIntegratorCannotResolveAreNotFound() {
+		setupCall()
+			.withServicePath(PATH + "/" + ERRAND_ID + "/lifecare/documents")
+			.withHttpMethod(GET)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withExpectedResponseStatus(NOT_FOUND)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
 	}
 }

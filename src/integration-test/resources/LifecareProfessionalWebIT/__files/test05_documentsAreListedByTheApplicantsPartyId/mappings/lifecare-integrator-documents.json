@@ -1,0 +1,59 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/persons/aaaaaaaa-0000-4000-8000-000000000001/documents"
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"documentModels": [
+				{
+					"id": 1,
+					"title": "Journalanteckning",
+					"date": "2026-09-22",
+					"time": "17:01",
+					"type": "Beslut",
+					"ownerTypeText": "EK Ekonomiskt bistånd",
+					"responsibleCaseworker": "RPA_031DEV",
+					"updateSignature": "RPA_031DEV",
+					"updateDate": "2026-09-22",
+					"protected": true,
+					"locked": false,
+					"documentType_Name": "JournalNote",
+					"typeCode": 3
+				},
+				{
+					"id": 2,
+					"title": "Anteckning om avgift",
+					"date": "2026-09-21",
+					"time": "09:00",
+					"type": "Journalanteckning",
+					"ownerTypeText": "AV Avgifter",
+					"updateSignature": "X",
+					"updateDate": "2026-09-21",
+					"protected": false,
+					"locked": false,
+					"documentType_Name": "JournalNote",
+					"typeCode": 1
+				},
+				{
+					"id": 3,
+					"title": "Brev",
+					"date": "2026-09-20",
+					"time": "08:00",
+					"type": "Brev",
+					"ownerTypeText": "EK Ekonomiskt bistånd",
+					"updateSignature": "",
+					"updateDate": "2026-09-20",
+					"protected": false,
+					"locked": true,
+					"documentType_Name": "Regular",
+					"typeCode": 13
+				}
+			]
+		},
+		"status": 200
+	}
+}

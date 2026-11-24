@@ -1,0 +1,31 @@
+{
+	"journalNotes": [
+		{
+			"id": "1",
+			"category": "JOURNAL_NOTE",
+			"title": "Journalanteckning",
+			"dateTime": "2026-09-22T17:01",
+			"type": "Beslut",
+			"ownerTypeText": "EK Ekonomiskt bistånd",
+			"responsibleCaseworker": "RPA_031DEV",
+			"modifiedBy": "RPA_031DEV 2026-09-22",
+			"locked": false,
+			"protected": true,
+			"documentKind": "JournalNote"
+		}
+	],
+	"documents": [
+		{
+			"id": "3",
+			"category": "DOCUMENT",
+			"title": "Brev",
+			"dateTime": "2026-09-20T08:00",
+			"type": "Brev",
+			"ownerTypeText": "EK Ekonomiskt bistånd",
+			"modifiedBy": "2026-09-20",
+			"locked": true,
+			"protected": false,
+			"documentKind": "Regular"
+		}
+	]
+}
