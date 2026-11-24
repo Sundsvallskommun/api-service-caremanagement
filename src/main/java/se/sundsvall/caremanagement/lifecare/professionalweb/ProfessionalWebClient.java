@@ -107,6 +107,33 @@ public class ProfessionalWebClient {
 		return read(() -> integrator.saveJobStimulus(MUNICIPALITY_ID, body));
 	}
 
+	/**
+	 * The underlag for a new beslut on an insats; an empty amountType and calculation 0 for one made without a beräkning.
+	 */
+	public JsonNode readDecisionProposal(final int serviceId, final String amountType, final int calculationId) {
+		return read(() -> integrator.readDecisionProposal(MUNICIPALITY_ID, serviceId, amountType, calculationId));
+	}
+
+	/** The orsak catalogue of a beslutstyp. */
+	public JsonNode readDecisionReasons(final int decisionCode) {
+		return read(() -> integrator.readDecisionReasons(MUNICIPALITY_ID, decisionCode));
+	}
+
+	/** A beslut, whole: the object an update takes back. */
+	public JsonNode readDecision(final int decisionId) {
+		return read(() -> integrator.readDecision(MUNICIPALITY_ID, decisionId));
+	}
+
+	/** Registers a beslut on an insats. Not idempotent. */
+	public JsonNode createDecision(final int serviceId, final JsonNode body) {
+		return read(() -> integrator.createDecision(MUNICIPALITY_ID, serviceId, body));
+	}
+
+	/** Saves a changed beslut. */
+	public JsonNode updateDecision(final int decisionId, final JsonNode body) {
+		return read(() -> integrator.updateDecision(MUNICIPALITY_ID, decisionId, body));
+	}
+
 	/** An answer from the integrator; a missing node when it answered without a body. */
 	private static JsonNode read(final Supplier<JsonNode> call) {
 		return Optional.ofNullable(ProfessionalWebErrors.call(call)).orElse(MissingNode.getInstance());

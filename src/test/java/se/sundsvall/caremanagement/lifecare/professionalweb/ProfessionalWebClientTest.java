@@ -123,6 +123,50 @@ class ProfessionalWebClientTest {
 		assertThat(client.saveJobStimulus(body)).isEqualTo(answer);
 	}
 
+	// Decisions
+
+	@Test
+	void readDecisionProposalAsksWithTheAmountTypeAndTheCalculation() {
+		final var answer = json("{\"decision\":{}}");
+		when(integrator.readDecisionProposal(MUNICIPALITY_ID, 22, "TotalSum", 25)).thenReturn(answer);
+
+		assertThat(client.readDecisionProposal(22, "TotalSum", 25)).isEqualTo(answer);
+	}
+
+	@Test
+	void readDecisionReasonsReadsTheDecisionCodesReasons() {
+		final var answer = json("[{\"id\":1}]");
+		when(integrator.readDecisionReasons(MUNICIPALITY_ID, 153)).thenReturn(answer);
+
+		assertThat(client.readDecisionReasons(153)).isEqualTo(answer);
+	}
+
+	@Test
+	void readDecisionReadsTheDecision() {
+		final var answer = json("{\"decisionId\":98}");
+		when(integrator.readDecision(MUNICIPALITY_ID, 98)).thenReturn(answer);
+
+		assertThat(client.readDecision(98)).isEqualTo(answer);
+	}
+
+	@Test
+	void createDecisionPostsTheBodyOnTheInsats() {
+		final var body = json("{\"decisionCode\":153}");
+		final var answer = json("{\"decisionId\":98}");
+		when(integrator.createDecision(MUNICIPALITY_ID, 2, body)).thenReturn(answer);
+
+		assertThat(client.createDecision(2, body)).isEqualTo(answer);
+	}
+
+	@Test
+	void updateDecisionPutsTheBodyOnTheDecision() {
+		final var body = json("{\"decisionId\":98}");
+		final var answer = json("{\"decisionId\":98,\"saved\":true}");
+		when(integrator.updateDecision(MUNICIPALITY_ID, 98, body)).thenReturn(answer);
+
+		assertThat(client.updateDecision(98, body)).isEqualTo(answer);
+	}
+
 	// Answers and errors
 
 	@Test

@@ -34,6 +34,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
@@ -314,6 +315,20 @@ class LifecareDecisionServiceTest {
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
 			.hasMessageContaining("Beslutsdatum saknas");
+		verify(errandServiceMock, never()).linkDecision(any(), anyInt());
+	}
+
+	@Test
+	void passesOnLifecaresBadRequestOfACreate() {
+		loaded(null);
+		caseworker();
+		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
+		when(lifecareMock.create(eq(1), any())).thenThrow(Problem.valueOf(BAD_REQUEST, "Ogiltigt beslutsdatum"));
+
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessageContaining("Ogiltigt beslutsdatum");
 		verify(errandServiceMock, never()).linkDecision(any(), anyInt());
 	}
 

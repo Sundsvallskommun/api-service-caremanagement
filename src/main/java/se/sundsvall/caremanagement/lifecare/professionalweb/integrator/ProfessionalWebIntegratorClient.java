@@ -52,4 +52,20 @@ public interface ProfessionalWebIntegratorClient {
 
 	@PostMapping(path = "/{municipalityId}/professional-web/job-stimulus", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	JsonNode saveJobStimulus(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/decisions/proposal", produces = APPLICATION_JSON_VALUE)
+	JsonNode readDecisionProposal(@PathVariable final String municipalityId, @PathVariable final int serviceId, @RequestParam final String amountType,
+		@RequestParam final int calculationId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/decision-codes/{decisionCode}/reasons", produces = APPLICATION_JSON_VALUE)
+	JsonNode readDecisionReasons(@PathVariable final String municipalityId, @PathVariable final int decisionCode);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/decisions/{decisionId}", produces = APPLICATION_JSON_VALUE)
+	JsonNode readDecision(@PathVariable final String municipalityId, @PathVariable final int decisionId);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/decisions", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode createDecision(@PathVariable final String municipalityId, @PathVariable final int serviceId, @RequestBody final JsonNode body);
+
+	@PutMapping(path = "/{municipalityId}/professional-web/decisions/{decisionId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode updateDecision(@PathVariable final String municipalityId, @PathVariable final int decisionId, @RequestBody final JsonNode body);
 }

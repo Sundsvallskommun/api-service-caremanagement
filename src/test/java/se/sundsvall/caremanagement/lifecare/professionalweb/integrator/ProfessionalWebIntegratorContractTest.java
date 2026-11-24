@@ -38,7 +38,12 @@ class ProfessionalWebIntegratorContractTest {
 		Map.entry("removeReminder", "DELETE reminders/{reminderId}"),
 		Map.entry("readJobStimulus", "GET services/{serviceId}/job-stimulus"),
 		Map.entry("readJobStimulusEndDate", "GET job-stimulus/end-date"),
-		Map.entry("saveJobStimulus", "POST job-stimulus"));
+		Map.entry("saveJobStimulus", "POST job-stimulus"),
+		Map.entry("readDecisionProposal", "GET services/{serviceId}/decisions/proposal"),
+		Map.entry("readDecisionReasons", "GET decision-codes/{decisionCode}/reasons"),
+		Map.entry("readDecision", "GET decisions/{decisionId}"),
+		Map.entry("createDecision", "POST services/{serviceId}/decisions"),
+		Map.entry("updateDecision", "PUT decisions/{decisionId}"));
 
 	private static Map<String, Object> paths;
 

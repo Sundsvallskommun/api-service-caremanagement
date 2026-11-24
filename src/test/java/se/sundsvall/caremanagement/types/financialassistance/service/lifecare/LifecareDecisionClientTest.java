@@ -29,8 +29,7 @@ class LifecareDecisionClientTest {
 	@Test
 	void readsTheUnderlagOfTheInsatsAsLifecaresWebAppAsksForIt() {
 		final var answer = JsonNodeFactory.instance.objectNode();
-		when(clientMock.get("api2/Decision/GetProposalForService",
-			Map.of("businessType", "8", "businessId", "2", "amountType", "", "calculationId", "0", "proposalId", "0"))).thenReturn(answer);
+		when(clientMock.readDecisionProposal(2, "", 0)).thenReturn(answer);
 
 		assertThat(client.readProposal(2)).isSameAs(answer);
 	}
@@ -38,7 +37,7 @@ class LifecareDecisionClientTest {
 	@Test
 	void readsTheOrsakCatalogueOfABeslutstyp() {
 		final var answer = JsonNodeFactory.instance.arrayNode();
-		when(clientMock.get("api2/Decision/GetMappedDecisionReasons", Map.of("id", "153"))).thenReturn(answer);
+		when(clientMock.readDecisionReasons(153)).thenReturn(answer);
 
 		assertThat(client.readReasons(153)).isSameAs(answer);
 	}
@@ -47,8 +46,8 @@ class LifecareDecisionClientTest {
 	void readsAndUpdatesABeslutByItsId() {
 		final var answer = JsonNodeFactory.instance.objectNode();
 		final var body = JsonNodeFactory.instance.objectNode();
-		when(clientMock.get("api2/Decision/GetDecision", Map.of("businessType", "4", "businessId", "98"))).thenReturn(answer);
-		when(clientMock.post("api2/Decision/Update", Map.of("businessType", "4", "businessId", "98"), body)).thenReturn(answer);
+		when(clientMock.readDecision(98)).thenReturn(answer);
+		when(clientMock.updateDecision(98, body)).thenReturn(answer);
 
 		assertThat(client.readDecision(98)).isSameAs(answer);
 		assertThat(client.update(98, body)).isSameAs(answer);
@@ -58,7 +57,7 @@ class LifecareDecisionClientTest {
 	void createsABeslutOnTheInsats() {
 		final var answer = JsonNodeFactory.instance.objectNode();
 		final var body = JsonNodeFactory.instance.objectNode();
-		when(clientMock.post("api2/Decision/Create", Map.of("businessType", "8", "businessId", "2"), body)).thenReturn(answer);
+		when(clientMock.createDecision(2, body)).thenReturn(answer);
 
 		assertThat(client.create(2, body)).isSameAs(answer);
 	}
@@ -76,8 +75,7 @@ class LifecareDecisionClientTest {
 	@Test
 	void readsTheUnderlagFromANormberakningAsLifecaresCalculationViewAsksForIt() {
 		final var answer = JsonNodeFactory.instance.objectNode();
-		when(clientMock.get("api2/Decision/GetProposalForService",
-			Map.of("businessType", "8", "businessId", "22", "amountType", "TotalSum", "calculationId", "25", "proposalId", "0"))).thenReturn(answer);
+		when(clientMock.readDecisionProposal(22, "TotalSum", 25)).thenReturn(answer);
 
 		assertThat(client.readProposal(22, 25)).isSameAs(answer);
 	}

@@ -1,15 +1,13 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Lifecare's beslut endpoints, with paths and query strings as Lifecare's own web app sends them (captures of
- * 2026-09-23).
+ * Lifecare's beslut, through lifecare-integrator's resources.
  *
  * <p>
  * Every answer carries the personnummer of the persons the beslut concerns: never log one.
@@ -21,24 +19,13 @@ class LifecareDecisionClient {
 	/** Lifecare's businessType for a businessId that is an insats. */
 	static final String SERVICE_BUSINESS_TYPE = "8";
 
-	/** Lifecare's businessType for a businessId that is a beslut. */
-	static final String DECISION_BUSINESS_TYPE = "4";
-
 	/**
 	 * The amountType Lifecare's calculation view sends when a beslut is made from a normberäkning: its "Besluta" button
 	 * at Resultat, the only one of the three Sundsvall's configuration shows (capture 2026-09-30).
 	 */
 	static final String AMOUNT_TYPE_TOTAL_SUM = "TotalSum";
 
-	static final String PATH_PROPOSAL = "api2/Decision/GetProposalForService";
-	static final String PATH_REASONS = "api2/Decision/GetMappedDecisionReasons";
-	static final String PATH_DECISION = "api2/Decision/GetDecision";
-	static final String PATH_CREATE = "api2/Decision/Create";
-	static final String PATH_UPDATE = "api2/Decision/Update";
 	static final String PATH_PRINT = "RenderPdf/PrintDecision";
-
-	private static final String BUSINESS_TYPE = "businessType";
-	private static final String BUSINESS_ID = "businessId";
 
 	private final ProfessionalWebClient client;
 	private final ProfessionalWebProperties properties;
@@ -55,7 +42,7 @@ class LifecareDecisionClient {
 	 * @return           the underlag
 	 */
 	JsonNode readProposal(final int serviceId) {
-		return readProposal(serviceId, "", 0);
+		return client.readDecisionProposal(serviceId, "", 0);
 	}
 
 	/**
@@ -69,17 +56,7 @@ class LifecareDecisionClient {
 	 * @return               the underlag
 	 */
 	JsonNode readProposal(final int serviceId, final int calculationId) {
-		return readProposal(serviceId, AMOUNT_TYPE_TOTAL_SUM, calculationId);
-	}
-
-	private JsonNode readProposal(final int serviceId, final String amountType, final int calculationId) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put(BUSINESS_TYPE, SERVICE_BUSINESS_TYPE);
-		params.put(BUSINESS_ID, String.valueOf(serviceId));
-		params.put("amountType", amountType);
-		params.put("calculationId", String.valueOf(calculationId));
-		params.put("proposalId", "0");
-		return client.get(PATH_PROPOSAL, params);
+		return client.readDecisionProposal(serviceId, AMOUNT_TYPE_TOTAL_SUM, calculationId);
 	}
 
 	/**
@@ -89,7 +66,7 @@ class LifecareDecisionClient {
 	 * @return              the catalogue, a tree of headings and orsaker
 	 */
 	JsonNode readReasons(final int decisionCode) {
-		return client.get(PATH_REASONS, Map.of("id", String.valueOf(decisionCode)));
+		return client.readDecisionReasons(decisionCode);
 	}
 
 	/**
@@ -99,7 +76,7 @@ class LifecareDecisionClient {
 	 * @return            the beslut
 	 */
 	JsonNode readDecision(final int decisionId) {
-		return client.get(PATH_DECISION, decisionParams(decisionId));
+		return client.readDecision(decisionId);
 	}
 
 	/**
@@ -124,10 +101,7 @@ class LifecareDecisionClient {
 	 * @return           the created beslut, carrying its decisionId
 	 */
 	JsonNode create(final int serviceId, final JsonNode body) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put(BUSINESS_TYPE, SERVICE_BUSINESS_TYPE);
-		params.put(BUSINESS_ID, String.valueOf(serviceId));
-		return client.post(PATH_CREATE, params, body);
+		return client.createDecision(serviceId, body);
 	}
 
 	/**
@@ -138,13 +112,6 @@ class LifecareDecisionClient {
 	 * @return            the beslut as it now stands
 	 */
 	JsonNode update(final int decisionId, final JsonNode body) {
-		return client.post(PATH_UPDATE, decisionParams(decisionId), body);
-	}
-
-	private static Map<String, String> decisionParams(final int decisionId) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put(BUSINESS_TYPE, DECISION_BUSINESS_TYPE);
-		params.put(BUSINESS_ID, String.valueOf(decisionId));
-		return params;
+		return client.updateDecision(decisionId, body);
 	}
 }
