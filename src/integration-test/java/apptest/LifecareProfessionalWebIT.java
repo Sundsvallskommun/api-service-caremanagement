@@ -16,18 +16,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
+import static org.springframework.http.HttpMethod.PUT;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
+import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 
 @WireMockAppTestSuite(files = "classpath:/LifecareProfessionalWebIT/", classes = Application.class)
 @Sql({
 	"/db/scripts/truncate.sql",
 	"/db/scripts/testdata-it.sql",
-	"/db/scripts/testdata-lifecare-calculation-it.sql"
+	"/db/scripts/testdata-lifecare-calculation-it.sql",
+	"/db/scripts/testdata-lifecare-professionalweb-it.sql"
 })
 class LifecareProfessionalWebIT extends AbstractAppTest {
 
 	private static final String ERRAND_ID = "77777777-7777-7777-7777-777777777777";
+	private static final String ERRAND_WITHOUT_DECISION_ID = "88888888-8888-8888-8888-888888888888";
 	private static final String PATH = "/2281/MY_NAMESPACE/errands/financial-assistance";
 	private static final String SENT_BY = "X-Sent-By";
 	private static final String CASEWORKER = "joe01doe; type=adAccount";
@@ -83,5 +87,24 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 		assertThat(errandEventRepository.findAll())
 			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getAction, ErrandEventEntity::getTarget, ErrandEventEntity::getLifecareId)
 			.contains(tuple(ERRAND_ID, "READ", "PAYEES", null), tuple(ERRAND_ID, "CREATE", "PAYMENT", "4242"));
+	}
+
+	@Test
+	void test04_aDecisionLifecareRefusesIsUnprocessableWithTheIntegratorsDetail() {
+		setupCall()
+			.withServicePath(PATH + "/" + ERRAND_WITHOUT_DECISION_ID + "/lifecare/decision")
+			.withHttpMethod(PUT)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(UNPROCESSABLE_CONTENT)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
+
+		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_WITHOUT_DECISION_ID))
+			.hasValueSatisfying(entity -> assertThat(entity.getLifecareDecisionId()).isNull());
+		assertThat(errandEventRepository.findAll())
+			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getAction, ErrandEventEntity::getTarget)
+			.contains(tuple(ERRAND_WITHOUT_DECISION_ID, "READ", "DECISION"))
+			.doesNotContain(tuple(ERRAND_WITHOUT_DECISION_ID, "CREATE", "DECISION"));
 	}
 }

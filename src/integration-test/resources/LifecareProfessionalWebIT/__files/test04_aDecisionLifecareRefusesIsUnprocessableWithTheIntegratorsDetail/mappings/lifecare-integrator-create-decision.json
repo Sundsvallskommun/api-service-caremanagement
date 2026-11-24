@@ -1,0 +1,31 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/services/8800/decisions",
+		"bodyPatterns": [
+			{
+				"matchesJsonPath": "$[?(@.serviceId == 8800)]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.decisionCode == 152)]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.decisionMaker == 'JOE01DOE')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.reasonCode == 16 && @.message == '<p>Avslag</p>')]"
+			}
+		]
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/problem+json"
+		},
+		"jsonBody": {
+			"title": "Unprocessable Content",
+			"status": 422,
+			"detail": "Beslutet går inte att registrera: insatsen är avslutad."
+		},
+		"status": 422
+	}
+}

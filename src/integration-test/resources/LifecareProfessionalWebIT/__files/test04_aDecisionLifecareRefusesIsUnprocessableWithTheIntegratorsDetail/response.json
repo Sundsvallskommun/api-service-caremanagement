@@ -1,0 +1,5 @@
+{
+	"title": "Unprocessable Content",
+	"status": 422,
+	"detail": "Beslutet går inte att registrera: insatsen är avslutad."
+}
