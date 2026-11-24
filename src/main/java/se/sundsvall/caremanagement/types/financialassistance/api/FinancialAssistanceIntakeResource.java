@@ -105,7 +105,7 @@ class FinancialAssistanceIntakeResource {
 
 	@GetMapping(path = "/financial-assistance/actualisations", produces = APPLICATION_JSON_VALUE)
 	@Operation(summary = "List the applicant's Lifecare actualisations",
-		description = "The Lifecare actualisations (case intakes) registered on the applicant — what the frontend lists so a caseworker can pick which actualisation to archive a supplementary application to. The applicant is identified by partyId (resolved to a personnummer via the citizen service). The period defaults to the last 24 months up to today when from/to are omitted.",
+		description = "The Lifecare actualisations (case intakes) registered on the applicant — what the frontend lists so a caseworker can pick which actualisation to archive a supplementary application to. The applicant is identified by partyId. The period defaults to the last 24 months up to today when from/to are omitted.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
 			@ApiResponse(responseCode = "404", description = "Not Found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class))),

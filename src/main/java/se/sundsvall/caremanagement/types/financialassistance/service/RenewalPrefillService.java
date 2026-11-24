@@ -42,9 +42,8 @@ public class RenewalPrefillService {
 
 	/**
 	 * The household minus the two adults. {@link LifecareCaseService} has already put every member, the applicant and
-	 * the co-applicant in the same partyId space, so the two exclusions are plain comparisons; a child the citizen
-	 * service could not resolve (204) carries a {@code null} partyId, and its name is still useful for the citizen to
-	 * recognise.
+	 * the co-applicant in the same partyId space, so the two exclusions are plain comparisons; a child lifecare-integrator
+	 * could not resolve carries a {@code null} partyId, and its name is still useful for the citizen to recognise.
 	 */
 	private static RenewalPrefill toPrefill(final LifecareRoster roster) {
 		final var children = roster.members().stream()

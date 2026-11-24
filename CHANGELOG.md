@@ -2,6 +2,10 @@
 
 Every change to the service, newest date first. One short line per change.
 
+## 2026-11-24
+
+- Drop the citizen-service lookup from the actualisations endpoint description, which reads Lifecare by partyId.
+
 ## 2026-11-23
 
 - Add an integration test for a ProfessionalWeb read and decision print through lifecare-integrator.
