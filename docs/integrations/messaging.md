@@ -10,8 +10,8 @@ TODO: confirm whether email to applicants is still planned through this client, 
 
 ## Calls
 
-| Call | Purpose |
-|---|---|
+|              Call              |         Purpose         |
+|--------------------------------|-------------------------|
 | `POST /{municipalityId}/email` | Send a plain-text email |
 
 ## Authentication
@@ -27,3 +27,4 @@ OAuth2 client credentials, registration `messaging`.
 ## Behaviour worth knowing
 
 - The application still needs `INTEGRATION_MESSAGING_*` to start, although nothing sends mail.
+

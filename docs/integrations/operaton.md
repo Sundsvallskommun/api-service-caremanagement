@@ -8,25 +8,25 @@ financial assistance rules.
 All calls go through `ProcessService`, which any module may use (`operaton` is a Modulith shared module). See
 [architecture.md](../architecture.md).
 
-| Flow | Caller |
-|---|---|
-| Start a financial assistance errand's process when the errand is created | `FinancialAssistanceProcessStarter` |
-| Start the process again for errands whose start failed | `FinancialAssistanceProcessStartRetryWorker` |
-| End the process when an errand is withdrawn (`ErrandWithdrawn`) | `FinancialAssistanceWithdrawalListener` |
-| Resume the process after a decision is finalized | `FinancialAssistanceFinalizeService` |
-| Send a message on a client's request, `POST /{municipalityId}/{namespace}/errands/{errandId}/process-messages` | `ProcessMessageResource` |
-| Resend queued messages | `ProcessMessageRetryWorker` |
-| Evaluate rule tables | `ApplicationRulesService`, `ExpenseRulesService`, `PeriodRulesService`, `IncomeChangeFeeder`, `RenewalDeltaService`, `DefaultAssigneeService` |
+|                                                      Flow                                                      |                                                                    Caller                                                                     |
+|----------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| Start a financial assistance errand's process when the errand is created                                       | `FinancialAssistanceProcessStarter`                                                                                                           |
+| Start the process again for errands whose start failed                                                         | `FinancialAssistanceProcessStartRetryWorker`                                                                                                  |
+| End the process when an errand is withdrawn (`ErrandWithdrawn`)                                                | `FinancialAssistanceWithdrawalListener`                                                                                                       |
+| Resume the process after a decision is finalized                                                               | `FinancialAssistanceFinalizeService`                                                                                                          |
+| Send a message on a client's request, `POST /{municipalityId}/{namespace}/errands/{errandId}/process-messages` | `ProcessMessageResource`                                                                                                                      |
+| Resend queued messages                                                                                         | `ProcessMessageRetryWorker`                                                                                                                   |
+| Evaluate rule tables                                                                                           | `ApplicationRulesService`, `ExpenseRulesService`, `PeriodRulesService`, `IncomeChangeFeeder`, `RenewalDeltaService`, `DefaultAssigneeService` |
 
 ## Calls
 
-| Call | Purpose |
-|---|---|
-| `GET /{municipalityId}/process-definitions?name=` | Resolve a definition name to its key before a start or a running check |
-| `POST /{municipalityId}/process-instances` | Start a process, business key = errandId |
-| `GET /{municipalityId}/process-instances` | List active instances, to see whether an errand already has one |
-| `POST /{municipalityId}/message` | Correlate a message by business key |
-| `POST /{municipalityId}/decision-definitions/evaluate?key=` | Evaluate a DMN decision, keys `Decision_*` in the rule services |
+|                            Call                             |                                Purpose                                 |
+|-------------------------------------------------------------|------------------------------------------------------------------------|
+| `GET /{municipalityId}/process-definitions?name=`           | Resolve a definition name to its key before a start or a running check |
+| `POST /{municipalityId}/process-instances`                  | Start a process, business key = errandId                               |
+| `GET /{municipalityId}/process-instances`                   | List active instances, to see whether an errand already has one        |
+| `POST /{municipalityId}/message`                            | Correlate a message by business key                                    |
+| `POST /{municipalityId}/decision-definitions/evaluate?key=` | Evaluate a DMN decision, keys `Decision_*` in the rule services        |
 
 `OperatonClient` also declares `GET /process-instances/{id}` and `POST /process-instances/{id}/variables`. Nothing
 calls them.
@@ -62,3 +62,4 @@ token URI for this registration, and no `integration.operaton.url`. Find out how
   or ended instances do not count as running.
 - An unknown definition name is a 400 from `ProcessService`. A process start at errand creation logs and swallows
   failures, and the scheduled retry picks the errand up later.
+

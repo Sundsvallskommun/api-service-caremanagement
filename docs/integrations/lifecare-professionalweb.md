@@ -10,15 +10,15 @@ on Lifecare's side, so all of it stays behind `ProfessionalWebClient`.
 The financial assistance resources under `/{municipalityId}/{namespace}/errands/financial-assistance`, mostly below
 `/{errandId}/lifecare`, and the finalize and payment flows. See [architecture.md](../architecture.md).
 
-| Caller in `types/financialassistance/service/lifecare/` | Resource it backs |
-|---|---|
-| `calculation/LifecareCalculationClient` | `FinancialAssistanceLifecareCalculationResource` (`/calculation`, `/normberakning`). Also used by `SurplusCalculationRemover` |
-| `LifecareDecisionClient` | `FinancialAssistanceLifecareDecisionResource`, the finalize flow (`LifecareFinalizeService`) and the section status |
-| `LifecarePaymentApi` | `FinancialAssistanceLifecarePaymentResource` and the payment registration (`LifecarePaymentRegistrationService`) |
-| `LifecareJobStimulusApi` | `FinancialAssistanceLifecareJobStimulusResource` |
-| `LifecareRecordService` | `FinancialAssistanceLifecareRecordResource` (journal notes and documents) |
-| `LifecareReminderService` | `FinancialAssistanceLifecareReminderResource` |
-| `LifecareSectionStatusService` | `FinancialAssistanceLifecareSectionStatusResource` |
+| Caller in `types/financialassistance/service/lifecare/` |                                                       Resource it backs                                                       |
+|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `calculation/LifecareCalculationClient`                 | `FinancialAssistanceLifecareCalculationResource` (`/calculation`, `/normberakning`). Also used by `SurplusCalculationRemover` |
+| `LifecareDecisionClient`                                | `FinancialAssistanceLifecareDecisionResource`, the finalize flow (`LifecareFinalizeService`) and the section status           |
+| `LifecarePaymentApi`                                    | `FinancialAssistanceLifecarePaymentResource` and the payment registration (`LifecarePaymentRegistrationService`)              |
+| `LifecareJobStimulusApi`                                | `FinancialAssistanceLifecareJobStimulusResource`                                                                              |
+| `LifecareRecordService`                                 | `FinancialAssistanceLifecareRecordResource` (journal notes and documents)                                                     |
+| `LifecareReminderService`                               | `FinancialAssistanceLifecareReminderResource`                                                                                 |
+| `LifecareSectionStatusService`                          | `FinancialAssistanceLifecareSectionStatusResource`                                                                            |
 
 ## Calls
 
@@ -26,15 +26,15 @@ All paths are below the module `WESE.FC.ProfessionalWeb/`. Each one goes to Life
 api-service-lifecare-integrator's `POST /2281/professional-web/exchange`, see
 [lifecare-integrator.md](lifecare-integrator.md).
 
-| Area | Operations |
-|---|---|
-| Calculation | `api2/Calculation/GetProposalService`, `ListCalculations`, `GetCalculation`, `GetCalculationForEdit`, `PlacePersons`, `GetAmount`, `GetSharedCost`, `GetJobStimuliForCalculation`, `Create`, `Update`, `Delete` |
-| Job stimulus | `api2/Calculation/GetJobStimulusForService`, `GetJobStimulusToDate`, `SaveJobStimulus` |
-| Decision | `api2/Decision/GetProposalForService`, `GetMappedDecisionReasons`, `GetDecision`, `Create`, `Update` |
-| Payment | `api2/Payment/GetPaymentForCreate`, `GetLatestPayments`, `Create`; `api2/Payee/Create`; `api2/Household/HasHouseholdThisDate/` |
+|            Area             |                                                                                                                     Operations                                                                                                                      |
+|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Calculation                 | `api2/Calculation/GetProposalService`, `ListCalculations`, `GetCalculation`, `GetCalculationForEdit`, `PlacePersons`, `GetAmount`, `GetSharedCost`, `GetJobStimuliForCalculation`, `Create`, `Update`, `Delete`                                     |
+| Job stimulus                | `api2/Calculation/GetJobStimulusForService`, `GetJobStimulusToDate`, `SaveJobStimulus`                                                                                                                                                              |
+| Decision                    | `api2/Decision/GetProposalForService`, `GetMappedDecisionReasons`, `GetDecision`, `Create`, `Update`                                                                                                                                                |
+| Payment                     | `api2/Payment/GetPaymentForCreate`, `GetLatestPayments`, `Create`; `api2/Payee/Create`; `api2/Household/HasHouseholdThisDate/`                                                                                                                      |
 | Journal notes and documents | `api2/Document/GetDocumentsListForClient/`, `GetJournalNoteWithContent/`, `GetDocumentWithContent/`, `GetNoteProposalForService`, `GetDocumentProposalForService`, `CreateJournalNote/`, `CreateDocument/`, `UpdateJournalNote/`, `UpdateDocument/` |
-| Reminders | `api2/Reminders/ListRemindersByServiceId`, `GetProposalForService`, `GetReminderEditComposite`, `CreateReminder/`, `UpdateReminder/`, `RemoveReminder/` |
-| Prints | `RenderPdf/PrintContainer` (calculation), `RenderPdf/PrintDecision`, `RenderPdf/PrintDocument` |
+| Reminders                   | `api2/Reminders/ListRemindersByServiceId`, `GetProposalForService`, `GetReminderEditComposite`, `CreateReminder/`, `UpdateReminder/`, `RemoveReminder/`                                                                                             |
+| Prints                      | `RenderPdf/PrintContainer` (calculation), `RenderPdf/PrintDecision`, `RenderPdf/PrintDocument`                                                                                                                                                      |
 
 A write sends back the object Lifecare handed out, a proposal or the current record, with a few fields changed. The
 client works on JSON trees for that reason, so fields the service does not know about survive the round trip.
@@ -74,3 +74,4 @@ the session, and does the session escalation. careM authenticates only to the in
   payment Lifecare already holds (409) instead of making it again.
 - **Lifecare accesses are logged per errand** by `LifecareAccessRecorder`. A read whose access cannot be logged is not
   served; a write whose access cannot be logged stands.
+

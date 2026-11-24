@@ -3,7 +3,7 @@
 api-service-lifecare-integrator. It runs inside the municipal network and is careM's only way to Lifecare. careM
 uses it two ways:
 
-| Use                         | Client                            |
+|             Use             |              Client               |
 |-----------------------------|-----------------------------------|
 | FamilyCare reads and writes | `LifecareIntegratorClient`        |
 | ProfessionalWeb exchange    | `ProfessionalWebIntegratorClient` |
@@ -24,15 +24,15 @@ See [architecture.md](../architecture.md) for the endpoints behind them.
 
 FamilyCare, all under `/{municipalityId}`:
 
-| Call                                                       | Stands in for FamilyCare's                  |
-|------------------------------------------------------------|---------------------------------------------|
-| `GET /person`                                              | `Persons`                                   |
-| `GET /actualisations`, `/calculations`, `/decisions`, `/payments`, `/services`, `/documents` | The period reads |
-| `GET /documents/{documentId}/content`                      | `DocumentContent`                           |
-| `GET /users`                                               | `Users/GetUsers`                            |
-| `GET /actualisations/proposal`, `GET /calculations/proposal` | The two proposals                         |
-| `POST /actualisations`, `POST /calculations`               | The two creates, answering the created id   |
-| `POST /actualisations/{actualisationId}/attachments`       | The attachment upload                       |
+|                                             Call                                             |        Stands in for FamilyCare's         |
+|----------------------------------------------------------------------------------------------|-------------------------------------------|
+| `GET /person`                                                                                | `Persons`                                 |
+| `GET /actualisations`, `/calculations`, `/decisions`, `/payments`, `/services`, `/documents` | The period reads                          |
+| `GET /documents/{documentId}/content`                                                        | `DocumentContent`                         |
+| `GET /users`                                                                                 | `Users/GetUsers`                          |
+| `GET /actualisations/proposal`, `GET /calculations/proposal`                                 | The two proposals                         |
+| `POST /actualisations`, `POST /calculations`                                                 | The two creates, answering the created id |
+| `POST /actualisations/{actualisationId}/attachments`                                         | The attachment upload                     |
 
 ProfessionalWeb: `POST /2281/professional-web/exchange`, one call per ProfessionalWeb request. careM sends the
 method, path, query parameters and a JSON body or form fields. The integrator answers with Lifecare's status, content
@@ -73,3 +73,4 @@ clients use. The url, client id, client secret and token uri have no defaults. T
   `IntegratorProfessionalWebTransport`. careM holds no Lifecare session and registers no health indicator for
   Lifecare or the integrator.
 - **Nothing is logged.** Feign logging is pinned to `NONE` for both clients.
+

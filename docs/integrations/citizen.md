@@ -7,16 +7,16 @@ need, and tells whether a person has a protected identity.
 
 Other modules call it through `CitizenService`. See [architecture.md](../architecture.md).
 
-| Method | Callers |
-|---|---|
+|                    Method                    |                                                                             Callers                                                                             |
+|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `getPersonalNumber` (partyId → personnummer) | `FinancialAssistanceCalculationService`, `FinancialAssistanceSsbtekService`, `HouseholdIdentifiersService`, `LifecareErrandService`, `NormberakningDraftReader` |
-| `hasProtectedIdentity` | `EligibilityService`, `ProtectedIdentityGate` |
+| `hasProtectedIdentity`                       | `EligibilityService`, `ProtectedIdentityGate`                                                                                                                   |
 
 ## Calls
 
-| Call | Purpose |
-|---|---|
-| `GET /{municipalityId}/{personId}/personnumber` | partyId → personnummer |
+|                          Call                           |            Purpose            |
+|---------------------------------------------------------|-------------------------------|
+| `GET /{municipalityId}/{personId}/personnumber`         | partyId → personnummer        |
 | `GET /{municipalityId}/{personId}?ShowClassified=false` | The person's protection flags |
 
 ## Authentication
@@ -39,3 +39,4 @@ OAuth2 client credentials, registration `citizen`.
   returns no person. Citizen leaves a classified person out of an answer without `ShowClassified`, so an empty answer
   is never taken as clear.
 - Lookups are not cached. Each call reaches Citizen.
+

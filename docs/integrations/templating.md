@@ -10,8 +10,8 @@ TODO: confirm whether decision documents or notices are still meant to be render
 
 ## Calls
 
-| Call | Purpose |
-|---|---|
+|                Call                 |                      Purpose                      |
+|-------------------------------------|---------------------------------------------------|
 | `POST /{municipalityId}/render/pdf` | Render a template to PDF, returned BASE64-encoded |
 
 ## Authentication
@@ -29,3 +29,4 @@ OAuth2 client credentials, registration `templating`.
 - `TemplatingIntegration.renderPdf` decodes the BASE64 output to bytes and answers 502 when the output is empty.
 - A 404 from templating stays a 404. Every other error becomes a 502 (`TemplatingConfiguration`).
 - The application still needs `INTEGRATION_TEMPLATING_*` to start, although nothing renders.
+

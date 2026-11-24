@@ -541,3 +541,4 @@ Every change to the service, newest date first. One short line per change.
 ## 2026-04-14
 
 - Rename the project to caremanagement (HYDRAN-1925).
+

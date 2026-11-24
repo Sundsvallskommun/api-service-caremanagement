@@ -13,14 +13,14 @@ careM never calls FamilyCare itself. Every call goes through api-service-lifecar
 Only the services in `src/main/java/se/sundsvall/caremanagement/lifecare/service/` call it. They back the financial
 assistance flows in `types/financialassistance`, see [architecture.md](../architecture.md):
 
-| Service                      | Calls                                                                     | Used for                                                                  |
-|------------------------------|---------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| `LifecareCaseService`        | `getPerson`, `getActualisations`, `getDecisions`, `getCalculations`       | Eligibility, the protected-identity gate, renewal prefill, the household   |
-| `LifecareCaseHistoryService` | `getCalculations`, `getDecisions`, `getPayments`, `getDocuments`, `getDocumentContent` | Decision proposal, proposal basis, Lifecare records, calculation sync |
-| `ActualisationService`       | `getActualisationProposal`, `createActualisation`, `getActualisations`, `postActualisationAttachment` | The intake into Lifecare and the nightly message archive upload |
-| `CalculationService`         | `getCalculationProposal`, `createCalculation`                             | Writing the calculation (normberäkning) back                              |
-| `CaseworkerResolver`         | `getServices`, `getUsers`                                                 | Finding the caseworker of the applicant's previous Lifecare service       |
-| `PaymentStatusService`       | `getPayments`                                                             | Payment status of an errand                                               |
+|           Service            |                                                 Calls                                                 |                                 Used for                                 |
+|------------------------------|-------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| `LifecareCaseService`        | `getPerson`, `getActualisations`, `getDecisions`, `getCalculations`                                   | Eligibility, the protected-identity gate, renewal prefill, the household |
+| `LifecareCaseHistoryService` | `getCalculations`, `getDecisions`, `getPayments`, `getDocuments`, `getDocumentContent`                | Decision proposal, proposal basis, Lifecare records, calculation sync    |
+| `ActualisationService`       | `getActualisationProposal`, `createActualisation`, `getActualisations`, `postActualisationAttachment` | The intake into Lifecare and the nightly message archive upload          |
+| `CalculationService`         | `getCalculationProposal`, `createCalculation`                                                         | Writing the calculation (normberäkning) back                             |
+| `CaseworkerResolver`         | `getServices`, `getUsers`                                                                             | Finding the caseworker of the applicant's previous Lifecare service      |
+| `PaymentStatusService`       | `getPayments`                                                                                         | Payment status of an errand                                              |
 
 ## Calls
 
@@ -55,3 +55,4 @@ careM holds no FamilyCare key. It authenticates to the integrator, which holds F
   is every first-time applicant. See [lifecare-integrator.md](lifecare-integrator.md) for which 404 that is.
 - **Dates on a write go out with a time.** `FamilyCareDates` renders dates as `T00:00:00` when the assemblers build an
   actualisation or a calculation. The integrator takes the date part.
+

@@ -27,16 +27,16 @@ docs/
 
 Each fact has one home. The documentation links to the others instead of restating them.
 
-| Knowledge | Home |
-|---|---|
-| The map: what talks to what, knowledge spanning several classes | `docs/` |
-| What a module is for | Its `package-info.java`; `docs/architecture.md` has one line per module |
-| A complex case in a single class the code cannot make clear | A short comment in that class, see Code conventions in the root `AGENTS.md` |
-| What a configuration property means | Its comment in `application.yml` |
-| Columns, types and constraints | The entity class and its migration in `src/main/resources/db/migration/` |
-| Work known but not done yet | `docs/todo/` |
-| Request and response fields | `src/integration-test/resources/api/openapi.yaml` |
-| Ownership, environments, contacts, operations | Confluence, linked from `docs/README.md` |
+|                            Knowledge                            |                                    Home                                     |
+|-----------------------------------------------------------------|-----------------------------------------------------------------------------|
+| The map: what talks to what, knowledge spanning several classes | `docs/`                                                                     |
+| What a module is for                                            | Its `package-info.java`; `docs/architecture.md` has one line per module     |
+| A complex case in a single class the code cannot make clear     | A short comment in that class, see Code conventions in the root `AGENTS.md` |
+| What a configuration property means                             | Its comment in `application.yml`                                            |
+| Columns, types and constraints                                  | The entity class and its migration in `src/main/resources/db/migration/`    |
+| Work known but not done yet                                     | `docs/todo/`                                                                |
+| Request and response fields                                     | `src/integration-test/resources/api/openapi.yaml`                           |
+| Ownership, environments, contacts, operations                   | Confluence, linked from `docs/README.md`                                    |
 
 ## Writing
 

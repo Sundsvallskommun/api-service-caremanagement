@@ -13,8 +13,8 @@ process calls financial aid as well, that call is not in this repository.
 
 ## Calls
 
-| Call | Purpose |
-|---|---|
+|                                  Call                                   |                    Purpose                     |
+|-------------------------------------------------------------------------|------------------------------------------------|
 | `GET /{municipalityId}/financial-aid?personalNumber=&fromDate=&toDate=` | The per-agency basis for one person and period |
 
 ## Authentication
@@ -34,3 +34,4 @@ OAuth2 client credentials, registration `financial-aid`.
 - Feign logging is off for this client, and nothing logs the personnummer or the answer.
 - `FinancialAssistanceSsbtekService` stores nothing. It keeps only the fields in `SsbtekPaymentViewFields` and defaults
   the period to whole months, M−2 through the current month.
+
