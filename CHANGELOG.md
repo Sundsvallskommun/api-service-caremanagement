@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-24
 
+- Run the ProfessionalWeb integration tests against lifecare-integrator's resources, with a payment, a refused decision and the document list added.
 - Call lifecare-integrator's ProfessionalWeb resources instead of its exchange, and drop the print template settings.
 - Drop the citizen-service lookup from the actualisations endpoint description, which reads Lifecare by partyId.
 
