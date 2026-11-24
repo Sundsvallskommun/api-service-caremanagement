@@ -283,6 +283,58 @@ class ProfessionalWebClientTest {
 		verify(integrator).deleteCalculation(MUNICIPALITY_ID, 31);
 	}
 
+	// Journal notes and documents
+
+	@Test
+	void listDocumentsReadsThePersonsRecordByPartyId() {
+		final var answer = json("{\"documentModels\":[]}");
+		when(integrator.listDocuments(MUNICIPALITY_ID, "party-1")).thenReturn(answer);
+
+		assertThat(client.listDocuments("party-1")).isEqualTo(answer);
+	}
+
+	@Test
+	void theRecordsAreReadInViewModeOrForEdit() {
+		when(integrator.readJournalNote(MUNICIPALITY_ID, 1)).thenReturn(json("{\"view\":\"note\"}"));
+		when(integrator.readJournalNoteForEdit(MUNICIPALITY_ID, 1)).thenReturn(json("{\"edit\":\"note\"}"));
+		when(integrator.readDocument(MUNICIPALITY_ID, 3)).thenReturn(json("{\"view\":\"document\"}"));
+		when(integrator.readDocumentForEdit(MUNICIPALITY_ID, 3)).thenReturn(json("{\"edit\":\"document\"}"));
+
+		assertThat(client.readJournalNote(1)).isEqualTo(json("{\"view\":\"note\"}"));
+		assertThat(client.readJournalNoteForEdit(1)).isEqualTo(json("{\"edit\":\"note\"}"));
+		assertThat(client.readDocument(3)).isEqualTo(json("{\"view\":\"document\"}"));
+		assertThat(client.readDocumentForEdit(3)).isEqualTo(json("{\"edit\":\"document\"}"));
+	}
+
+	@Test
+	void theProposalsAreReadOnTheInsats() {
+		when(integrator.readJournalNoteProposal(MUNICIPALITY_ID, 2)).thenReturn(json("{\"documentJournalNote\":{}}"));
+		when(integrator.readDocumentProposal(MUNICIPALITY_ID, 2)).thenReturn(json("{\"document\":{}}"));
+
+		assertThat(client.readJournalNoteProposal(2)).isEqualTo(json("{\"documentJournalNote\":{}}"));
+		assertThat(client.readDocumentProposal(2)).isEqualTo(json("{\"document\":{}}"));
+	}
+
+	@Test
+	void theRecordsAreCreatedWithTheirBodiesAsTheyAre() {
+		final var body = json("{\"title\":\"Anteckning\"}");
+		when(integrator.createJournalNote(MUNICIPALITY_ID, body)).thenReturn(json("{\"id\":138}"));
+		when(integrator.createDocument(MUNICIPALITY_ID, body)).thenReturn(json("{\"id\":139}"));
+
+		assertThat(client.createJournalNote(body)).isEqualTo(json("{\"id\":138}"));
+		assertThat(client.createDocument(body)).isEqualTo(json("{\"id\":139}"));
+	}
+
+	@Test
+	void theRecordsAreUpdatedOnTheirIds() {
+		final var body = json("{\"documentId\":1}");
+		when(integrator.updateJournalNote(MUNICIPALITY_ID, 1, body)).thenReturn(json("{\"saved\":\"note\"}"));
+		when(integrator.updateDocument(MUNICIPALITY_ID, 3, body)).thenReturn(json("{\"saved\":\"document\"}"));
+
+		assertThat(client.updateJournalNote(1, body)).isEqualTo(json("{\"saved\":\"note\"}"));
+		assertThat(client.updateDocument(3, body)).isEqualTo(json("{\"saved\":\"document\"}"));
+	}
+
 	// Answers and errors
 
 	@Test

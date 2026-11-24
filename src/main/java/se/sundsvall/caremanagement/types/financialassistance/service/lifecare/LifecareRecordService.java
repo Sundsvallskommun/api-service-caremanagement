@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -57,7 +56,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
  * Lifecare's list is keyed on the person, not the errand: it spans every akt the applicant has, other units' included.
  * Only the rows written under an ekonomiskt bistånd owner are kept ({@link LifecareRecordFilter}), and every list,
  * body,
- * read, change and PDF below works on that filtered list. The personnummer comes from the errand, never from the
+ * read, change and PDF below works on that filtered list. The applicant's partyId comes from the errand, never from the
  * caller. A record read or changed by id must be in the filtered list, so an errand can reach neither another person's
  * record nor another unit's by naming its id. New records are written on the errand's insats.
  * </p>
@@ -65,15 +64,10 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 @Service
 public class LifecareRecordService {
 
-	static final String PATH_LIST = "api2/Document/GetDocumentsListForClient/";
-	static final String PATH_READ_NOTE = "api2/Document/GetJournalNoteWithContent/";
-	static final String PATH_READ_DOCUMENT = "api2/Document/GetDocumentWithContent/";
-	static final String PATH_UPDATE_NOTE = "api2/Document/UpdateJournalNote/";
-	static final String PATH_UPDATE_DOCUMENT = "api2/Document/UpdateDocument/";
-	static final String PATH_NOTE_PROPOSAL = "api2/Document/GetNoteProposalForService";
-	static final String PATH_DOCUMENT_PROPOSAL = "api2/Document/GetDocumentProposalForService";
-	static final String PATH_CREATE_NOTE = "api2/Document/CreateJournalNote/";
-	static final String PATH_CREATE_DOCUMENT = "api2/Document/CreateDocument/";
+	static final String PATH_NOTE_PROPOSAL = "services/{serviceId}/journal-notes/proposal";
+	static final String PATH_DOCUMENT_PROPOSAL = "services/{serviceId}/documents/proposal";
+	static final String PATH_READ_NOTE_FOR_EDIT = "journal-notes/{id}/edit";
+	static final String PATH_READ_DOCUMENT_FOR_EDIT = "documents/{id}/edit";
 	static final String PATH_PRINT_DOCUMENT = "RenderPdf/PrintDocument";
 
 	/** The document kinds Lifecare prints through a print template rather than holding a file for. */
@@ -91,14 +85,13 @@ public class LifecareRecordService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(LifecareRecordService.class);
 
-	/** The Lifecare endpoints and log wording for one kind of record. */
-	private record Kind(String category, String readPath, String updatePath, String readDescription, String updateDescription,
-		String bodiesDescription) {
+	/** The resource read for edit and the log wording for one kind of record. */
+	private record Kind(String category, String editPath, String readDescription, String updateDescription, String bodiesDescription) {
 	}
 
-	private static final Kind NOTE = new Kind(JOURNAL_NOTE, PATH_READ_NOTE, PATH_UPDATE_NOTE, "Läste en journalanteckning i Lifecare",
+	private static final Kind NOTE = new Kind(JOURNAL_NOTE, PATH_READ_NOTE_FOR_EDIT, "Läste en journalanteckning i Lifecare",
 		"Ändrade en journalanteckning i Lifecare", "Läste journalanteckningarnas innehåll i Lifecare");
-	private static final Kind DOC = new Kind(DOCUMENT, PATH_READ_DOCUMENT, PATH_UPDATE_DOCUMENT, "Läste ett dokument i Lifecare",
+	private static final Kind DOC = new Kind(DOCUMENT, PATH_READ_DOCUMENT_FOR_EDIT, "Läste ett dokument i Lifecare",
 		"Ändrade ett dokument i Lifecare", "Läste dokumentens innehåll i Lifecare");
 
 	private final ProfessionalWebClient client;
@@ -217,7 +210,7 @@ public class LifecareRecordService {
 	 */
 	public List<LifecareNoteType> journalNoteTypes(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var noteTypes = toNoteTypes(client.get(PATH_NOTE_PROPOSAL, Map.of("id", String.valueOf(errand.requireServiceId()))));
+		final var noteTypes = toNoteTypes(client.readJournalNoteProposal(errand.requireServiceId()));
 		// Lifecare answers with a blank note on the applicant's insats, so this is a read of the errand, not a catalogue.
 		recorder.read(errand, JOURNAL_NOTE, "Läste underlag för en ny journalanteckning i Lifecare");
 		return noteTypes;
@@ -234,7 +227,7 @@ public class LifecareRecordService {
 	 */
 	public List<LifecareDocumentType> documentTypes(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var documentTypes = toDocumentTypes(client.get(PATH_DOCUMENT_PROPOSAL, Map.of("id", String.valueOf(errand.requireServiceId()))));
+		final var documentTypes = toDocumentTypes(client.readDocumentProposal(errand.requireServiceId()));
 		// As for the note types: the answer is a blank document on the applicant's insats.
 		recorder.read(errand, DOCUMENT, "Läste underlag för ett nytt dokument i Lifecare");
 		return documentTypes;
@@ -253,13 +246,13 @@ public class LifecareRecordService {
 	public LifecareRecord createJournalNote(final String municipalityId, final String namespace, final String errandId,
 		final CreateLifecareJournalNoteRequest request) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var proposal = client.get(PATH_NOTE_PROPOSAL, Map.of("id", String.valueOf(errand.requireServiceId())));
+		final var proposal = client.readJournalNoteProposal(errand.requireServiceId());
 		final var noteType = activeNoteTypes(proposal).stream()
 			.filter(candidate -> request.getNoteTypeCode().equals(integer(candidate.path("id"))))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, UNKNOWN_NOTE_TYPE));
 
-		final var created = client.post(PATH_CREATE_NOTE, Map.of(),
+		final var created = client.createJournalNote(
 			toJournalNoteBody(requireObject(proposal.path("documentJournalNote"), PATH_NOTE_PROPOSAL), noteType, request));
 		final var journalNote = toRecord(created, JOURNAL_NOTE);
 		recorder.written(errand, LifecareAccessEntry.CREATE, JOURNAL_NOTE, "Skrev en journalanteckning i Lifecare", journalNote.getId());
@@ -279,13 +272,13 @@ public class LifecareRecordService {
 	public LifecareRecord createDocument(final String municipalityId, final String namespace, final String errandId,
 		final CreateLifecareDocumentRequest request) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var proposal = client.get(PATH_DOCUMENT_PROPOSAL, Map.of("id", String.valueOf(errand.requireServiceId())));
+		final var proposal = client.readDocumentProposal(errand.requireServiceId());
 		final var documentType = writableDocumentTypes(proposal).stream()
 			.filter(candidate -> request.getDocumentTypeCode().equals(integer(candidate.path("documentCode"))))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(BAD_REQUEST, UNKNOWN_DOCUMENT_TYPE));
 
-		final var created = client.post(PATH_CREATE_DOCUMENT, Map.of(),
+		final var created = client.createDocument(
 			toDocumentBody(requireObject(proposal.path("document"), PATH_DOCUMENT_PROPOSAL), documentType, request));
 		final var document = toRecord(created, DOCUMENT);
 		recorder.written(errand, LifecareAccessEntry.CREATE, DOCUMENT, "Skrev ett dokument i Lifecare", document.getId());
@@ -308,7 +301,7 @@ public class LifecareRecordService {
 
 	private LifecareRecordBody readBody(final Kind kind, final String id) {
 		try {
-			final var body = client.get(kind.readPath(), params(id, "true", "false"));
+			final var body = readInViewMode(kind, Integer.parseInt(id));
 			final var content = text(body.path("content"));
 			if (content == null) {
 				return LifecareRecordBody.create().withId(id).withContent("");
@@ -342,7 +335,7 @@ public class LifecareRecordService {
 			throw Problem.valueOf(CONFLICT, FINALISED);
 		}
 		final var updated = applyRecordEdit(editable, edit);
-		client.post(kind.updatePath(), Map.of(), updated);
+		save(kind, id, updated);
 		recorder.written(errand, LifecareAccessEntry.UPDATE, kind.category(), kind.updateDescription(), String.valueOf(id));
 		return toRecordContent(updated, kind.category());
 	}
@@ -351,7 +344,25 @@ public class LifecareRecordService {
 	 * The record in the shape Lifecare's own editor works on (inEdit=true), the object that goes back on save.
 	 */
 	private ObjectNode readEditable(final Kind kind, final int id) {
-		return requireObject(client.get(kind.readPath(), params(String.valueOf(id), "false", "true")), kind.readPath());
+		if (kind == NOTE) {
+			return requireObject(client.readJournalNoteForEdit(id), kind.editPath());
+		}
+		return requireObject(client.readDocumentForEdit(id), kind.editPath());
+	}
+
+	private JsonNode readInViewMode(final Kind kind, final int id) {
+		if (kind == NOTE) {
+			return client.readJournalNote(id);
+		}
+		return client.readDocument(id);
+	}
+
+	private void save(final Kind kind, final int id, final ObjectNode updated) {
+		if (kind == NOTE) {
+			client.updateJournalNote(id, updated);
+		} else {
+			client.updateDocument(id, updated);
+		}
 	}
 
 	/**
@@ -396,7 +407,7 @@ public class LifecareRecordService {
 
 	/** The applicant's list, with only the rows written under an ekonomiskt bistånd owner. */
 	private JsonNode readList(final LifecareErrand errand) {
-		return recordFilter.financialAssistanceOnly(client.get(PATH_LIST, Map.of("id", errandService.applicantPersonalNumber(errand))));
+		return recordFilter.financialAssistanceOnly(client.listDocuments(errandService.applicantPartyId(errand)));
 	}
 
 	private static ObjectNode requireObject(final JsonNode node, final String path) {
@@ -406,11 +417,4 @@ public class LifecareRecordService {
 		throw Problem.valueOf(BAD_GATEWAY, UNEXPECTED_ANSWER.formatted(path));
 	}
 
-	private static Map<String, String> params(final String id, final String hideRevisions, final String inEdit) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put("id", id);
-		params.put("hideRevisions", hideRevisions);
-		params.put("inEdit", inEdit);
-		return params;
-	}
 }

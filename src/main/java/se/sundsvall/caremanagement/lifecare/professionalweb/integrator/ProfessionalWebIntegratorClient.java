@@ -117,4 +117,37 @@ public interface ProfessionalWebIntegratorClient {
 	@DeleteMapping(path = "/{municipalityId}/professional-web/calculations/{calculationId}")
 	void deleteCalculation(@PathVariable final String municipalityId, @PathVariable final int calculationId);
 
+	@GetMapping(path = "/{municipalityId}/professional-web/persons/{partyId}/documents", produces = APPLICATION_JSON_VALUE)
+	JsonNode listDocuments(@PathVariable final String municipalityId, @PathVariable final String partyId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/journal-notes/{id}", produces = APPLICATION_JSON_VALUE)
+	JsonNode readJournalNote(@PathVariable final String municipalityId, @PathVariable final int id);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/journal-notes/{id}/edit", produces = APPLICATION_JSON_VALUE)
+	JsonNode readJournalNoteForEdit(@PathVariable final String municipalityId, @PathVariable final int id);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/documents/{id}", produces = APPLICATION_JSON_VALUE)
+	JsonNode readDocument(@PathVariable final String municipalityId, @PathVariable final int id);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/documents/{id}/edit", produces = APPLICATION_JSON_VALUE)
+	JsonNode readDocumentForEdit(@PathVariable final String municipalityId, @PathVariable final int id);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/journal-notes/proposal", produces = APPLICATION_JSON_VALUE)
+	JsonNode readJournalNoteProposal(@PathVariable final String municipalityId, @PathVariable final int serviceId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/documents/proposal", produces = APPLICATION_JSON_VALUE)
+	JsonNode readDocumentProposal(@PathVariable final String municipalityId, @PathVariable final int serviceId);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/journal-notes", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode createJournalNote(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/documents", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode createDocument(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
+
+	@PutMapping(path = "/{municipalityId}/professional-web/journal-notes/{id}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode updateJournalNote(@PathVariable final String municipalityId, @PathVariable final int id, @RequestBody final JsonNode body);
+
+	@PutMapping(path = "/{municipalityId}/professional-web/documents/{id}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode updateDocument(@PathVariable final String municipalityId, @PathVariable final int id, @RequestBody final JsonNode body);
+
 }

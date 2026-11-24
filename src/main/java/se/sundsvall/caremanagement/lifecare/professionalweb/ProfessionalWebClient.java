@@ -214,6 +214,61 @@ public class ProfessionalWebClient {
 		write(() -> integrator.deleteCalculation(MUNICIPALITY_ID, calculationId));
 	}
 
+	/** The journalanteckningar and documents in a person's record. */
+	public JsonNode listDocuments(final String partyId) {
+		return read(() -> integrator.listDocuments(MUNICIPALITY_ID, partyId));
+	}
+
+	/** A journalanteckning with its content, in view mode. */
+	public JsonNode readJournalNote(final int id) {
+		return read(() -> integrator.readJournalNote(MUNICIPALITY_ID, id));
+	}
+
+	/** A journalanteckning as Lifecare's editor reads it, the object an update takes back. */
+	public JsonNode readJournalNoteForEdit(final int id) {
+		return read(() -> integrator.readJournalNoteForEdit(MUNICIPALITY_ID, id));
+	}
+
+	/** A document with its content, in view mode. */
+	public JsonNode readDocument(final int id) {
+		return read(() -> integrator.readDocument(MUNICIPALITY_ID, id));
+	}
+
+	/** A document as Lifecare's editor reads it, the object an update takes back. */
+	public JsonNode readDocumentForEdit(final int id) {
+		return read(() -> integrator.readDocumentForEdit(MUNICIPALITY_ID, id));
+	}
+
+	/** The blank journalanteckning and its note types on an insats. */
+	public JsonNode readJournalNoteProposal(final int serviceId) {
+		return read(() -> integrator.readJournalNoteProposal(MUNICIPALITY_ID, serviceId));
+	}
+
+	/** The blank document and its document types on an insats. */
+	public JsonNode readDocumentProposal(final int serviceId) {
+		return read(() -> integrator.readDocumentProposal(MUNICIPALITY_ID, serviceId));
+	}
+
+	/** Writes a new journalanteckning. Not idempotent. */
+	public JsonNode createJournalNote(final JsonNode body) {
+		return read(() -> integrator.createJournalNote(MUNICIPALITY_ID, body));
+	}
+
+	/** Writes a new document. Not idempotent. */
+	public JsonNode createDocument(final JsonNode body) {
+		return read(() -> integrator.createDocument(MUNICIPALITY_ID, body));
+	}
+
+	/** Saves a changed journalanteckning. */
+	public JsonNode updateJournalNote(final int id, final JsonNode body) {
+		return read(() -> integrator.updateJournalNote(MUNICIPALITY_ID, id, body));
+	}
+
+	/** Saves a changed document. */
+	public JsonNode updateDocument(final int id, final JsonNode body) {
+		return read(() -> integrator.updateDocument(MUNICIPALITY_ID, id, body));
+	}
+
 	/** An answer from the integrator; a missing node when it answered without a body. */
 	private static JsonNode read(final Supplier<JsonNode> call) {
 		return Optional.ofNullable(ProfessionalWebErrors.call(call)).orElse(MissingNode.getInstance());
