@@ -5,7 +5,6 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import se.sundsvall.caremanagement.lifecare.integration.integrator.configuration.LifecareIntegratorConfiguration;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
@@ -13,7 +12,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
  * The ProfessionalWeb pass-through of api-service-lifecare-integrator. Same service, gateway and OAuth2 registration
  * as the FamilyCare reads, a client of its own so the two do not share a circuit breaker.
  */
-@FeignClient(name = ProfessionalWebIntegratorClient.CLIENT_ID, url = "${integration.lifecare-integrator.url}", configuration = LifecareIntegratorConfiguration.class)
+@FeignClient(name = ProfessionalWebIntegratorClient.CLIENT_ID, url = "${integration.lifecare-integrator.url}", configuration = ProfessionalWebIntegratorConfiguration.class)
 @CircuitBreaker(name = ProfessionalWebIntegratorClient.CLIENT_ID)
 public interface ProfessionalWebIntegratorClient {
 

@@ -92,6 +92,10 @@ resilience4j:
         base-config: default
         # The engine's 404 ("no process instance is waiting") is an answer about one errand, not a failing engine.
         record-failure-predicate: se.sundsvall.caremanagement.operaton.integration.configuration.OperatonCircuitBreakerFailures
+      lifecare-integrator-professionalweb:
+        base-config: default
+        # Lifecare's answers careM passes on (400, 403, 404, 422), a refused write among them, are not a failing integrator.
+        record-failure-predicate: se.sundsvall.caremanagement.lifecare.professionalweb.integrator.ProfessionalWebCircuitBreakerFailures
 
 #========================================
 # Integration settings

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.lifecare.professionalweb;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 import org.springframework.http.HttpStatus;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -33,6 +34,8 @@ public final class ProfessionalWebErrors {
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
+	private static final List<Integer> PASSED_ON_STATUSES = List.of(400, 403, 404, 422);
+
 	private ProfessionalWebErrors() {}
 
 	/**
@@ -51,6 +54,53 @@ public final class ProfessionalWebErrors {
 			case LIFECARE_REFUSED_STATUS -> problem(UNPROCESSABLE_CONTENT, message.orElse("Lifecare godtog inte uppgifterna."));
 			default -> problem(BAD_GATEWAY, message.orElse("Lifecare answered " + response.status()));
 		};
+	}
+
+	/**
+	 * The problem for an error answer from lifecare-integrator's ProfessionalWeb resources: 400, 403, 404 and 422 keep
+	 * their status, anything else is a 502. The integrator's detail, Lifecare's own text when there is one, goes along.
+	 *
+	 * @param  status the integrator's status
+	 * @param  body   the integrator's problem body, may be empty
+	 * @return        the problem to throw
+	 */
+	public static ThrowableProblem fromIntegrator(final int status, final byte[] body) {
+		final var detail = integratorDetail(body).orElse("lifecare-integrator answered " + status);
+		if (PASSED_ON_STATUSES.contains(status)) {
+			return problem(HttpStatus.valueOf(status), detail);
+		}
+		return problem(BAD_GATEWAY, detail);
+	}
+
+	/**
+	 * Makes a call to lifecare-integrator. A problem from the integrator passes unchanged; anything else (a timeout, an
+	 * integrator that cannot be reached, an open circuit) is a 502.
+	 *
+	 * @param  call the call
+	 * @param  <T>  the answer's type
+	 * @return      the answer
+	 */
+	public static <T> T call(final Supplier<T> call) {
+		try {
+			return call.get();
+		} catch (final ThrowableProblem problem) {
+			throw problem;
+		} catch (final RuntimeException e) {
+			throw problem(BAD_GATEWAY, "lifecare-integrator could not be reached (" + e.getClass().getSimpleName() + ")");
+		}
+	}
+
+	private static Optional<String> integratorDetail(final byte[] body) {
+		if (body == null || body.length == 0) {
+			return Optional.empty();
+		}
+		try {
+			return Optional.ofNullable(JSON.readTree(body).get("detail"))
+				.filter(value -> value.isString() && !value.asString().isBlank())
+				.map(value -> value.asString().trim());
+		} catch (final JacksonException _) {
+			return Optional.empty();
+		}
 	}
 
 	/**
