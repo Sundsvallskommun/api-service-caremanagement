@@ -92,6 +92,21 @@ public class ProfessionalWebClient {
 		write(() -> integrator.removeReminder(MUNICIPALITY_ID, reminderId));
 	}
 
+	/** The sökandes and medsökandes jobbstimulans periods on an insats. */
+	public JsonNode readJobStimulus(final int serviceId) {
+		return read(() -> integrator.readJobStimulus(MUNICIPALITY_ID, serviceId));
+	}
+
+	/** The end Lifecare gives a jobbstimulans period starting on the date, a bare JSON string. */
+	public JsonNode readJobStimulusEndDate(final String fromDate) {
+		return read(() -> integrator.readJobStimulusEndDate(MUNICIPALITY_ID, fromDate));
+	}
+
+	/** Saves a person's jobbstimulans periods; a period left out is deleted. */
+	public JsonNode saveJobStimulus(final JsonNode body) {
+		return read(() -> integrator.saveJobStimulus(MUNICIPALITY_ID, body));
+	}
+
 	/** An answer from the integrator; a missing node when it answered without a body. */
 	private static JsonNode read(final Supplier<JsonNode> call) {
 		return Optional.ofNullable(ProfessionalWebErrors.call(call)).orElse(MissingNode.getInstance());

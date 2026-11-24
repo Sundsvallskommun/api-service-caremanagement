@@ -35,7 +35,10 @@ class ProfessionalWebIntegratorContractTest {
 		Map.entry("readReminder", "GET reminders/{reminderId}"),
 		Map.entry("createReminder", "POST reminders"),
 		Map.entry("updateReminder", "PUT reminders/{reminderId}"),
-		Map.entry("removeReminder", "DELETE reminders/{reminderId}"));
+		Map.entry("removeReminder", "DELETE reminders/{reminderId}"),
+		Map.entry("readJobStimulus", "GET services/{serviceId}/job-stimulus"),
+		Map.entry("readJobStimulusEndDate", "GET job-stimulus/end-date"),
+		Map.entry("saveJobStimulus", "POST job-stimulus"));
 
 	private static Map<String, Object> paths;
 

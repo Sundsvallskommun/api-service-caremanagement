@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import tools.jackson.databind.JsonNode;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -42,4 +43,13 @@ public interface ProfessionalWebIntegratorClient {
 
 	@DeleteMapping(path = "/{municipalityId}/professional-web/reminders/{reminderId}")
 	void removeReminder(@PathVariable final String municipalityId, @PathVariable final int reminderId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/services/{serviceId}/job-stimulus", produces = APPLICATION_JSON_VALUE)
+	JsonNode readJobStimulus(@PathVariable final String municipalityId, @PathVariable final int serviceId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/job-stimulus/end-date", produces = APPLICATION_JSON_VALUE)
+	JsonNode readJobStimulusEndDate(@PathVariable final String municipalityId, @RequestParam final String fromDate);
+
+	@PostMapping(path = "/{municipalityId}/professional-web/job-stimulus", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	JsonNode saveJobStimulus(@PathVariable final String municipalityId, @RequestBody final JsonNode body);
 }

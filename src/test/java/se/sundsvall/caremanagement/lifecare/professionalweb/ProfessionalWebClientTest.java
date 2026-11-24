@@ -96,6 +96,33 @@ class ProfessionalWebClientTest {
 		verify(integrator).removeReminder(MUNICIPALITY_ID, 40);
 	}
 
+	// Job stimulus
+
+	@Test
+	void readJobStimulusReadsTheInsatsPeriods() {
+		final var answer = json("{\"applicant\":[]}");
+		when(integrator.readJobStimulus(MUNICIPALITY_ID, 24)).thenReturn(answer);
+
+		assertThat(client.readJobStimulus(24)).isEqualTo(answer);
+	}
+
+	@Test
+	void readJobStimulusEndDateAsksWithTheStartDate() {
+		final var answer = json("\"2030-01-14\"");
+		when(integrator.readJobStimulusEndDate(MUNICIPALITY_ID, "2028-01-15")).thenReturn(answer);
+
+		assertThat(client.readJobStimulusEndDate("2028-01-15")).isEqualTo(answer);
+	}
+
+	@Test
+	void saveJobStimulusPostsTheBodyAsItIs() {
+		final var body = json("{\"applicant\":[]}");
+		final var answer = json("{\"applicant\":[{\"jobStimulusId\":110}]}");
+		when(integrator.saveJobStimulus(MUNICIPALITY_ID, body)).thenReturn(answer);
+
+		assertThat(client.saveJobStimulus(body)).isEqualTo(answer);
+	}
+
 	// Answers and errors
 
 	@Test

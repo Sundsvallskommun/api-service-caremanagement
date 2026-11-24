@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,7 +23,7 @@ class LifecareJobStimulusApiTest {
 	@Test
 	void readForService() {
 		final var answer = json("{}");
-		when(client.get("api2/Calculation/GetJobStimulusForService", Map.of("businessType", "8", "businessId", "24"))).thenReturn(answer);
+		when(client.readJobStimulus(24)).thenReturn(answer);
 
 		assertThat(api.readForService(24)).isSameAs(answer);
 	}
@@ -32,7 +31,7 @@ class LifecareJobStimulusApiTest {
 	@Test
 	void readToDate() {
 		final var answer = json("\"2030-01-14\"");
-		when(client.get("api2/Calculation/GetJobStimulusToDate", Map.of("id", "2028-01-15"))).thenReturn(answer);
+		when(client.readJobStimulusEndDate("2028-01-15")).thenReturn(answer);
 
 		assertThat(api.readToDate("2028-01-15")).isSameAs(answer);
 	}
@@ -41,7 +40,7 @@ class LifecareJobStimulusApiTest {
 	void save() {
 		final var body = json("{}");
 		final var answer = json("{ \"applicant\": null }");
-		when(client.post("api2/Calculation/SaveJobStimulus", Map.of(), body)).thenReturn(answer);
+		when(client.saveJobStimulus(body)).thenReturn(answer);
 
 		assertThat(api.save(body)).isSameAs(answer);
 	}
