@@ -1,8 +1,9 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb.integrator;
 
-import java.util.List;
 import java.util.function.Predicate;
 import se.sundsvall.dept44.problem.ThrowableProblem;
+
+import static se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebErrors.PASSED_ON_STATUSES;
 
 /**
  * What counts against the ProfessionalWeb client's circuit breaker: everything but an answer from Lifecare that careM
@@ -10,10 +11,8 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
  */
 public class ProfessionalWebCircuitBreakerFailures implements Predicate<Throwable> {
 
-	private static final List<Integer> ANSWERS = List.of(400, 403, 404, 422);
-
 	@Override
 	public boolean test(final Throwable failure) {
-		return !(failure instanceof final ThrowableProblem problem && problem.getStatus() != null && ANSWERS.contains(problem.getStatus().value()));
+		return !(failure instanceof final ThrowableProblem problem && problem.getStatus() != null && PASSED_ON_STATUSES.contains(problem.getStatus().value()));
 	}
 }

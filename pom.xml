@@ -24,7 +24,6 @@
 		<pdfbox.version>3.0.8</pdfbox.version>
 		<poi.version>5.5.1</poi.version>
 		<poi-pdf-converter.version>2.2.0</poi-pdf-converter.version>
-		<!-- Reading the Lifecare sign-in pages (ProfessionalWeb integration). -->
 		<generated-sources-path>${project.build.directory}/generated-sources</generated-sources-path>
 		<generated-sources-java-path>src/main/java</generated-sources-java-path>
 	</properties>

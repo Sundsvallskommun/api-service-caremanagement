@@ -90,7 +90,7 @@ public class LifecareReminderService {
 	 */
 	public List<LifecareReminder> list(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var reminders = toReminders(readList(errand.requireServiceId()));
+		final var reminders = toReminders(client.listReminders(errand.requireServiceId()));
 		recorder.read(errand, TARGET_REMINDERS, "Läste bevakningar i Lifecare");
 		return reminders;
 	}
@@ -106,7 +106,7 @@ public class LifecareReminderService {
 	 */
 	public LifecareReminderOptions options(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var options = toReminderOptions(readProposal(errand.requireServiceId()));
+		final var options = toReminderOptions(client.readReminderProposal(errand.requireServiceId()));
 		// The proposal is a blank bevakning on the applicant's insats, so reading it is a read of the errand.
 		recorder.read(errand, TARGET_REMINDER, "Läste underlag för en ny bevakning i Lifecare");
 		return options;
@@ -127,7 +127,7 @@ public class LifecareReminderService {
 		if (isPast(request.getReminderDate())) {
 			throw Problem.valueOf(BAD_REQUEST, PAST_DATE);
 		}
-		final var proposal = readProposal(serviceId);
+		final var proposal = client.readReminderProposal(serviceId);
 		final var blank = requireObject(proposal.path("reminderForAdd"), PATH_PROPOSAL);
 		final var target = resolveTarget(proposal, blank);
 		resolveCodeTexts(proposal.path(FIELD_OPTIONS), request);
@@ -152,7 +152,7 @@ public class LifecareReminderService {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var serviceId = errand.requireServiceId();
 		assertOnInsats(serviceId, reminderId);
-		final var proposal = readProposal(serviceId);
+		final var proposal = client.readReminderProposal(serviceId);
 		final var current = requireObject(client.readReminder(reminderId).path("reminder"), PATH_EDIT);
 
 		final var dateChanged = !Objects.equals(text(current.path("reminderDate")), request.getReminderDate());
@@ -180,16 +180,8 @@ public class LifecareReminderService {
 		recorder.written(errand, LifecareAccessEntry.DELETE, TARGET_REMINDER, "Tog bort en bevakning i Lifecare", String.valueOf(reminderId));
 	}
 
-	private JsonNode readList(final int serviceId) {
-		return client.listReminders(serviceId);
-	}
-
-	private JsonNode readProposal(final int serviceId) {
-		return client.readReminderProposal(serviceId);
-	}
-
 	private void assertOnInsats(final int serviceId, final int reminderId) {
-		final var onInsats = readList(serviceId).path("reminders").valueStream()
+		final var onInsats = client.listReminders(serviceId).path("reminders").valueStream()
 			.anyMatch(reminder -> Integer.valueOf(reminderId).equals(integer(reminder.path("reminderId"))));
 		if (!onInsats) {
 			throw Problem.valueOf(NOT_FOUND, NOT_ON_INSATS);

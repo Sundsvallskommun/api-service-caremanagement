@@ -13,7 +13,7 @@ The financial assistance resources under `/{municipalityId}/{namespace}/errands/
 | Caller in `types/financialassistance/service/lifecare/` |                                                       Resource it backs                                                       |
 |---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
 | `calculation/LifecareCalculationClient`                 | `FinancialAssistanceLifecareCalculationResource` (`/calculation`, `/normberakning`). Also used by `SurplusCalculationRemover` |
-| `LifecareDecisionClient`                                | `FinancialAssistanceLifecareDecisionResource`, the finalize flow (`LifecareFinalizeService`) and the section status           |
+| `LifecareDecisionClient`                                | `FinancialAssistanceLifecareDecisionResource` and the finalize flow (`LifecareFinalizeService`)                               |
 | `LifecarePaymentApi`                                    | `FinancialAssistanceLifecarePaymentResource` and the payment registration (`LifecarePaymentRegistrationService`)              |
 | `LifecareJobStimulusApi`                                | `FinancialAssistanceLifecareJobStimulusResource`                                                                              |
 | `LifecareRecordService`                                 | `FinancialAssistanceLifecareRecordResource` (journal notes and documents)                                                     |

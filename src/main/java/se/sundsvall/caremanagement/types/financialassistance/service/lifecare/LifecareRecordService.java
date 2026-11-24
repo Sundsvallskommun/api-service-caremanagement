@@ -177,7 +177,7 @@ public class LifecareRecordService {
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, NOT_THE_CLIENTS));
 		final byte[] pdf;
 		if (PRINTED_KINDS.contains(textOrEmpty(row.path("documentType_Name")))) {
-			pdf = printDocument(id);
+			pdf = client.printDocument(id);
 		} else {
 			pdf = storedDocumentPdf(municipalityId, errand, row);
 		}
@@ -369,10 +369,6 @@ public class LifecareRecordService {
 		if (findRecord(readList(errand), id, kind.category()).isEmpty()) {
 			throw Problem.valueOf(NOT_FOUND, NOT_THE_CLIENTS);
 		}
-	}
-
-	private byte[] printDocument(final int id) {
-		return client.printDocument(id);
 	}
 
 	private byte[] storedDocumentPdf(final String municipalityId, final LifecareErrand errand, final JsonNode row) {
