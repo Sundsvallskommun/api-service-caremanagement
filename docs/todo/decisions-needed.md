@@ -10,7 +10,7 @@ Done when they are either used by a flow or removed together with their configur
 
 ## Municipality id fixed in code for the integrator's ProfessionalWeb route
 
-`lifecare/professionalweb/integrator/IntegratorProfessionalWebTransport.java` always calls the integrator with
+`lifecare/professionalweb/ProfessionalWebClient.java` always calls the integrator with
 municipality `2281`. That holds while there is one Lifecare, but it is the only municipality id in the integration
 code that is not configuration.
 
@@ -18,9 +18,9 @@ Done when it is configuration, or an ADR records why it stays in code.
 
 ## Circuit breaker settings for the Lifecare clients
 
-`application.yml` configures a circuit breaker only for `operaton`. The `lifecare-integrator`
-and `lifecare-integrator-professionalweb` breakers run on whatever dept44 gives them by default. Not checked what that
-is.
+`application.yml` configures the `operaton` and `lifecare-integrator-professionalweb` breakers only with which failures
+count, on `base-config: default`. Their thresholds, and all of the `lifecare-integrator` breaker, are whatever dept44
+gives them by default. Not checked what that is.
 
 Done when the defaults are known and either accepted in [the integration files](../integrations/) or overridden in
 `application.yml`.

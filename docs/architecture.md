@@ -152,5 +152,5 @@ module's own tables.
 | `…/fa/{errandId}/lifecare/section-status`                                                | `FinancialAssistanceLifecareSectionStatusResource.java`                                   | ProfessionalWeb                                                                                      |
 
 The financial assistance resources are in `types/financialassistance/api/`. Every `…/fa/{errandId}/lifecare/…`
-endpoint takes its Lifecare keys from the errand through `LifecareErrandService`, never from the caller, and asks
-Citizen for the applicant's personnummer.
+endpoint takes its Lifecare keys from the errand through `LifecareErrandService`, never from the caller. Only a new
+reminder asks Citizen for the applicant's personnummer, which Lifecare wants in the reminder's body.

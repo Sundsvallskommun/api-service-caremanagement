@@ -1,7 +1,7 @@
 # Lifecare ProfessionalWeb
 
-The internal api2 endpoints Lifecare's own web client calls, in the module `WESE.FC.ProfessionalWeb`. The service uses
-them for what the public FamilyCare API lacks: editing a normberäkning, decisions, payments and payees, reminders,
+The internal api2 endpoints Lifecare's own web client calls, in the module `WESE.FC.ProfessionalWeb`, reached through
+lifecare-integrator's resources. The service uses them for what the public FamilyCare API lacks: editing a normberäkning, decisions, payments and payees, reminders,
 journal notes and documents, job stimulus periods, and Lifecare's PDF prints. The API is undocumented and unversioned
 on Lifecare's side, so all of it stays behind `ProfessionalWebClient`.
 
@@ -22,19 +22,19 @@ The financial assistance resources under `/{municipalityId}/{namespace}/errands/
 
 ## Calls
 
-All paths are below the module `WESE.FC.ProfessionalWeb/`. Each one goes to Lifecare through
-api-service-lifecare-integrator's `POST /2281/professional-web/exchange`, see
-[lifecare-integrator.md](lifecare-integrator.md).
+Each call goes to one of api-service-lifecare-integrator's resources under `/2281/professional-web/`, see
+[lifecare-integrator.md](lifecare-integrator.md). The integrator makes the matching api2 or print call in Lifecare and
+returns Lifecare's JSON untouched. `ProfessionalWebClient` has one method per resource.
 
-|            Area             |                                                                                                                     Operations                                                                                                                      |
-|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Calculation                 | `api2/Calculation/GetProposalService`, `ListCalculations`, `GetCalculation`, `GetCalculationForEdit`, `PlacePersons`, `GetAmount`, `GetSharedCost`, `GetJobStimuliForCalculation`, `Create`, `Update`, `Delete`                                     |
-| Job stimulus                | `api2/Calculation/GetJobStimulusForService`, `GetJobStimulusToDate`, `SaveJobStimulus`                                                                                                                                                              |
-| Decision                    | `api2/Decision/GetProposalForService`, `GetMappedDecisionReasons`, `GetDecision`, `Create`, `Update`                                                                                                                                                |
-| Payment                     | `api2/Payment/GetPaymentForCreate`, `GetLatestPayments`, `Create`; `api2/Payee/Create`; `api2/Household/HasHouseholdThisDate/`                                                                                                                      |
-| Journal notes and documents | `api2/Document/GetDocumentsListForClient/`, `GetJournalNoteWithContent/`, `GetDocumentWithContent/`, `GetNoteProposalForService`, `GetDocumentProposalForService`, `CreateJournalNote/`, `CreateDocument/`, `UpdateJournalNote/`, `UpdateDocument/` |
-| Reminders                   | `api2/Reminders/ListRemindersByServiceId`, `GetProposalForService`, `GetReminderEditComposite`, `CreateReminder/`, `UpdateReminder/`, `RemoveReminder/`                                                                                             |
-| Prints                      | `RenderPdf/PrintContainer` (calculation), `RenderPdf/PrintDecision`, `RenderPdf/PrintDocument`                                                                                                                                                      |
+|            Area             |                                                                                                                                          Resources                                                                                                                                          |
+|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Calculation                 | `GET services/{serviceId}/calculations/proposal`, `/calculations/latest`; `GET calculations/{calculationId}`, `/edit`; `POST calculations/place-persons`, `/amount`, `/shared-cost`, `/job-stimuli`; `POST services/{serviceId}/calculations`; `PUT`, `DELETE calculations/{calculationId}` |
+| Job stimulus                | `GET services/{serviceId}/job-stimulus`, `GET job-stimulus/end-date?fromDate=`, `POST job-stimulus`                                                                                                                                                                                         |
+| Decision                    | `GET services/{serviceId}/decisions/proposal?amountType=&calculationId=`, `GET decision-codes/{decisionCode}/reasons`, `GET decisions/{decisionId}`, `POST services/{serviceId}/decisions`, `PUT decisions/{decisionId}`                                                                    |
+| Payment                     | `GET services/{serviceId}/payments/proposal`, `/payments/latest`, `/household?date=`; `POST services/{serviceId}/payments`; `POST payees`                                                                                                                                                   |
+| Journal notes and documents | `GET persons/{partyId}/documents`; `GET journal-notes/{id}`, `/edit`; `GET documents/{id}`, `/edit`; `GET services/{serviceId}/journal-notes/proposal`, `/documents/proposal`; `POST journal-notes`, `POST documents`; `PUT journal-notes/{id}`, `PUT documents/{id}`                       |
+| Reminders                   | `GET services/{serviceId}/reminders`, `/reminders/proposal`; `POST reminders`; `GET`, `PUT`, `DELETE reminders/{reminderId}`                                                                                                                                                                |
+| Prints                      | `GET calculations/{calculationId}/pdf`, `GET decisions/{decisionId}/pdf`, `GET documents/{id}/pdf`, with `Accept: application/pdf`                                                                                                                                                          |
 
 A write sends back the object Lifecare handed out, a proposal or the current record, with a few fields changed. The
 client works on JSON trees for that reason, so fields the service does not know about survive the round trip.
@@ -47,28 +47,34 @@ the session, and does the session escalation. careM authenticates only to the in
 
 ## Code and configuration
 
-- Code: `src/main/java/se/sundsvall/caremanagement/lifecare/professionalweb/`, and the transport in its
-  `integrator/` subpackage.
+- Code: `src/main/java/se/sundsvall/caremanagement/lifecare/professionalweb/`, and the Feign client, its error
+  decoder and its circuit breaker rule in the `integrator/` subpackage.
 - Callers: `src/main/java/se/sundsvall/caremanagement/types/financialassistance/service/lifecare/`.
-- Configuration: `integration.lifecare-professionalweb` in `application.yml` holds the test decision maker and the
-  three print template ids. How Lifecare is reached is configured under `integration.lifecare-integrator`.
+- Configuration: `integration.lifecare-professionalweb` in `application.yml` holds the test decision maker. How Lifecare
+  is reached is configured under `integration.lifecare-integrator`. The print templates are configured in the
+  integrator, not here.
 
 ## Behaviour worth knowing
 
-- **Lifecare's answer comes back as data.** The integrator returns Lifecare's own status, content type and body, so
-  a 461 or a PDF reaches careM unchanged. An exchange answer without Lifecare's answer in it is a 502.
-- **Error mapping** (`ProfessionalWebErrors`): 400 → 400, 403 → 403, 404 → 404, Lifecare's 461 (refused but
-  understood) → 422, anything else → 502. Lifecare's sentence under `exceptionMessage` or `message` becomes the
-  problem's detail on 400, 461 and 502. An answer that is not JSON where JSON was expected is a 502.
-- **Prints may ask questions first.** Some templates, such as "Beslut" for a decision with a medsökande, answer with an
-  HTML form (`form#myForm`) instead of a PDF. `ParameterQueryForm` reads its fields off the page, since the names vary
-  per template, and `ProfessionalWebClient.getPdf` posts them back with Lifecare's defaults, as a caseworker pressing
-  Klar would. A second round of questions, or an answer that is not a PDF, is a 502.
-- **Nothing is logged beyond method, path and status.** Answers carry personnummer and bodies carry what the
+- **Error mapping** (`ProfessionalWebIntegratorErrorDecoder`, `ProfessionalWebErrors`): the integrator's 400, 403,
+  404 and 422 keep their status, anything else is a 502. The integrator's `detail`, which carries Lifecare's sentence
+  when there is one, becomes the problem's detail. A problem without a detail gets `lifecare-integrator answered
+  <status>`. A timeout, an integrator that cannot be reached or an open circuit is a 502.
+- **400 and 422 are Lifecare refusing.** On Create of a decision, payment or calculation they pass on; any other
+  failure answers that it is not known whether Lifecare saved it, so the caseworker checks before saving again.
+- **A print that is not a PDF is a 502.** The integrator answers the parameter questions some templates ask, such as
+  "Beslut" for a decision with a medsökande, so careM only checks that the answer starts with `%PDF`.
+- **The document list is read by partyId.** careM sends the applicant's partyId and no personnummer. When the
+  integrator cannot resolve the partyId, its 404 reaches the caller.
+- **The household check is asked by insats.** `services/{serviceId}/household` takes the payment date; the integrator
+  reads the person off the insats's payment underlag itself.
+- **Nothing is logged.** Answers carry personnummer and bodies carry what the
   caseworker wrote. The paths `/**/professional-web/**` are excluded from logbook in `application.yml`.
 - **No health indicator.** careM holds no session, so it has nothing of its own to report on ProfessionalWeb.
 - **Its own circuit breaker.** The Feign client `ProfessionalWebIntegratorClient` has the circuit breaker
-  `lifecare-integrator-professionalweb`, so it does not share one with the FamilyCare reads. The municipality id is
+  `lifecare-integrator-professionalweb`, so it does not share one with the FamilyCare reads. Its
+  `ProfessionalWebCircuitBreakerFailures` does not count 400, 403, 404 or 422 as failures, so refused writes do not
+  open it. The municipality id is
   fixed at 2281.
 - **Payment/Create is not idempotent.** careM never sends it again. `LifecarePaymentRegistrationService` refuses a
   payment Lifecare already holds (409) instead of making it again.
