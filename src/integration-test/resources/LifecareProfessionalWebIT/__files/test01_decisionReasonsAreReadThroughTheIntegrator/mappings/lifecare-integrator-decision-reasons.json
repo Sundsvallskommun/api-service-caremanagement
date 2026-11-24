@@ -1,0 +1,23 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/decision-codes/153/reasons"
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": [
+			{
+				"name": "Arbetar deltid, ofrivilligt",
+				"options": [
+					{
+						"reasonCode": 19,
+						"name": "Arbetar deltid ofrivilligt, otillräcklig inkomst"
+					}
+				]
+			}
+		],
+		"status": 200
+	}
+}
