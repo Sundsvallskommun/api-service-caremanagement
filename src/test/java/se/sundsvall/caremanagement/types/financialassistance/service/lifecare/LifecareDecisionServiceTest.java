@@ -11,6 +11,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionProposal;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionReason;
@@ -75,6 +76,9 @@ class LifecareDecisionServiceTest {
 	private LifecareDecisionClient lifecareMock;
 
 	@Mock
+	private ProfessionalWebClient clientMock;
+
+	@Mock
 	private LifecareAccessRecorder accessRecorderMock;
 
 	@Mock
@@ -111,13 +115,13 @@ class LifecareDecisionServiceTest {
 		loaded(null);
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEmpty();
-		verifyNoInteractions(lifecareMock, accessRecorderMock);
+		verifyNoInteractions(lifecareMock, clientMock, accessRecorderMock);
 	}
 
 	@Test
 	void showsTheSavedBeslutAsLifecareHasItAndLogsTheRead() {
 		final var errand = loaded(98);
-		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
+		when(clientMock.readDecision(98)).thenReturn(tree(SAVED));
 
 		final var view = service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -132,7 +136,7 @@ class LifecareDecisionServiceTest {
 	@Test
 	void servesNoBeslutWhoseReadCouldNotBeLogged() {
 		final var errand = loaded(98);
-		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
+		when(clientMock.readDecision(98)).thenReturn(tree(SAVED));
 		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Läste beslutet i Lifecare", "98");
 
 		assertThatThrownBy(() -> service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
@@ -142,9 +146,9 @@ class LifecareDecisionServiceTest {
 	void createsTheBeslutTheFirstTimeAndLinksTheErrandToIt() {
 		final var errand = loaded(null);
 		caseworker();
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.create(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 98}"));
-		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
+		when(clientMock.createDecision(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 98}"));
+		when(clientMock.readDecision(98)).thenReturn(tree(SAVED));
 
 		final var view = service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL);
 
@@ -153,7 +157,7 @@ class LifecareDecisionServiceTest {
 		assertThat(body.path("reasonCode").asInt()).isEqualTo(19);
 		assertThat(body.path("amount").asInt()).isEqualTo(3000);
 		assertThat(body.path("decisionMaker").stringValue()).isEqualTo("TEST");
-		verify(lifecareMock, never()).update(anyInt(), any());
+		verify(clientMock, never()).updateDecision(anyInt(), any());
 		verify(errandServiceMock).linkDecision(errand, 98);
 		verify(accessRecorderMock).read(errand, "DECISION", "Läste beslutsunderlag i Lifecare");
 		verify(accessRecorderMock).written(errand, "CREATE", "DECISION", "Registrerade beslutet i Lifecare", "98");
@@ -164,21 +168,21 @@ class LifecareDecisionServiceTest {
 	void savesNothingWhenTheReadOfTheUnderlagCouldNotBeLogged() {
 		final var errand = loaded(null);
 		caseworker();
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
 		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Läste beslutsunderlag i Lifecare");
 
 		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL)).isInstanceOf(IllegalStateException.class);
-		verify(lifecareMock, never()).create(anyInt(), any());
-		verify(lifecareMock, never()).update(anyInt(), any());
+		verify(clientMock, never()).createDecision(anyInt(), any());
+		verify(clientMock, never()).updateDecision(anyInt(), any());
 	}
 
 	@Test
 	void namesTheConfiguredTestDecisionMakerInsteadOfTheCaseworker() {
 		loaded(null);
 		when(propertiesMock.testDecisionMaker()).thenReturn("test");
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.create(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 98}"));
-		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
+		when(clientMock.createDecision(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 98}"));
+		when(clientMock.readDecision(98)).thenReturn(tree(SAVED));
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL);
 
@@ -192,14 +196,14 @@ class LifecareDecisionServiceTest {
 		caseworker();
 		final var changed = (ObjectNode) tree(SAVED);
 		changed.put("message", "<p>Ändrat</p>");
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
-		when(lifecareMock.update(eq(98), bodyCaptor.capture())).thenReturn(changed);
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
+		when(clientMock.readDecision(98)).thenReturn(tree(SAVED));
+		when(clientMock.updateDecision(eq(98), bodyCaptor.capture())).thenReturn(changed);
 
 		final var view = service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Ändrat</p>", false, null));
 
-		verify(lifecareMock, never()).create(anyInt(), any());
+		verify(clientMock, never()).createDecision(anyInt(), any());
 		assertThat(bodyCaptor.getValue().path("decisionId").asInt()).isEqualTo(98);
 		assertThat(bodyCaptor.getValue().path("message").stringValue()).isEqualTo("<p>Ändrat</p>");
 		assertThat(bodyCaptor.getValue().path("lockedMessage").booleanValue()).isFalse();
@@ -214,9 +218,9 @@ class LifecareDecisionServiceTest {
 		caseworker();
 		final var locked = (ObjectNode) tree(SAVED);
 		locked.put("lockedMessage", true);
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
-		when(lifecareMock.update(eq(98), bodyCaptor.capture())).thenReturn(locked);
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
+		when(clientMock.readDecision(98)).thenReturn(tree(SAVED));
+		when(clientMock.updateDecision(eq(98), bodyCaptor.capture())).thenReturn(locked);
 
 		final var view = service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Beslut</p>", true, null));
@@ -230,9 +234,9 @@ class LifecareDecisionServiceTest {
 	void describesAWriteProtectedCreate() {
 		final var errand = loaded(null);
 		caseworker();
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.create(eq(1), any())).thenReturn(tree("{\"decisionId\": 98}"));
-		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
+		when(clientMock.createDecision(eq(1), any())).thenReturn(tree("{\"decisionId\": 98}"));
+		when(clientMock.readDecision(98)).thenReturn(tree(SAVED));
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("3000"), 19, "<p>Beslut</p>", true, null));
@@ -247,14 +251,14 @@ class LifecareDecisionServiceTest {
 		final var proposal = (ObjectNode) tree(PROPOSAL);
 		proposal.putArray("decisionTypes").addObject()
 			.put("code", 161).put("name", "EK Återkrav").put("type", 9).put("isActive", true).put("requiresFromDate", false).put("requiresToDate", false);
-		when(lifecareMock.readProposal(1)).thenReturn(proposal);
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(proposal);
 
 		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			new LifecareDecisionSaveRequest(161, null, null, null, null, null, null, null, null)))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
 			.hasMessageContaining("EK Återkrav");
-		verify(lifecareMock, never()).create(anyInt(), any());
+		verify(clientMock, never()).createDecision(anyInt(), any());
 	}
 
 	@Test
@@ -264,9 +268,9 @@ class LifecareDecisionServiceTest {
 		final var proposal = (ObjectNode) tree(PROPOSAL);
 		final var persons = proposal.withObjectProperty("decision").withArrayProperty("decisionPersons");
 		persons.add(((ObjectNode) persons.get(0).deepCopy()).put("personId", "20120505T020").put("coApplicant", true));
-		when(lifecareMock.readProposal(1)).thenReturn(proposal);
-		when(lifecareMock.create(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 134}"));
-		when(lifecareMock.readDecision(134)).thenReturn(tree(SAVED));
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(proposal);
+		when(clientMock.createDecision(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 134}"));
+		when(clientMock.readDecision(134)).thenReturn(tree(SAVED));
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.OCTOBER, 1), LocalDate.of(2026, Month.OCTOBER, 31),
 			new BigDecimal("100"), 3, "<p>Beslut</p>", null, 1));
@@ -284,15 +288,15 @@ class LifecareDecisionServiceTest {
 		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", CONFLICT);
-		verifyNoInteractions(lifecareMock);
+		verifyNoInteractions(lifecareMock, clientMock);
 	}
 
 	@Test
 	void warnsAgainstSavingAgainWhenTheBeslutWasMadeButTheErrandCouldNotBeLinked() {
 		final var errand = loaded(null);
 		caseworker();
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.create(eq(1), any())).thenReturn(tree("{\"decisionId\": 98}"));
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
+		when(clientMock.createDecision(eq(1), any())).thenReturn(tree("{\"decisionId\": 98}"));
 		doThrow(Problem.valueOf(SERVICE_UNAVAILABLE, "db down")).when(errandServiceMock).linkDecision(errand, 98);
 
 		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL))
@@ -308,8 +312,8 @@ class LifecareDecisionServiceTest {
 	void passesOnLifecaresOwnRefusalOfACreate() {
 		loaded(null);
 		caseworker();
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.create(eq(1), any())).thenThrow(Problem.valueOf(UNPROCESSABLE_CONTENT, "Beslutsdatum saknas"));
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
+		when(clientMock.createDecision(eq(1), any())).thenThrow(Problem.valueOf(UNPROCESSABLE_CONTENT, "Beslutsdatum saknas"));
 
 		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL))
 			.isInstanceOf(ThrowableProblem.class)
@@ -322,8 +326,8 @@ class LifecareDecisionServiceTest {
 	void passesOnLifecaresBadRequestOfACreate() {
 		loaded(null);
 		caseworker();
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.create(eq(1), any())).thenThrow(Problem.valueOf(BAD_REQUEST, "Ogiltigt beslutsdatum"));
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
+		when(clientMock.createDecision(eq(1), any())).thenThrow(Problem.valueOf(BAD_REQUEST, "Ogiltigt beslutsdatum"));
 
 		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL))
 			.isInstanceOf(ThrowableProblem.class)
@@ -336,8 +340,8 @@ class LifecareDecisionServiceTest {
 	void tellsTheCaseworkerToCheckLifecareWhenACreateWentUnanswered() {
 		loaded(null);
 		caseworker();
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.create(eq(1), any()))
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
+		when(clientMock.createDecision(eq(1), any()))
 			.thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare timed out"))
 			.thenThrow(new IllegalStateException("socket closed"))
 			.thenReturn(tree("{}"));
@@ -359,7 +363,7 @@ class LifecareDecisionServiceTest {
 			.put("code", 161).put("name", "EK Återkrav").put("type", 9).put("isActive", true).put("requiresFromDate", false).put("requiresToDate", false);
 		proposal.withArrayProperty("decisionTypes").addObject()
 			.put("code", 9).put("name", "Utgången").put("type", 9).put("isActive", false);
-		when(lifecareMock.readProposal(1)).thenReturn(proposal);
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(proposal);
 
 		final var types = service.types(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -371,7 +375,7 @@ class LifecareDecisionServiceTest {
 	@Test
 	void servesNoBeslutstyperWhoseReadCouldNotBeLogged() {
 		final var errand = loaded(null);
-		when(lifecareMock.readProposal(1)).thenReturn(tree(PROPOSAL));
+		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
 		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Läste beslutstyper i Lifecare");
 
 		assertThatThrownBy(() -> service.types(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
@@ -379,7 +383,7 @@ class LifecareDecisionServiceTest {
 
 	@Test
 	void listsTheOrsakerOfABeslutstyp() {
-		when(lifecareMock.readReasons(153)).thenReturn(tree("""
+		when(clientMock.readDecisionReasons(153)).thenReturn(tree("""
 			[{"header": "Arbetar deltid, ofrivilligt", "name": "Arbetar deltid, ofrivilligt", "reasonCode": null,
 			  "options": [{"header": "", "name": "Arbetar deltid ofrivilligt, otillräcklig inkomst", "reasonCode": 19, "options": []}]}]"""));
 
@@ -395,14 +399,14 @@ class LifecareDecisionServiceTest {
 		assertThatThrownBy(() -> service.pdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
-		verifyNoInteractions(lifecareMock);
+		verifyNoInteractions(lifecareMock, clientMock);
 	}
 
 	@Test
 	void printsTheSavedBeslutAndLogsTheRead() {
 		final var errand = loaded(98);
 		final var pdf = "%PDF-1.7".getBytes();
-		when(lifecareMock.printDecision(98)).thenReturn(pdf);
+		when(clientMock.printDecision(98)).thenReturn(pdf);
 
 		assertThat(service.pdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isSameAs(pdf);
 		verify(accessRecorderMock).read(errand, "DECISION", "Hämtade beslutet som PDF från Lifecare", "98");
@@ -411,7 +415,7 @@ class LifecareDecisionServiceTest {
 	@Test
 	void servesNoPdfWhoseReadCouldNotBeLogged() {
 		final var errand = loaded(98);
-		when(lifecareMock.printDecision(98)).thenReturn("%PDF-1.7".getBytes());
+		when(clientMock.printDecision(98)).thenReturn("%PDF-1.7".getBytes());
 		doThrow(new IllegalStateException("log down")).when(accessRecorderMock).read(errand, "DECISION", "Hämtade beslutet som PDF från Lifecare", "98");
 
 		assertThatThrownBy(() -> service.pdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
@@ -422,7 +426,7 @@ class LifecareDecisionServiceTest {
 		loaded(null);
 
 		assertThat(service.proposal(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecareDecisionProposal(null, false, null, null, null));
-		verifyNoInteractions(lifecareMock, accessRecorderMock);
+		verifyNoInteractions(lifecareMock, clientMock, accessRecorderMock);
 	}
 
 	@Test
@@ -457,8 +461,8 @@ class LifecareDecisionServiceTest {
 		final var errand = loadedWithCalculation(null);
 		caseworker();
 		when(lifecareMock.readProposal(1, 25)).thenReturn(tree(PROPOSAL_FROM_FINAL_CALCULATION));
-		when(lifecareMock.create(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 133}"));
-		when(lifecareMock.readDecision(133)).thenReturn(tree(SAVED));
+		when(clientMock.createDecision(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 133}"));
+		when(clientMock.readDecision(133)).thenReturn(tree(SAVED));
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecareDecisionSaveRequest(153, null, null, null, null, 3, "<p>Beslut</p>", null, null));
 
@@ -466,7 +470,7 @@ class LifecareDecisionServiceTest {
 		assertThat(body.path("amount").asInt()).isEqualTo(2068);
 		assertThat(body.path("fromDate").stringValue()).isEqualTo("2026-09-01");
 		assertThat(body.path("toDate").stringValue()).isEqualTo("2026-09-30");
-		verify(lifecareMock, never()).readProposal(anyInt());
+		verify(clientMock, never()).readDecisionProposal(anyInt(), eq(""), eq(0));
 		verify(accessRecorderMock).written(errand, "CREATE", "DECISION", "Registrerade beslutet i Lifecare, från normberäkning 25", "133");
 	}
 
@@ -477,8 +481,8 @@ class LifecareDecisionServiceTest {
 		final var saved = (ObjectNode) tree(SAVED);
 		saved.put("decisionId", 133).put("amount", 2068);
 		when(lifecareMock.readProposal(1, 25)).thenReturn(tree(PROPOSAL_FROM_FINAL_CALCULATION));
-		when(lifecareMock.readDecision(133)).thenReturn(saved);
-		when(lifecareMock.update(eq(133), bodyCaptor.capture())).thenReturn(saved);
+		when(clientMock.readDecision(133)).thenReturn(saved);
+		when(clientMock.updateDecision(eq(133), bodyCaptor.capture())).thenReturn(saved);
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID,
 			new LifecareDecisionSaveRequest(153, null, LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30), new BigDecimal("2000"), 3, "<p>Beslut</p>", false, null));
@@ -492,8 +496,8 @@ class LifecareDecisionServiceTest {
 		final var errand = loadedWithCalculation(null);
 		caseworker();
 		when(lifecareMock.readProposal(1, 25)).thenReturn(tree(PROPOSAL));
-		when(lifecareMock.create(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 98}"));
-		when(lifecareMock.readDecision(98)).thenReturn(tree(SAVED));
+		when(clientMock.createDecision(eq(1), bodyCaptor.capture())).thenReturn(tree("{\"decisionId\": 98}"));
+		when(clientMock.readDecision(98)).thenReturn(tree(SAVED));
 
 		service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL);
 

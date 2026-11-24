@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.c
 
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.NormberakningDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.NormberakningTypes;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareAccessRecorder;
@@ -58,10 +59,12 @@ class LifecareCalculationEditService {
 	private static final String END_DATE = "endDate";
 
 	private final LifecareCalculationClient client;
+	private final ProfessionalWebClient professionalWebClient;
 	private final LifecareAccessRecorder recorder;
 
-	LifecareCalculationEditService(final LifecareCalculationClient client, final LifecareAccessRecorder recorder) {
+	LifecareCalculationEditService(final LifecareCalculationClient client, final ProfessionalWebClient professionalWebClient, final LifecareAccessRecorder recorder) {
 		this.client = client;
+		this.professionalWebClient = professionalWebClient;
 		this.recorder = recorder;
 	}
 
@@ -82,7 +85,7 @@ class LifecareCalculationEditService {
 	 * @return               the view
 	 */
 	NormberakningDraft readDraftView(final LifecareErrand errand, final int calculationId) {
-		final var forEdit = client.readForEdit(calculationId);
+		final var forEdit = professionalWebClient.readCalculationForEdit(calculationId);
 		recorder.read(errand, TARGET, READ_CALCULATION, String.valueOf(calculationId));
 		return toLifecareDraftView(forEdit, applicationMonthOf(errand));
 	}
@@ -95,7 +98,7 @@ class LifecareCalculationEditService {
 	 * @return               the catalogues
 	 */
 	NormberakningTypes readTypes(final LifecareErrand errand, final int calculationId) {
-		final var forEdit = client.readForEdit(calculationId);
+		final var forEdit = professionalWebClient.readCalculationForEdit(calculationId);
 		recorder.read(errand, TARGET, READ_CALCULATION, String.valueOf(calculationId));
 		return NormberakningTypes.create()
 			.withNorms(toNormOptions(forEdit.path("norms")))
@@ -116,12 +119,12 @@ class LifecareCalculationEditService {
 	 */
 	JsonNode change(final LifecareErrand errand, final int calculationId, final CalculationChange change, final boolean finalize) {
 		final var serviceId = errand.requireServiceId();
-		final var forEdit = client.readForEdit(calculationId);
+		final var forEdit = professionalWebClient.readCalculationForEdit(calculationId);
 		final var before = asObject(forEdit.path(CALCULATION));
 		if (truthy(before, "isFinalized")) {
 			throw Problem.valueOf(UNPROCESSABLE_CONTENT, "Normberäkningen är sparad som slutlig i Lifecare och kan inte ändras.");
 		}
-		final var jobStimulus = client.readJobStimulus(serviceId);
+		final var jobStimulus = professionalWebClient.readJobStimulus(serviceId);
 		recorder.read(errand, TARGET, READ_UNDERLAG);
 
 		final var types = forEdit.path(INCOME_TYPES);
@@ -131,7 +134,7 @@ class LifecareCalculationEditService {
 		final var counted = withCountedAmounts(before, placeAndMark(changed, jobStimulus, keepPlacements));
 		final var calculation = withJobStimulusIncomes(withSharedCost(before, counted), types);
 
-		final var updated = client.update(calculationId, CalculationBodyBuilder.update(calculation, householdSizeOfSaved(calculation), finalize));
+		final var updated = professionalWebClient.updateCalculation(calculationId, CalculationBodyBuilder.update(calculation, householdSizeOfSaved(calculation), finalize));
 		final String description;
 		if (finalize) {
 			description = "Sparade normberäkningen som slutlig i Lifecare";
@@ -157,7 +160,7 @@ class LifecareCalculationEditService {
 		body.set(END_DATE, calculation.path(END_DATE).deepCopy());
 		body.set(NORM_ID, calculation.path(NORM_ID).deepCopy());
 		body.set(PERSONS, array(objects(calculation, PERSONS).stream().filter(person -> truthy(person, INCLUDED)).map(ObjectNode::deepCopy).toList()));
-		final var placed = client.placePersons(body);
+		final var placed = professionalWebClient.placePersons(body);
 
 		withPlacedPersons(calculation, objects(placed, PERSONS), keepPlacements);
 		// The norm comes back with its rows and gemensamma kostnader: the new one's, when the norm was changed.

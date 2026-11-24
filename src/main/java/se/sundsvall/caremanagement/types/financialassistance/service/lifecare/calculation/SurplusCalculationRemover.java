@@ -3,6 +3,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.c
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 
 /**
  * Removes a normberäkning careM created in Lifecare and then lost the errand's link to. The prepare step and the
@@ -21,9 +22,9 @@ public class SurplusCalculationRemover {
 
 	private static final Logger LOG = LoggerFactory.getLogger(SurplusCalculationRemover.class);
 
-	private final LifecareCalculationClient client;
+	private final ProfessionalWebClient client;
 
-	SurplusCalculationRemover(final LifecareCalculationClient client) {
+	SurplusCalculationRemover(final ProfessionalWebClient client) {
 		this.client = client;
 	}
 
@@ -35,7 +36,7 @@ public class SurplusCalculationRemover {
 	 */
 	public boolean remove(final int calculationId) {
 		try {
-			client.delete(calculationId);
+			client.deleteCalculation(calculationId);
 			LOG.info("Removed the surplus normberäkning {} from Lifecare", calculationId);
 			return true;
 		} catch (final RuntimeException e) {

@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareCalculationView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.NormberakningPreviousCalculation;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareAccessRecorder;
@@ -61,13 +62,13 @@ public class ErrandLifecareCalculationService {
 	private static final String FIELD_CALCULATION_ID = "calculationId";
 
 	private final LifecareErrandService errandService;
-	private final LifecareCalculationClient client;
+	private final ProfessionalWebClient client;
 	private final LifecareCalculationEditService editService;
 	private final NormberakningDraftReader draftReader;
 	private final LifecareAccessRecorder recorder;
 	private final SurplusCalculationRemover surplusRemover;
 
-	ErrandLifecareCalculationService(final LifecareErrandService errandService, final LifecareCalculationClient client, final LifecareCalculationEditService editService,
+	ErrandLifecareCalculationService(final LifecareErrandService errandService, final ProfessionalWebClient client, final LifecareCalculationEditService editService,
 		final NormberakningDraftReader draftReader, final LifecareAccessRecorder recorder, final SurplusCalculationRemover surplusRemover) {
 		this.errandService = errandService;
 		this.client = client;
@@ -88,7 +89,7 @@ public class ErrandLifecareCalculationService {
 	public Optional<LifecareCalculationView> read(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		return errand.calculation().map(calculationId -> {
-			final var forEdit = client.readForEdit(calculationId);
+			final var forEdit = client.readCalculationForEdit(calculationId);
 			recorder.read(errand, TARGET, READ_CALCULATION, String.valueOf(calculationId));
 			return toLifecareCalculationView(forEdit.path("calculation"));
 		});
@@ -106,7 +107,7 @@ public class ErrandLifecareCalculationService {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var calculationId = errand.calculation()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, "Normberäkningen är inte sparad i Lifecare än."));
-		final var pdf = client.print(calculationId);
+		final var pdf = client.printCalculation(calculationId);
 		recorder.read(errand, TARGET, "Läste normberäkningen som PDF i Lifecare", String.valueOf(calculationId));
 		return pdf;
 	}
@@ -134,7 +135,7 @@ public class ErrandLifecareCalculationService {
 
 		final var serviceId = errand.requireServiceId();
 		final var draft = draftReader.read(errand);
-		final var proposal = client.readProposal(serviceId);
+		final var proposal = client.readCalculationProposal(serviceId);
 		final var jobStimulus = client.readJobStimulus(serviceId);
 		recorder.read(errand, TARGET, READ_UNDERLAG);
 
@@ -191,12 +192,12 @@ public class ErrandLifecareCalculationService {
 	 * @return               the previous beräkning, empty when the insats has none before the period
 	 */
 	private Optional<JsonNode> previousCalculation(final LifecareErrand errand, final Function<JsonNode, String> periodStartOf) {
-		final var listed = client.listForService(errand.serviceId());
+		final var listed = client.listLatestCalculations(errand.serviceId());
 		recorder.read(errand, TARGET, "Läste insatsens normberäkningar i Lifecare");
 
 		return PreviousCalculationPicker.pick(listed, periodStartOf.apply(listed), errand.calculationId()).map(previous -> {
 			final var previousId = integerOrNull(previous, FIELD_CALCULATION_ID);
-			final JsonNode calculation = client.read(previousId);
+			final JsonNode calculation = client.readCalculation(previousId);
 			recorder.read(errand, TARGET, "Läste föregående normberäkning i Lifecare", String.valueOf(previousId));
 			return calculation;
 		});
@@ -205,7 +206,7 @@ public class ErrandLifecareCalculationService {
 	/** Creates the beräkning, telling a call Lifecare never answered apart from a refusal. A create is never retried. */
 	private JsonNode createInLifecare(final int serviceId, final ObjectNode body) {
 		try {
-			return client.create(serviceId, body);
+			return client.createCalculation(serviceId, body);
 		} catch (final RuntimeException e) {
 			if (e instanceof final ThrowableProblem problem && (problem.getStatus() == BAD_REQUEST || problem.getStatus() == UNPROCESSABLE_CONTENT)) {
 				throw problem;

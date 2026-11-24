@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,7 +17,7 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 class SurplusCalculationRemoverTest {
 
 	@Mock
-	private LifecareCalculationClient client;
+	private ProfessionalWebClient client;
 
 	@InjectMocks
 	private SurplusCalculationRemover remover;
@@ -25,19 +26,19 @@ class SurplusCalculationRemoverTest {
 	void removesTheBeräkningFromLifecare() {
 		assertThat(remover.remove(53)).isTrue();
 
-		verify(client).delete(53);
+		verify(client).deleteCalculation(53);
 	}
 
 	@Test
 	void leavesItWhenLifecareRefuses() {
-		doThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare refused")).when(client).delete(53);
+		doThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare refused")).when(client).deleteCalculation(53);
 
 		assertThat(remover.remove(53)).isFalse();
 	}
 
 	@Test
 	void leavesItWhenLifecareCannotBeReached() {
-		doThrow(new IllegalStateException("no session")).when(client).delete(53);
+		doThrow(new IllegalStateException("no session")).when(client).deleteCalculation(53);
 
 		assertThat(remover.remove(53)).isFalse();
 	}

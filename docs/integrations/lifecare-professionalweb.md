@@ -10,15 +10,18 @@ on Lifecare's side, so all of it stays behind `ProfessionalWebClient`.
 The financial assistance resources under `/{municipalityId}/{namespace}/errands/financial-assistance`, mostly below
 `/{errandId}/lifecare`, and the finalize and payment flows. See [architecture.md](../architecture.md).
 
-| Caller in `types/financialassistance/service/lifecare/` |                                                       Resource it backs                                                       |
-|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| `calculation/LifecareCalculationClient`                 | `FinancialAssistanceLifecareCalculationResource` (`/calculation`, `/normberakning`). Also used by `SurplusCalculationRemover` |
-| `LifecareDecisionClient`                                | `FinancialAssistanceLifecareDecisionResource` and the finalize flow (`LifecareFinalizeService`)                               |
-| `LifecarePaymentApi`                                    | `FinancialAssistanceLifecarePaymentResource` and the payment registration (`LifecarePaymentRegistrationService`)              |
-| `LifecareJobStimulusApi`                                | `FinancialAssistanceLifecareJobStimulusResource`                                                                              |
-| `LifecareRecordService`                                 | `FinancialAssistanceLifecareRecordResource` (journal notes and documents)                                                     |
-| `LifecareReminderService`                               | `FinancialAssistanceLifecareReminderResource`                                                                                 |
-| `LifecareSectionStatusService`                          | `FinancialAssistanceLifecareSectionStatusResource`                                                                            |
+|                                        Caller in `types/financialassistance/service/lifecare/`                                         |                                                                   Resource it backs                                                                   |
+|----------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `calculation/ErrandLifecareCalculationService`, `calculation/ErrandNormberakningService`, `calculation/LifecareCalculationEditService` | `FinancialAssistanceLifecareCalculationResource` (`/calculation`, `/normberakning`). `LifecareCalculationClient` builds the bodies of the norm counts |
+| `calculation/SurplusCalculationRemover`                                                                                                | The removal of a beräkning careM created twice                                                                                                        |
+| `LifecareDecisionService`                                                                                                              | `FinancialAssistanceLifecareDecisionResource`. `LifecareDecisionClient` reads the underlag from a normberäkning                                       |
+| `LifecareFinalizeService`                                                                                                              | The finalize flow                                                                                                                                     |
+| `ErrandLifecarePaymentService`                                                                                                         | `FinancialAssistanceLifecarePaymentResource`                                                                                                          |
+| `LifecarePaymentRegistrationService`                                                                                                   | The payment registration. `LifecarePaymentApi` holds the hushåll check                                                                                |
+| `ErrandLifecareJobStimulusService`                                                                                                     | `FinancialAssistanceLifecareJobStimulusResource`                                                                                                      |
+| `LifecareRecordService`                                                                                                                | `FinancialAssistanceLifecareRecordResource` (journal notes and documents)                                                                             |
+| `LifecareReminderService`                                                                                                              | `FinancialAssistanceLifecareReminderResource`                                                                                                         |
+| `LifecareSectionStatusService`                                                                                                         | `FinancialAssistanceLifecareSectionStatusResource`                                                                                                    |
 
 ## Calls
 

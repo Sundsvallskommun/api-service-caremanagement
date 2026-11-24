@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.NormberakningRowInput;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareAccessRecorder;
@@ -48,6 +49,8 @@ class LifecareCalculationEditServiceTest {
 	@Mock
 	private LifecareCalculationClient client;
 	@Mock
+	private ProfessionalWebClient professionalWebClient;
+	@Mock
 	private LifecareAccessRecorder recorder;
 
 	@Captor
@@ -57,20 +60,20 @@ class LifecareCalculationEditServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new LifecareCalculationEditService(client, recorder);
-		when(client.readJobStimulus(1)).thenReturn(json("{\"applicant\":null,\"coApplicant\":null,\"hasCoApplicant\":false}"));
+		service = new LifecareCalculationEditService(client, professionalWebClient, recorder);
+		when(professionalWebClient.readJobStimulus(1)).thenReturn(json("{\"applicant\":null,\"coApplicant\":null,\"hasCoApplicant\":false}"));
 		// Lifecare places the member where it was and finds jobbstimulans in the period.
-		when(client.placePersons(any())).thenReturn(json("{\"calculationPersons\":" + savedCalculation().path("calculationPersons") + "}"));
+		when(professionalWebClient.placePersons(any())).thenReturn(json("{\"calculationPersons\":" + savedCalculation().path("calculationPersons") + "}"));
 		when(client.withJobStimuli(any(), any())).thenAnswer(invocation -> ((ObjectNode) invocation.getArgument(0)).deepCopy().put("hasApplicantJobStimuli", true));
-		when(client.update(eq(CALCULATION_ID), any())).thenReturn(savedCalculation());
+		when(professionalWebClient.updateCalculation(eq(CALCULATION_ID), any())).thenReturn(savedCalculation());
 	}
 
 	private void readsForEdit(final ObjectNode forEdit) {
-		when(client.readForEdit(CALCULATION_ID)).thenReturn(forEdit);
+		when(professionalWebClient.readCalculationForEdit(CALCULATION_ID)).thenReturn(forEdit);
 	}
 
 	private ObjectNode sentUpdate() {
-		verify(client).update(eq(CALCULATION_ID), bodyCaptor.capture());
+		verify(professionalWebClient).updateCalculation(eq(CALCULATION_ID), bodyCaptor.capture());
 		return bodyCaptor.getValue();
 	}
 
@@ -100,7 +103,7 @@ class LifecareCalculationEditServiceTest {
 		doThrow(new IllegalStateException("log down")).when(recorder).read(ERRAND, "CALCULATION", "Läste beräkningsunderlag i Lifecare");
 
 		assertThatThrownBy(() -> service.change(ERRAND, CALCULATION_ID, (calculation, _) -> calculation, false)).isInstanceOf(IllegalStateException.class);
-		verify(client, never()).update(anyInt(), any());
+		verify(professionalWebClient, never()).updateCalculation(anyInt(), any());
 	}
 
 	@Test
@@ -111,7 +114,7 @@ class LifecareCalculationEditServiceTest {
 
 		service.change(ERRAND, CALCULATION_ID, (calculation, _) -> calculation, false);
 
-		verify(client).placePersons(bodyCaptor.capture());
+		verify(professionalWebClient).placePersons(bodyCaptor.capture());
 		assertThat(bodyCaptor.getValue()).isEqualTo(json("""
 			{"startDate":"2026-09-01","endDate":"2026-09-30","normId":1,"calculationPersons":[%s]}""".formatted(savedCalculation().path("calculationPersons").get(0))));
 		final var body = sentUpdate();
@@ -147,7 +150,7 @@ class LifecareCalculationEditServiceTest {
 	void keepsANormintervallAMemberAlreadyHas() {
 		readsForEdit(forEdit(savedCalculation()));
 		// Lifecare would place the applicant elsewhere; the row it is on stays.
-		when(client.placePersons(any())).thenReturn(json("""
+		when(professionalWebClient.placePersons(any())).thenReturn(json("""
 			{"calculationPersons":[{"personId":"19880209T050","normRowId":1,"normRow":"Make/maka/sambo","amount":3550}]}"""));
 
 		service.change(ERRAND, CALCULATION_ID, (calculation, _) -> CalculationRowChanges.changeExpense(calculation, "E-3",
@@ -204,7 +207,7 @@ class LifecareCalculationEditServiceTest {
 		assertThatThrownBy(() -> service.change(ERRAND, CALCULATION_ID, (calculation, forEdit) -> CalculationRowChanges.changeHeader(calculation, forEdit,
 			NormHeaderInput.create().withHasCustomHouseholdSize(true).withHouseholdSize(4)), false))
 			.hasFieldOrPropertyWithValue("status", BAD_GATEWAY);
-		verify(client, never()).update(anyInt(), any());
+		verify(professionalWebClient, never()).updateCalculation(anyInt(), any());
 	}
 
 	@Test
@@ -217,7 +220,7 @@ class LifecareCalculationEditServiceTest {
 		assertThatThrownBy(() -> service.change(ERRAND, CALCULATION_ID, (calculation, forEdit) -> CalculationRowChanges.changeHeader(calculation, forEdit,
 			NormHeaderInput.create().withNormId(99)), false))
 			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT);
-		verify(client, never()).update(anyInt(), any());
+		verify(professionalWebClient, never()).updateCalculation(anyInt(), any());
 	}
 
 	@Test
@@ -225,12 +228,12 @@ class LifecareCalculationEditServiceTest {
 		final var forEdit = forEdit(savedCalculation());
 		forEdit.set("norms", tree("[{\"normId\":1,\"name\":\"Riksnorm 2026\"},{\"normId\":6,\"name\":\"Specnorm\"}]"));
 		readsForEdit(forEdit);
-		when(client.placePersons(any())).thenReturn(json("{\"calculationPersons\":[{\"personId\":\"19880209T050\",\"normRowId\":1,\"normRow\":\"Make\",\"amount\":2000}]}"));
+		when(professionalWebClient.placePersons(any())).thenReturn(json("{\"calculationPersons\":[{\"personId\":\"19880209T050\",\"normRowId\":1,\"normRow\":\"Make\",\"amount\":2000}]}"));
 
 		service.change(ERRAND, CALCULATION_ID, (calculation, edit) -> CalculationRowChanges.changeHeader(calculation, edit, NormHeaderInput.create().withNormId(6)), false);
 
 		// Sent on their old rows, as the web app does; Lifecare decides what fits the new norm.
-		verify(client).placePersons(bodyCaptor.capture());
+		verify(professionalWebClient).placePersons(bodyCaptor.capture());
 		assertThat(bodyCaptor.getValue().path("normId").intValue()).isEqualTo(6);
 		assertThat(bodyCaptor.getValue().path("calculationPersons").get(0).path("normRowId").intValue()).isEqualTo(2);
 		final var body = sentUpdate();
@@ -246,7 +249,7 @@ class LifecareCalculationEditServiceTest {
 		final var forEdit = forEdit(savedCalculation());
 		forEdit.set("norms", tree("[{\"normId\":1,\"name\":\"Riksnorm 2026\"},{\"normId\":3,\"name\":\"Norm 3\"}]"));
 		readsForEdit(forEdit);
-		when(client.placePersons(any())).thenReturn(json("""
+		when(professionalWebClient.placePersons(any())).thenReturn(json("""
 			{"calculationPersons":[{"personId":"19880209T050","normRowId":1,"normRow":null,"amount":4380}],
 			 "norm":{"rows":[{"rowId":1,"name":"Make/maka/sambo 4380.00","monthlyAmount":4380}]}}"""));
 
@@ -265,7 +268,7 @@ class LifecareCalculationEditServiceTest {
 		final var forEdit = forEdit(savedCalculation());
 		forEdit.set("norms", tree("[{\"normId\":1,\"name\":\"Riksnorm 2026\"},{\"normId\":3,\"name\":\"Matnorm 2026\"}]"));
 		readsForEdit(forEdit);
-		when(client.placePersons(any())).thenReturn(json("{\"calculationPersons\":[{\"personId\":\"19880209T050\",\"normRowId\":0,\"normRow\":null,\"amount\":0}],\"norm\":null}"));
+		when(professionalWebClient.placePersons(any())).thenReturn(json("{\"calculationPersons\":[{\"personId\":\"19880209T050\",\"normRowId\":0,\"normRow\":null,\"amount\":0}],\"norm\":null}"));
 
 		service.change(ERRAND, CALCULATION_ID, (calculation, edit) -> CalculationRowChanges.changeHeader(calculation, edit, NormHeaderInput.create().withNormId(3)), false);
 
@@ -293,7 +296,7 @@ class LifecareCalculationEditServiceTest {
 		assertThatThrownBy(() -> service.change(ERRAND, CALCULATION_ID, (calculation, _) -> calculation, false))
 			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
 			.hasMessageContaining("slutlig");
-		verify(client, never()).update(anyInt(), any());
+		verify(professionalWebClient, never()).updateCalculation(anyInt(), any());
 		verifyNoInteractions(recorder);
 	}
 
@@ -311,7 +314,7 @@ class LifecareCalculationEditServiceTest {
 
 		assertThatThrownBy(() -> service.change(withoutInsats, CALCULATION_ID, (calculation, _) -> calculation, false))
 			.hasFieldOrPropertyWithValue("status", CONFLICT);
-		verify(client, never()).readForEdit(anyInt());
+		verify(professionalWebClient, never()).readCalculationForEdit(anyInt());
 	}
 
 	@Test

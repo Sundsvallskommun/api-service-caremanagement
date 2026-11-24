@@ -8,6 +8,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebErrors;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentCreated;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentRequest;
@@ -49,13 +50,15 @@ public class LifecarePaymentRegistrationService {
 
 	private final LifecareErrandService errandService;
 	private final LifecareAccessRecorder accessRecorder;
+	private final ProfessionalWebClient client;
 	private final LifecarePaymentApi paymentApi;
 	private final TransactionTemplate transactionTemplate;
 
-	LifecarePaymentRegistrationService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final LifecarePaymentApi paymentApi,
+	LifecarePaymentRegistrationService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final ProfessionalWebClient client, final LifecarePaymentApi paymentApi,
 		final PlatformTransactionManager transactionManager) {
 		this.errandService = errandService;
 		this.accessRecorder = accessRecorder;
+		this.client = client;
 		this.paymentApi = paymentApi;
 		this.transactionTemplate = new TransactionTemplate(transactionManager);
 	}
@@ -73,7 +76,7 @@ public class LifecarePaymentRegistrationService {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var serviceId = errand.requireServiceId();
 		// A fresh underlag every time: the saldo it carries changes with each utbetalning registered.
-		final var underlag = paymentApi.readPaymentForCreate(serviceId);
+		final var underlag = client.readPaymentProposal(serviceId);
 		accessRecorder.read(errand, TARGET_PAYEES, "Läste utbetalningsunderlag i Lifecare");
 
 		final var body = buildPaymentCreate(underlag, request);
@@ -88,7 +91,7 @@ public class LifecarePaymentRegistrationService {
 		// outside, so a link that fails cannot roll back the answer for a payment already made.
 		final var lifecareId = transactionTemplate.execute(_ -> {
 			errandService.lock(errand);
-			final var duplicate = findRegisteredPayment(paymentApi.readLatestPayments(serviceId), body);
+			final var duplicate = findRegisteredPayment(client.readLatestPayments(serviceId), body);
 			if (duplicate.isPresent()) {
 				throw Problem.valueOf(CONFLICT, "En likadan utbetalning finns redan i Lifecare (id %s): samma belopp, månad, konto och datum."
 					.formatted(integer(duplicate.get(), "paymentId")));
@@ -103,7 +106,7 @@ public class LifecarePaymentRegistrationService {
 	private String create(final int serviceId, final JsonNode body) {
 		final JsonNode created;
 		try {
-			created = paymentApi.createPayment(serviceId, body);
+			created = client.createPayment(serviceId, body);
 		} catch (final ThrowableProblem problem) {
 			if (ProfessionalWebErrors.isRefusal(problem)) {
 				throw problem;

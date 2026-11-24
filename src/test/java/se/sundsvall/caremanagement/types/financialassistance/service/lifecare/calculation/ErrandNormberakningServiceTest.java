@@ -9,6 +9,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormIncomeInput;
@@ -63,7 +64,7 @@ class ErrandNormberakningServiceTest {
 	@Mock
 	private LifecareCalculationEditService editService;
 	@Mock
-	private LifecareCalculationClient client;
+	private ProfessionalWebClient client;
 	@Mock
 	private NormberakningDraftReader draftReader;
 	@Mock
@@ -122,7 +123,7 @@ class ErrandNormberakningServiceTest {
 	@Test
 	void offersCaremsTypesAndLifecaresNormsBeforeTheBeräkningIsInLifecare() {
 		errandIs(UNLINKED);
-		when(client.readProposal(1)).thenReturn(json("{\"norms\":[{\"normId\":1,\"name\":\"Riksnorm 2026\"}]}"));
+		when(client.readCalculationProposal(1)).thenReturn(json("{\"norms\":[{\"normId\":1,\"name\":\"Riksnorm 2026\"}]}"));
 
 		final var types = service.types(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -136,7 +137,7 @@ class ErrandNormberakningServiceTest {
 	@Test
 	void offersNoNormsWhenLifecareCannotSayOrThereIsNoInsats() {
 		errandIs(UNLINKED);
-		when(client.readProposal(1)).thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
+		when(client.readCalculationProposal(1)).thenThrow(Problem.valueOf(BAD_GATEWAY, "down"));
 
 		assertThat(service.types(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).getNorms()).isEmpty();
 
@@ -148,7 +149,7 @@ class ErrandNormberakningServiceTest {
 	@Test
 	void offersNoNormsWhoseReadCouldNotBeLogged() {
 		errandIs(UNLINKED);
-		when(client.readProposal(1)).thenReturn(json("{\"norms\":[{\"normId\":1,\"name\":\"Riksnorm 2026\"}]}"));
+		when(client.readCalculationProposal(1)).thenReturn(json("{\"norms\":[{\"normId\":1,\"name\":\"Riksnorm 2026\"}]}"));
 		doThrow(new IllegalStateException("log down")).when(recorder).read(UNLINKED, "CALCULATION", "Läste normer i Lifecare");
 
 		assertThat(service.types(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).getNorms()).isEmpty();

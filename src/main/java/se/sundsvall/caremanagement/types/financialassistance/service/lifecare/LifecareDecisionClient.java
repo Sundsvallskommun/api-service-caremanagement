@@ -5,11 +5,9 @@ import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClien
 import tools.jackson.databind.JsonNode;
 
 /**
- * Lifecare's beslut, through lifecare-integrator's resources.
- *
- * <p>
- * Every answer carries the personnummer of the persons the beslut concerns: never log one.
- * </p>
+ * The underlag for a beslut made from a normberäkning, through lifecare-integrator's resources. Every answer carries
+ * the
+ * personnummer of the persons the beslut concerns: never log one.
  */
 @Component
 class LifecareDecisionClient {
@@ -27,78 +25,11 @@ class LifecareDecisionClient {
 	}
 
 	/**
-	 * The underlag for a new beslut on the insats: the blank beslut, the beslutstyper and the beslutsfattare.
-	 *
-	 * @param  serviceId the insats
-	 * @return           the underlag
-	 */
-	JsonNode readProposal(final int serviceId) {
-		return client.readDecisionProposal(serviceId, "", 0);
-	}
-
-	/**
-	 * The underlag for a new beslut made from a normberäkning, as Lifecare's calculation view asks for it (capture
-	 * 2026-09-30). When the normberäkning is saved as final, Lifecare fills the blank beslut in with its period and its
-	 * TotalSum amount, without sign; otherwise the answer is the same as {@link #readProposal(int)}. Lifecare keeps no
-	 * link between the beslut and the normberäkning.
-	 *
-	 * @param  serviceId     the insats
-	 * @param  calculationId the normberäkning
-	 * @return               the underlag
+	 * When the normberäkning is saved as final, Lifecare fills the blank beslut in with its period and its TotalSum amount,
+	 * without sign; otherwise the answer is the same as for a beslut made without one. Lifecare keeps no link between the
+	 * beslut and the normberäkning.
 	 */
 	JsonNode readProposal(final int serviceId, final int calculationId) {
 		return client.readDecisionProposal(serviceId, AMOUNT_TYPE_TOTAL_SUM, calculationId);
-	}
-
-	/**
-	 * Lifecare's orsak catalogue for a beslutstyp. The id is the beslutstyp's code, not an insats.
-	 *
-	 * @param  decisionCode the beslutstyp
-	 * @return              the catalogue, a tree of headings and orsaker
-	 */
-	JsonNode readReasons(final int decisionCode) {
-		return client.readDecisionReasons(decisionCode);
-	}
-
-	/**
-	 * A beslut registered in Lifecare, whole: the object an update takes back.
-	 *
-	 * @param  decisionId the beslut
-	 * @return            the beslut
-	 */
-	JsonNode readDecision(final int decisionId) {
-		return client.readDecision(decisionId);
-	}
-
-	/**
-	 * The beslut rendered as PDF by Lifecare's own print.
-	 *
-	 * @param  decisionId the beslut
-	 * @return            the PDF
-	 */
-	byte[] printDecision(final int decisionId) {
-		return client.printDecision(decisionId);
-	}
-
-	/**
-	 * Registers a beslut on the insats. Not idempotent: a second call makes a second beslut.
-	 *
-	 * @param  serviceId the insats
-	 * @param  body      the underlag's blank beslut, filled in
-	 * @return           the created beslut, carrying its decisionId
-	 */
-	JsonNode create(final int serviceId, final JsonNode body) {
-		return client.createDecision(serviceId, body);
-	}
-
-	/**
-	 * Saves changes to a registered beslut.
-	 *
-	 * @param  decisionId the beslut
-	 * @param  body       the read beslut with the changes applied
-	 * @return            the beslut as it now stands
-	 */
-	JsonNode update(final int decisionId, final JsonNode body) {
-		return client.updateDecision(decisionId, body);
 	}
 }

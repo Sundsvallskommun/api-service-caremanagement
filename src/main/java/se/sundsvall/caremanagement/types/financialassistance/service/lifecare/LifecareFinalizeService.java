@@ -8,6 +8,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeResponse;
@@ -42,12 +43,12 @@ public class LifecareFinalizeService {
 	static final String ERROR_NO_DECIDER = "a decision can only be recorded by an identified user - the X-Sent-By header is required";
 
 	private final LifecareErrandService errandService;
-	private final LifecareDecisionClient lifecare;
+	private final ProfessionalWebClient lifecare;
 	private final LifecareAccessRecorder accessRecorder;
 	private final FinancialAssistanceFinalizeService finalizeService;
 	private final Validator validator;
 
-	LifecareFinalizeService(final LifecareErrandService errandService, final LifecareDecisionClient lifecare, final LifecareAccessRecorder accessRecorder,
+	LifecareFinalizeService(final LifecareErrandService errandService, final ProfessionalWebClient lifecare, final LifecareAccessRecorder accessRecorder,
 		final FinancialAssistanceFinalizeService finalizeService, final Validator validator) {
 		this.errandService = errandService;
 		this.lifecare = lifecare;

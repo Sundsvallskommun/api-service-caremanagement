@@ -9,6 +9,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePayeeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentStatus;
 import se.sundsvall.dept44.problem.Problem;
@@ -52,7 +53,7 @@ class ErrandLifecarePaymentServiceTest {
 	@Mock
 	private LifecareAccessRecorder accessRecorder;
 	@Mock
-	private LifecarePaymentApi paymentApi;
+	private ProfessionalWebClient client;
 
 	@InjectMocks
 	private ErrandLifecarePaymentService service;
@@ -67,8 +68,8 @@ class ErrandLifecarePaymentServiceTest {
 	@Test
 	void paymentOptions() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
-		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+		when(client.readPaymentProposal(1)).thenReturn(underlag());
+		when(client.readLatestPayments(1)).thenReturn(json(REGISTERED));
 
 		final var options = service.paymentOptions(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -80,8 +81,8 @@ class ErrandLifecarePaymentServiceTest {
 	@Test
 	void paymentOptionsNotServedWhenTheReadCannotBeLogged() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
-		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+		when(client.readPaymentProposal(1)).thenReturn(underlag());
+		when(client.readLatestPayments(1)).thenReturn(json(REGISTERED));
 		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
 
 		assertThatThrownBy(() -> service.paymentOptions(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
@@ -90,7 +91,7 @@ class ErrandLifecarePaymentServiceTest {
 	@Test
 	void paymentStatus() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+		when(client.readLatestPayments(1)).thenReturn(json(REGISTERED));
 
 		final var status = service.paymentStatus(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
 
@@ -101,7 +102,7 @@ class ErrandLifecarePaymentServiceTest {
 	@Test
 	void paymentStatusUnavailableWhenItsReadCannotBeLogged() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+		when(client.readLatestPayments(1)).thenReturn(json(REGISTERED));
 		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
 
 		// The unlogged read is not handed over: the caller gets the same answer as when Lifecare cannot be read.
@@ -112,7 +113,7 @@ class ErrandLifecarePaymentServiceTest {
 	void paymentStatusCountsTheLinkedUtbetalningFiledUnderAnotherMonth() {
 		final var october = new LifecareErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 1, null, null, List.of("4"), 2026, 10);
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(october);
-		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+		when(client.readLatestPayments(1)).thenReturn(json(REGISTERED));
 
 		assertThat(service.paymentStatus(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isEqualTo(new LifecarePaymentStatus("2026-10", true, "2026-09-21", new BigDecimal("1.0"), null, false));
@@ -125,13 +126,13 @@ class ErrandLifecarePaymentServiceTest {
 		for (var call = 0; call < 4; call++) {
 			assertThat(service.paymentStatus(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecarePaymentStatus(null, false, null, null, null, true));
 		}
-		verifyNoInteractions(paymentApi, accessRecorder);
+		verifyNoInteractions(client, accessRecorder);
 	}
 
 	@Test
 	void paymentStatusUnavailableWhenLifecareCannotBeRead() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readLatestPayments(1)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare could not be reached"));
+		when(client.readLatestPayments(1)).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare could not be reached"));
 
 		assertThat(service.paymentStatus(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isEqualTo(new LifecarePaymentStatus("2026-09", false, null, null, null, true));
 		verifyNoInteractions(accessRecorder);
@@ -142,13 +143,13 @@ class ErrandLifecarePaymentServiceTest {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(errand(null, 2026, 9));
 
 		assertThat(service.paymentStatus(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).unavailable()).isTrue();
-		verifyNoInteractions(paymentApi);
+		verifyNoInteractions(client);
 	}
 
 	@Test
 	void registeredPayments() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+		when(client.readLatestPayments(1)).thenReturn(json(REGISTERED));
 
 		assertThat(service.registeredPayments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).hasSize(2);
 		verify(accessRecorder).read(ERRAND, "PAYMENTS", "Läste utbetalningar i Lifecare");
@@ -157,7 +158,7 @@ class ErrandLifecarePaymentServiceTest {
 	@Test
 	void registeredPaymentsAreNotServedWhenTheReadCannotBeLogged() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readLatestPayments(1)).thenReturn(json(REGISTERED));
+		when(client.readLatestPayments(1)).thenReturn(json(REGISTERED));
 		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
 
 		assertThatThrownBy(() -> service.registeredPayments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).isInstanceOf(IllegalStateException.class);
@@ -169,14 +170,14 @@ class ErrandLifecarePaymentServiceTest {
 
 		assertThatThrownBy(() -> service.registeredPayments(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(CONFLICT));
-		verifyNoInteractions(paymentApi, accessRecorder);
+		verifyNoInteractions(client, accessRecorder);
 	}
 
 	@Test
 	void createPayeeFilesItUnderThePersonLifecareNamesForTheInsats() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
-		when(paymentApi.createPayee(any())).thenReturn(json("""
+		when(client.readPaymentProposal(1)).thenReturn(underlag());
+		when(client.createPayee(any())).thenReturn(json("""
 			{ "payeeId": 3, "payeeName": "Konto B", "personId": "19800101T001", "paymentMethod": 14, "paymentMethodText": null,
 			  "accountNumber": "22222222", "clearing": "", "name": "Kontoinnehavare B", "isActive": true }
 			"""));
@@ -185,7 +186,7 @@ class ErrandLifecarePaymentServiceTest {
 
 		assertThat(created.id()).isEqualTo(3);
 		assertThat(created.paymentMethod()).isEqualTo("Bankgiro via Plusgiro");
-		verify(paymentApi).createPayee(bodyCaptor.capture());
+		verify(client).createPayee(bodyCaptor.capture());
 		assertThat(bodyCaptor.getValue().get("personId").asString()).isEqualTo("19800101T001");
 		assertThat(bodyCaptor.getValue().get("paymentMethod").asInt()).isEqualTo(14);
 		assertThat(bodyCaptor.getValue().get("accountNumber").asString()).isEqualTo("22222222");
@@ -196,35 +197,35 @@ class ErrandLifecarePaymentServiceTest {
 	@Test
 	void createPayeeWritesNothingWhenTheUnderlagReadCannotBeLogged() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
+		when(client.readPaymentProposal(1)).thenReturn(underlag());
 		doThrow(new IllegalStateException("log down")).when(accessRecorder).read(any(), anyString(), anyString());
 		final var payee = new LifecarePayeeRequest("Kontoinnehavare B", null, 14, null, "22222222");
 
 		assertThatThrownBy(() -> service.createPayee(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payee))
 			.isInstanceOf(IllegalStateException.class);
-		verify(paymentApi, never()).createPayee(any());
+		verify(client, never()).createPayee(any());
 	}
 
 	@Test
 	void createPayeeReturnsTheExistingPayeeInsteadOfCreatingTheSameOneTwice() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
+		when(client.readPaymentProposal(1)).thenReturn(underlag());
 
 		final var payee = service.createPayee(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecarePayeeRequest("Någon", null, 14, null, "1111-1111"));
 
 		assertThat(payee.id()).isEqualTo(2);
-		verify(paymentApi, never()).createPayee(any());
+		verify(client, never()).createPayee(any());
 		verify(accessRecorder, never()).written(any(), anyString(), anyString(), anyString(), any());
 	}
 
 	@Test
 	void createPayeeRefusesABetalsattTheInsatsDoesNotOffer() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
+		when(client.readPaymentProposal(1)).thenReturn(underlag());
 
 		assertThatThrownBy(() -> service.createPayee(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecarePayeeRequest("Någon", null, 21, null, "1")))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(BAD_REQUEST));
-		verify(paymentApi, never()).createPayee(any());
+		verify(client, never()).createPayee(any());
 	}
 
 	@Test
@@ -232,11 +233,11 @@ class ErrandLifecarePaymentServiceTest {
 		final var underlag = underlag();
 		((ObjectNode) underlag.get("payment")).putNull("susPersonId");
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag);
+		when(client.readPaymentProposal(1)).thenReturn(underlag);
 
 		assertThatThrownBy(() -> service.createPayee(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, new LifecarePayeeRequest("Ny", null, 14, null, "33333333")))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY));
-		verify(paymentApi, never()).createPayee(any());
+		verify(client, never()).createPayee(any());
 		verify(accessRecorder).read(eq(ERRAND), eq("PAYEES"), anyString());
 		verifyNoMoreInteractions(accessRecorder);
 	}

@@ -4,12 +4,11 @@ import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
-import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Lifecare's normberäkning, through lifecare-integrator's resources. Every answer and body is a JSON tree: Lifecare's
- * create and update take its own whole
- * object back, and a typed round trip would drop the fields no type knows.
+ * The normberäkning counts Lifecare makes from bodies careM builds, through lifecare-integrator's resources. Nothing
+ * here
+ * changes anything in Lifecare.
  */
 @Component
 class LifecareCalculationClient {
@@ -21,66 +20,6 @@ class LifecareCalculationClient {
 
 	LifecareCalculationClient(final ProfessionalWebClient client) {
 		this.client = client;
-	}
-
-	/**
-	 * The underlag for a new beräkning on the insats: a blank one with the household, and the catalogues.
-	 *
-	 * @param  serviceId the insats
-	 * @return           GetProposalService's answer
-	 */
-	JsonNode readProposal(final int serviceId) {
-		return client.readCalculationProposal(serviceId);
-	}
-
-	/**
-	 * Every beräkning on the insats, without rows.
-	 *
-	 * @param  serviceId the insats
-	 * @return           ListCalculations' answer, an array
-	 */
-	JsonNode listForService(final int serviceId) {
-		return client.listLatestCalculations(serviceId);
-	}
-
-	/**
-	 * A saved beräkning as Lifecare shows it: rows, period and its summering.
-	 *
-	 * @param  calculationId the beräkning
-	 * @return               GetCalculation's answer
-	 */
-	JsonNode read(final int calculationId) {
-		return client.readCalculation(calculationId);
-	}
-
-	/**
-	 * A saved beräkning, whole (what Update takes back), with the catalogues.
-	 *
-	 * @param  calculationId the beräkning
-	 * @return               GetCalculationForEdit's answer
-	 */
-	JsonNode readForEdit(final int calculationId) {
-		return client.readCalculationForEdit(calculationId);
-	}
-
-	/**
-	 * The applicant's and co-applicant's jobbstimulans periods on an insats.
-	 *
-	 * @param  serviceId the insats
-	 * @return           GetJobStimulusForService's answer
-	 */
-	JsonNode readJobStimulus(final int serviceId) {
-		return client.readJobStimulus(serviceId);
-	}
-
-	/**
-	 * Places the members on the norm's rows for the period; Lifecare picks each row and its amount.
-	 *
-	 * @param  body startDate, endDate, normId and the included calculationPersons
-	 * @return      PlacePersons' answer: calculationPersons and, when it sends it, the norm
-	 */
-	JsonNode placePersons(final ObjectNode body) {
-		return client.placePersons(body);
 	}
 
 	/**
@@ -131,48 +70,4 @@ class LifecareCalculationClient {
 		body.set("jobStimulus", jobStimulus);
 		return client.readJobStimuliForCalculation(body);
 	}
-
-	/**
-	 * Creates a beräkning on the insats. Not idempotent: a second call makes a second beräkning, so it is never retried.
-	 *
-	 * @param  serviceId the insats
-	 * @param  body      the Create body
-	 * @return           the created beräkning
-	 */
-	JsonNode create(final int serviceId, final ObjectNode body) {
-		return client.createCalculation(serviceId, body);
-	}
-
-	/**
-	 * Saves changes to a beräkning. Lifecare answers with the beräkning recounted.
-	 *
-	 * @param  calculationId the beräkning
-	 * @param  body          the Update body
-	 * @return               the saved beräkning
-	 */
-	JsonNode update(final int calculationId, final ObjectNode body) {
-		return client.updateCalculation(calculationId, body);
-	}
-
-	/**
-	 * Removes a beräkning (Calculation/Delete, the call behind Ta bort in Lifecare's list of beräkningar). Only for a
-	 * beräkning careM itself has just created and nothing links to: Lifecare offers removal of a beräkning that is not
-	 * slutlig.
-	 *
-	 * @param calculationId the beräkning
-	 */
-	void delete(final int calculationId) {
-		client.deleteCalculation(calculationId);
-	}
-
-	/**
-	 * The beräkning rendered as PDF by Lifecare's own print.
-	 *
-	 * @param  calculationId the beräkning
-	 * @return               the PDF
-	 */
-	byte[] print(final int calculationId) {
-		return client.printCalculation(calculationId);
-	}
-
 }

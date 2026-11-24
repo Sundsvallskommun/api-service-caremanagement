@@ -11,6 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CommunicationChannels;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeDecision;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.FinalizeRequest;
@@ -52,7 +53,7 @@ class LifecareFinalizeServiceTest {
 	private LifecareErrandService errandServiceMock;
 
 	@Mock
-	private LifecareDecisionClient lifecareMock;
+	private ProfessionalWebClient lifecareMock;
 
 	@Mock
 	private LifecareAccessRecorder accessRecorderMock;

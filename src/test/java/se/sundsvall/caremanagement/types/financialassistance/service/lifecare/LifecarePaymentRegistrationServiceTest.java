@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.PlatformTransactionManager;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentCreated;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
@@ -59,6 +60,8 @@ class LifecarePaymentRegistrationServiceTest {
 	@Mock
 	private LifecarePaymentApi paymentApi;
 	@Mock
+	private ProfessionalWebClient client;
+	@Mock
 	private PlatformTransactionManager transactionManager;
 
 	@InjectMocks
@@ -77,30 +80,30 @@ class LifecarePaymentRegistrationServiceTest {
 	@BeforeEach
 	void setUp() {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
-		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag());
-		when(paymentApi.readLatestPayments(1)).thenReturn(json("[]"));
+		when(client.readPaymentProposal(1)).thenReturn(underlag());
+		when(client.readLatestPayments(1)).thenReturn(json("[]"));
 		when(paymentApi.hasHouseholdOn(1, "2026-09-21")).thenReturn(true);
 	}
 
 	@Test
 	void registersTheUtbetalningInLifecareLinksItAndAnswersWithItsId() {
-		when(paymentApi.createPayment(eq(1), any())).thenReturn(json("{ \"paymentId\": 4 }"));
+		when(client.createPayment(eq(1), any())).thenReturn(json("{ \"paymentId\": 4 }"));
 
 		final var created = service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment());
 
 		assertThat(created).isEqualTo(new LifecarePaymentCreated("4", true));
-		verify(paymentApi).createPayment(eq(1), bodyCaptor.capture());
+		verify(client).createPayment(eq(1), bodyCaptor.capture());
 		assertThat(bodyCaptor.getValue().get("amount").decimalValue()).isEqualByComparingTo(BigDecimal.ONE);
 		assertThat(bodyCaptor.getValue().get("concernedMonth").asString()).isEqualTo("202609");
 		assertThat(bodyCaptor.getValue().get("billingNumber").asString()).isEqualTo("123");
 		verify(errandService).linkPayment(ERRAND, "4");
 		verify(accessRecorder).read(ERRAND, "PAYEES", "Läste utbetalningsunderlag i Lifecare");
 		// The errand is locked before the duplicate check and held over the create, and released before the link.
-		final var order = inOrder(transactionManager, errandService, paymentApi);
+		final var order = inOrder(transactionManager, errandService, client);
 		order.verify(transactionManager).getTransaction(any());
 		order.verify(errandService).lock(ERRAND);
-		order.verify(paymentApi).readLatestPayments(1);
-		order.verify(paymentApi).createPayment(eq(1), any());
+		order.verify(client).readLatestPayments(1);
+		order.verify(client).createPayment(eq(1), any());
 		order.verify(transactionManager).commit(any());
 		order.verify(errandService).linkPayment(ERRAND, "4");
 		verify(accessRecorder).written(ERRAND, "CREATE", "PAYMENT", "Registrerade en utbetalning i Lifecare", "4");
@@ -112,15 +115,15 @@ class LifecarePaymentRegistrationServiceTest {
 		final var payment = payment();
 
 		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment)).isInstanceOf(IllegalStateException.class);
-		verify(paymentApi, never()).createPayment(anyInt(), any());
+		verify(client, never()).createPayment(anyInt(), any());
 	}
 
 	@Test
 	void refusesAnUtbetalningLifecareAlreadyHoldsInsteadOfPayingItTwice() {
-		when(paymentApi.readLatestPayments(1)).thenReturn(json("[" + EXISTING + "]"));
+		when(client.readLatestPayments(1)).thenReturn(json("[" + EXISTING + "]"));
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), CONFLICT, "id 4");
-		verify(paymentApi, never()).createPayment(anyInt(), any());
+		verify(client, never()).createPayment(anyInt(), any());
 		verify(errandService).lock(ERRAND);
 		verify(transactionManager).rollback(any());
 	}
@@ -128,11 +131,11 @@ class LifecarePaymentRegistrationServiceTest {
 	@Test
 	void doesNotTakeAMakuleradOrDifferentUtbetalningForTheSameOne() {
 		final var existing = (ObjectNode) json(EXISTING);
-		when(paymentApi.readLatestPayments(1)).thenReturn(json("[%s, %s, %s]".formatted(
+		when(client.readLatestPayments(1)).thenReturn(json("[%s, %s, %s]".formatted(
 			existing.deepCopy().put("cancellationDate", "2026-09-22"),
 			existing.deepCopy().put("paymentId", 5).put("amount", 2),
 			existing.deepCopy().put("paymentId", 6).put("payDate", "2026-09-08"))));
-		when(paymentApi.createPayment(eq(1), any())).thenReturn(json("{ \"paymentId\": 7 }"));
+		when(client.createPayment(eq(1), any())).thenReturn(json("{ \"paymentId\": 7 }"));
 
 		assertThat(service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment()).lifecareId()).isEqualTo("7");
 	}
@@ -143,19 +146,19 @@ class LifecarePaymentRegistrationServiceTest {
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), UNPROCESSABLE_CONTENT,
 			"inget hushåll");
-		verify(paymentApi, never()).createPayment(anyInt(), any());
+		verify(client, never()).createPayment(anyInt(), any());
 	}
 
 	@Test
 	void doesNotSendAnUtbetalningWhenLifecareNamesNoPerson() {
 		final var underlag = underlag();
 		((ObjectNode) underlag.get("payment")).put("susPersonId", "");
-		when(paymentApi.readPaymentForCreate(1)).thenReturn(underlag);
+		when(client.readPaymentProposal(1)).thenReturn(underlag);
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), UNPROCESSABLE_CONTENT,
 			"inget hushåll");
 		verify(paymentApi, never()).hasHouseholdOn(anyInt(), anyString());
-		verify(paymentApi, never()).createPayment(anyInt(), any());
+		verify(client, never()).createPayment(anyInt(), any());
 	}
 
 	@Test
@@ -164,13 +167,13 @@ class LifecarePaymentRegistrationServiceTest {
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, tooMuch)), UNPROCESSABLE_CONTENT,
 			"räcker inte");
-		verify(paymentApi, never()).createPayment(anyInt(), any());
+		verify(client, never()).createPayment(anyInt(), any());
 	}
 
 	@Test
 	void passesARefusalFromLifecareOnInLifecaresWords() {
 		final var refusal = Problem.valueOf(UNPROCESSABLE_CONTENT, "Lifecare godtog inte uppgifterna.");
-		when(paymentApi.createPayment(eq(1), any())).thenThrow(refusal);
+		when(client.createPayment(eq(1), any())).thenThrow(refusal);
 
 		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())).isSameAs(refusal);
 		verify(errandService, never()).linkPayment(any(), anyString());
@@ -179,7 +182,7 @@ class LifecarePaymentRegistrationServiceTest {
 	@Test
 	void passesABadRequestFromLifecareOnInLifecaresWords() {
 		final var refusal = Problem.valueOf(BAD_REQUEST, "Ogiltigt konto");
-		when(paymentApi.createPayment(eq(1), any())).thenThrow(refusal);
+		when(client.createPayment(eq(1), any())).thenThrow(refusal);
 
 		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())).isSameAs(refusal);
 		verify(errandService, never()).linkPayment(any(), anyString());
@@ -187,23 +190,23 @@ class LifecarePaymentRegistrationServiceTest {
 
 	@Test
 	void saysToCheckLifecareWhenItDidNotAnswerAndNeverRetries() {
-		when(paymentApi.createPayment(eq(1), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare could not be reached (HttpTimeoutException)"));
+		when(client.createPayment(eq(1), any())).thenThrow(Problem.valueOf(BAD_GATEWAY, "Lifecare could not be reached (HttpTimeoutException)"));
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), BAD_GATEWAY, "Kontrollera");
-		verify(paymentApi, times(1)).createPayment(anyInt(), any());
+		verify(client, times(1)).createPayment(anyInt(), any());
 		verify(accessRecorder, never()).written(any(), anyString(), anyString(), anyString(), any());
 	}
 
 	@Test
 	void saysToCheckLifecareOnAnyOtherFailureOfTheCreate() {
-		when(paymentApi.createPayment(eq(1), any())).thenThrow(new IllegalStateException("boom"));
+		when(client.createPayment(eq(1), any())).thenThrow(new IllegalStateException("boom"));
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), BAD_GATEWAY, "Kontrollera");
 	}
 
 	@Test
 	void saysToCheckLifecareWhenItsAnswerCarriesNoId() {
-		when(paymentApi.createPayment(eq(1), any())).thenReturn(json("{}"));
+		when(client.createPayment(eq(1), any())).thenReturn(json("{}"));
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), BAD_GATEWAY, "Kontrollera");
 		verify(errandService, never()).linkPayment(any(), anyString());
@@ -211,7 +214,7 @@ class LifecarePaymentRegistrationServiceTest {
 
 	@Test
 	void keepsTheRegistrationAndSaysSoWhenTheErrandCannotBeLinked() {
-		when(paymentApi.createPayment(eq(1), any())).thenReturn(json("{ \"paymentId\": 4 }"));
+		when(client.createPayment(eq(1), any())).thenReturn(json("{ \"paymentId\": 4 }"));
 		doThrow(new IllegalStateException("db down")).when(errandService).linkPayment(ERRAND, "4");
 
 		assertThat(service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())).isEqualTo(new LifecarePaymentCreated("4", false));

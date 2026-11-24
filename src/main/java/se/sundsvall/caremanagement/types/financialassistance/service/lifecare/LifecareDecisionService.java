@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebErrors;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionProposal;
@@ -56,13 +57,15 @@ public class LifecareDecisionService {
 
 	private final LifecareErrandService errandService;
 	private final LifecareDecisionClient lifecare;
+	private final ProfessionalWebClient client;
 	private final LifecareAccessRecorder accessRecorder;
 	private final ProfessionalWebProperties properties;
 
-	LifecareDecisionService(final LifecareErrandService errandService, final LifecareDecisionClient lifecare, final LifecareAccessRecorder accessRecorder,
+	LifecareDecisionService(final LifecareErrandService errandService, final LifecareDecisionClient lifecare, final ProfessionalWebClient client, final LifecareAccessRecorder accessRecorder,
 		final ProfessionalWebProperties properties) {
 		this.errandService = errandService;
 		this.lifecare = lifecare;
+		this.client = client;
 		this.accessRecorder = accessRecorder;
 		this.properties = properties;
 	}
@@ -78,7 +81,7 @@ public class LifecareDecisionService {
 	public Optional<LifecareDecisionView> read(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		return errand.decision().map(decisionId -> {
-			final var saved = lifecare.readDecision(decisionId);
+			final var saved = client.readDecision(decisionId);
 			accessRecorder.read(errand, TARGET_DECISION, "Läste beslutet i Lifecare", String.valueOf(decisionId));
 			return toView(saved);
 		});
@@ -94,7 +97,7 @@ public class LifecareDecisionService {
 	 */
 	public List<LifecareDecisionType> types(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var proposal = lifecare.readProposal(errand.requireServiceId());
+		final var proposal = client.readDecisionProposal(errand.requireServiceId(), "", 0);
 		accessRecorder.read(errand, TARGET_DECISION, "Läste beslutstyper i Lifecare");
 		return toTypes(proposal);
 	}
@@ -130,7 +133,7 @@ public class LifecareDecisionService {
 	 * @return              the orsaker
 	 */
 	public List<LifecareDecisionReason> reasons(final int decisionCode) {
-		return toReasons(lifecare.readReasons(decisionCode));
+		return toReasons(client.readDecisionReasons(decisionCode));
 	}
 
 	/**
@@ -157,8 +160,8 @@ public class LifecareDecisionService {
 		final var decisionMaker = decisionMaker();
 
 		final var calculationId = errand.calculation();
-		final var proposal = calculationId.map(id -> lifecare.readProposal(serviceId, id)).orElseGet(() -> lifecare.readProposal(serviceId));
-		final var saved = errand.decision().map(lifecare::readDecision);
+		final var proposal = calculationId.map(id -> lifecare.readProposal(serviceId, id)).orElseGet(() -> client.readDecisionProposal(serviceId, "", 0));
+		final var saved = errand.decision().map(client::readDecision);
 		accessRecorder.read(errand, TARGET_DECISION, "Läste beslutsunderlag i Lifecare");
 		final var prefill = calculationId.flatMap(id -> toPrefill(proposal, id));
 		final var input = toInput(prefill.map(basis -> basis.fillIn(request)).orElse(request), decisionMaker);
@@ -166,7 +169,7 @@ public class LifecareDecisionService {
 
 		if (saved.isPresent()) {
 			final var decisionId = errand.decisionId();
-			final var updated = lifecare.update(decisionId, buildUpdate(saved.get(), proposal, input));
+			final var updated = client.updateDecision(decisionId, buildUpdate(saved.get(), proposal, input));
 			accessRecorder.written(errand, LifecareAccessEntry.UPDATE, TARGET_DECISION, describeWrite(input, "Ändrade och skrivskyddade beslutet i Lifecare",
 				"Ändrade beslutet i Lifecare") + basisDescription, String.valueOf(decisionId));
 			return toView(updated);
@@ -176,7 +179,7 @@ public class LifecareDecisionService {
 		accessRecorder.written(errand, LifecareAccessEntry.CREATE, TARGET_DECISION, describeWrite(input, "Registrerade och skrivskyddade beslutet i Lifecare",
 			"Registrerade beslutet i Lifecare") + basisDescription, String.valueOf(created));
 		link(errand, created);
-		return toView(lifecare.readDecision(created));
+		return toView(client.readDecision(created));
 	}
 
 	/**
@@ -190,7 +193,7 @@ public class LifecareDecisionService {
 	public byte[] pdf(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var decisionId = errand.decision().orElseThrow(() -> Problem.valueOf(NOT_FOUND, ERROR_NOT_SAVED));
-		final var pdf = lifecare.printDecision(decisionId);
+		final var pdf = client.printDecision(decisionId);
 		accessRecorder.read(errand, TARGET_DECISION, "Hämtade beslutet som PDF från Lifecare", String.valueOf(decisionId));
 		return pdf;
 	}
@@ -234,7 +237,7 @@ public class LifecareDecisionService {
 	private int createInLifecare(final int serviceId, final JsonNode body) {
 		final JsonNode created;
 		try {
-			created = lifecare.create(serviceId, body);
+			created = client.createDecision(serviceId, body);
 		} catch (final ThrowableProblem problem) {
 			if (ProfessionalWebErrors.isRefusal(problem)) {
 				throw problem;

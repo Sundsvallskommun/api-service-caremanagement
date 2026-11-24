@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePayee;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePayeeRequest;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentOptions;
@@ -38,12 +39,12 @@ public class ErrandLifecarePaymentService {
 
 	private final LifecareErrandService errandService;
 	private final LifecareAccessRecorder accessRecorder;
-	private final LifecarePaymentApi paymentApi;
+	private final ProfessionalWebClient client;
 
-	ErrandLifecarePaymentService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final LifecarePaymentApi paymentApi) {
+	ErrandLifecarePaymentService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final ProfessionalWebClient client) {
 		this.errandService = errandService;
 		this.accessRecorder = accessRecorder;
-		this.paymentApi = paymentApi;
+		this.client = client;
 	}
 
 	/**
@@ -58,8 +59,8 @@ public class ErrandLifecarePaymentService {
 	public LifecarePaymentOptions paymentOptions(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var serviceId = errand.requireServiceId();
-		final var underlag = paymentApi.readPaymentForCreate(serviceId);
-		final var registered = paymentApi.readLatestPayments(serviceId);
+		final var underlag = client.readPaymentProposal(serviceId);
+		final var registered = client.readLatestPayments(serviceId);
 		accessRecorder.read(errand, TARGET_PAYEES, "Läste utbetalningsunderlag i Lifecare");
 		return toPaymentOptions(underlag, registered, errand.applicationMonth().orElse(null));
 	}
@@ -83,7 +84,7 @@ public class ErrandLifecarePaymentService {
 		}
 		final var applicationMonth = month.get();
 		try {
-			final var registered = paymentApi.readLatestPayments(errand.requireServiceId());
+			final var registered = client.readLatestPayments(errand.requireServiceId());
 			accessRecorder.read(errand, TARGET_PAYMENTS, "Läste utbetalningar i Lifecare");
 			return toPaymentStatus(registered, applicationMonth, errand.paymentIds());
 		} catch (final RuntimeException _) {
@@ -101,7 +102,7 @@ public class ErrandLifecarePaymentService {
 	 */
 	public List<LifecareRegisteredPayment> registeredPayments(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var registered = paymentApi.readLatestPayments(errand.requireServiceId());
+		final var registered = client.readLatestPayments(errand.requireServiceId());
 		accessRecorder.read(errand, TARGET_PAYMENTS, "Läste utbetalningar i Lifecare");
 		return toRegisteredPayments(registered);
 	}
@@ -119,7 +120,7 @@ public class ErrandLifecarePaymentService {
 	 */
 	public LifecarePayee createPayee(final String municipalityId, final String namespace, final String errandId, final LifecarePayeeRequest request) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var underlag = paymentApi.readPaymentForCreate(errand.requireServiceId());
+		final var underlag = client.readPaymentProposal(errand.requireServiceId());
 		accessRecorder.read(errand, TARGET_PAYEES, "Läste betalningsmottagare i Lifecare");
 
 		final var methods = array(underlag, "paymentMethods");
@@ -137,7 +138,7 @@ public class ErrandLifecarePaymentService {
 			throw Problem.valueOf(BAD_GATEWAY, "Lifecare angav ingen person för insatsen");
 		}
 
-		final var created = paymentApi.createPayee(buildPayeeCreate(personId, request));
+		final var created = client.createPayee(buildPayeeCreate(personId, request));
 		accessRecorder.written(errand, LifecareAccessEntry.CREATE, TARGET_PAYEE, "Lade till en betalningsmottagare i Lifecare", String.valueOf(integer(created, "payeeId")));
 		return toPayee(created, methods);
 	}

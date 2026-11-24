@@ -4,6 +4,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.NormHeaderInput;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.NormberakningDraft;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.NormberakningRowInput;
@@ -49,13 +50,13 @@ public class ErrandNormberakningService {
 
 	private final LifecareErrandService errandService;
 	private final LifecareCalculationEditService editService;
-	private final LifecareCalculationClient client;
+	private final ProfessionalWebClient client;
 	private final NormberakningDraftReader draftReader;
 	private final FinancialAssistanceCalculationService calculationService;
 	private final FinancialAssistanceDraftRowService draftRowService;
 	private final LifecareAccessRecorder recorder;
 
-	ErrandNormberakningService(final LifecareErrandService errandService, final LifecareCalculationEditService editService, final LifecareCalculationClient client,
+	ErrandNormberakningService(final LifecareErrandService errandService, final LifecareCalculationEditService editService, final ProfessionalWebClient client,
 		final NormberakningDraftReader draftReader, final FinancialAssistanceCalculationService calculationService, final FinancialAssistanceDraftRowService draftRowService,
 		final LifecareAccessRecorder recorder) {
 		this.errandService = errandService;
@@ -242,7 +243,7 @@ public class ErrandNormberakningService {
 			return List.of();
 		}
 		try {
-			final var proposal = client.readProposal(errand.serviceId());
+			final var proposal = client.readCalculationProposal(errand.serviceId());
 			recorder.read(errand, TARGET, "Läste normer i Lifecare");
 			return toNormOptions(proposal.path("norms"));
 		} catch (final RuntimeException e) {

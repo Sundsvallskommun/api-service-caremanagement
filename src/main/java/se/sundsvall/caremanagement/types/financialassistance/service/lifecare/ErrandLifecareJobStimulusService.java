@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareJobStimulusPeriod;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareJobStimulusPeriodRequest;
 import se.sundsvall.dept44.problem.Problem;
@@ -32,12 +33,12 @@ public class ErrandLifecareJobStimulusService {
 
 	private final LifecareErrandService errandService;
 	private final LifecareAccessRecorder accessRecorder;
-	private final LifecareJobStimulusApi jobStimulusApi;
+	private final ProfessionalWebClient client;
 
-	ErrandLifecareJobStimulusService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final LifecareJobStimulusApi jobStimulusApi) {
+	ErrandLifecareJobStimulusService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final ProfessionalWebClient client) {
 		this.errandService = errandService;
 		this.accessRecorder = accessRecorder;
-		this.jobStimulusApi = jobStimulusApi;
+		this.client = client;
 	}
 
 	/**
@@ -50,7 +51,7 @@ public class ErrandLifecareJobStimulusService {
 	 */
 	public List<LifecareJobStimulusPeriod> periods(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var raw = jobStimulusApi.readForService(errand.requireServiceId());
+		final var raw = client.readJobStimulus(errand.requireServiceId());
 		accessRecorder.read(errand, TARGET, READ_DESCRIPTION);
 		return toJobStimulusPeriods(raw);
 	}
@@ -71,11 +72,11 @@ public class ErrandLifecareJobStimulusService {
 		final var serviceId = errand.requireServiceId();
 		final var role = Optional.ofNullable(request.role()).orElse(APPLICANT);
 
-		final var current = jobStimulusApi.readForService(serviceId);
+		final var current = client.readJobStimulus(serviceId);
 		final var toDate = Optional.ofNullable(request.toDate()).orElseGet(() -> readToDate(request.fromDate()));
 		accessRecorder.read(errand, TARGET, READ_DESCRIPTION);
 
-		final var saved = jobStimulusApi.save(buildJobStimulusAdd(current, role, request.fromDate(), toDate));
+		final var saved = client.saveJobStimulus(buildJobStimulusAdd(current, role, request.fromDate(), toDate));
 		accessRecorder.written(errand, LifecareAccessEntry.CREATE, TARGET, "Lade till en jobbstimulansperiod%s i Lifecare (%s – %s)".formatted(whose(role), request.fromDate(),
 			toDate), null);
 		return toJobStimulusPeriods(saved);
@@ -97,14 +98,14 @@ public class ErrandLifecareJobStimulusService {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var serviceId = errand.requireServiceId();
 
-		final var current = jobStimulusApi.readForService(serviceId);
+		final var current = client.readJobStimulus(serviceId);
 		accessRecorder.read(errand, TARGET, READ_DESCRIPTION);
 		final var removed = toJobStimulusPeriods(current).stream()
 			.filter(period -> Objects.equals(period.id(), periodId))
 			.findFirst()
 			.orElseThrow(() -> Problem.valueOf(NOT_FOUND, PERIOD_GONE));
 
-		final var saved = jobStimulusApi.save(buildJobStimulusRemove(current, periodId));
+		final var saved = client.saveJobStimulus(buildJobStimulusRemove(current, periodId));
 		accessRecorder.written(errand, LifecareAccessEntry.DELETE, TARGET,
 			"Tog bort en jobbstimulansperiod%s i Lifecare (%s – %s)".formatted(whose(removed.role()), removed.fromDate(), Objects.requireNonNullElse(removed.toDate(), "tills vidare")),
 			String.valueOf(periodId));
@@ -120,7 +121,7 @@ public class ErrandLifecareJobStimulusService {
 	}
 
 	private String readToDate(final String fromDate) {
-		return Optional.ofNullable(jobStimulusApi.readToDate(fromDate))
+		return Optional.ofNullable(client.readJobStimulusEndDate(fromDate))
 			.filter(JsonNode::isString)
 			.map(JsonNode::asString)
 			.filter(StringUtils::hasText)
