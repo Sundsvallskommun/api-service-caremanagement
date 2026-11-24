@@ -1,0 +1,22 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/services/7700/payments/latest"
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": [
+			{
+				"paymentId": 4100,
+				"amount": 1.0,
+				"concernedMonth": "202608",
+				"payDate": "2026-08-21",
+				"accountNumber": "11111111",
+				"status": 0
+			}
+		],
+		"status": 200
+	}
+}

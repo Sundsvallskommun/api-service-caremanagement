@@ -7,12 +7,16 @@ import org.springframework.test.context.jdbc.Sql;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.eventlog.integration.db.ErrandEventRepository;
 import se.sundsvall.caremanagement.eventlog.integration.db.model.ErrandEventEntity;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.POST;
+import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 
 @WireMockAppTestSuite(files = "classpath:/LifecareProfessionalWebIT/", classes = Application.class)
@@ -27,9 +31,14 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 	private static final String PATH = "/2281/MY_NAMESPACE/errands/financial-assistance";
 	private static final String SENT_BY = "X-Sent-By";
 	private static final String CASEWORKER = "joe01doe; type=adAccount";
+	private static final String REQUEST_FILE = "request.json";
+	private static final String RESPONSE_FILE = "response.json";
 
 	@Autowired
 	private ErrandEventRepository errandEventRepository;
+
+	@Autowired
+	private FinancialAssistanceRepository financialAssistanceRepository;
 
 	@Test
 	void test01_decisionReasonsAreReadThroughTheIntegrator() {
@@ -37,7 +46,7 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 			.withServicePath(PATH + "/lifecare/decision-types/153/reasons")
 			.withHttpMethod(GET)
 			.withExpectedResponseStatus(OK)
-			.withExpectedResponse("response.json")
+			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
 	}
 
@@ -54,5 +63,25 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 		assertThat(errandEventRepository.findAll())
 			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getAction, ErrandEventEntity::getTarget, ErrandEventEntity::getLifecareId)
 			.contains(tuple(ERRAND_ID, "READ", "DECISION", "815"));
+	}
+
+	@Test
+	void test03_paymentIsRegisteredThroughTheIntegrator() {
+		// The stubs match the household check on the payment date and the create on the body built from the underlag.
+		setupCall()
+			.withServicePath(PATH + "/" + ERRAND_ID + "/lifecare/payments")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(CREATED)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
+
+		assertThat(financialAssistanceRepository.findWithLifecarePaymentIdsByErrandId(ERRAND_ID))
+			.map(FinancialAssistanceEntity::getLifecarePaymentIds)
+			.hasValueSatisfying(paymentIds -> assertThat(paymentIds).containsExactly("4242"));
+		assertThat(errandEventRepository.findAll())
+			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getAction, ErrandEventEntity::getTarget, ErrandEventEntity::getLifecareId)
+			.contains(tuple(ERRAND_ID, "READ", "PAYEES", null), tuple(ERRAND_ID, "CREATE", "PAYMENT", "4242"));
 	}
 }

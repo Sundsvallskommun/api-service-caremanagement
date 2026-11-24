@@ -1,0 +1,87 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/services/7700/payments/proposal"
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"payment": {
+				"paymentId": 0,
+				"serviceId": 7700,
+				"amount": 0.0,
+				"paymentMethod": 0,
+				"payDate": "2026-09-21",
+				"concernedMonth": null,
+				"clearing": null,
+				"accountNumber": null,
+				"name": null,
+				"susPersonId": "19800101T001",
+				"aktualiseringId": null,
+				"maxAmountForPayment": 1000.0,
+				"notificationOnlyOfMaxAmountForPaymentActivated": true,
+				"balance": null,
+				"paymentPersons": [
+					{
+						"paymentId": 0,
+						"personId": "19800101T001",
+						"name": "Efternamn, Förnamn",
+						"included": true,
+						"personIdFormatted": "800101-T001"
+					}
+				],
+				"postings": [
+					{
+						"paymentId": 0,
+						"account": "TEST UTB",
+						"amount": 0.0,
+						"purpose": 1,
+						"purposeText": "Försörjningsstöd exklusive tillfälligt boende"
+					}
+				],
+				"balanceId": 0
+			},
+			"payees": [
+				{
+					"payeeId": 2,
+					"payeeName": "Konto A",
+					"personId": "19800101T001",
+					"paymentMethod": 14,
+					"accountNumber": "11111111",
+					"clearing": "",
+					"name": "Kontoinnehavare A",
+					"postalAddress": "Sundsvall",
+					"isActive": true
+				}
+			],
+			"paymentMethods": [
+				{
+					"paymentCode": 14,
+					"payment": "Bankgiro via Plusgiro",
+					"inUse": true
+				}
+			],
+			"paymentConcernMonths": [
+				{
+					"concernMonth": "202609",
+					"displayMonth": "September 2026"
+				}
+			],
+			"balances": [
+				{
+					"serviceId": 7700,
+					"ownerType": 1,
+					"ownerId": 1,
+					"paymentType": 1,
+					"approvedAmount": 4.0,
+					"bookedAmount": 1.0,
+					"name": "Ek. Bistånd 3,00 ",
+					"balanceAmount": 3.0
+				}
+			]
+		},
+		"status": 200
+	}
+}
