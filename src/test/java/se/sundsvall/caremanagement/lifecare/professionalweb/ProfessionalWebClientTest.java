@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb;
 
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -333,6 +334,63 @@ class ProfessionalWebClientTest {
 
 		assertThat(client.updateJournalNote(1, body)).isEqualTo(json("{\"saved\":\"note\"}"));
 		assertThat(client.updateDocument(3, body)).isEqualTo(json("{\"saved\":\"document\"}"));
+	}
+
+	// Prints
+
+	@Test
+	void thePrintsAreLifecaresPdfUnchanged() {
+		final var decision = "%PDF-1.7 beslut".getBytes(StandardCharsets.UTF_8);
+		final var document = "%PDF-1.7 dokument".getBytes(StandardCharsets.UTF_8);
+		final var calculation = "%PDF-1.7 beräkning".getBytes(StandardCharsets.UTF_8);
+		when(integrator.printDecision(MUNICIPALITY_ID, 98)).thenReturn(decision);
+		when(integrator.printDocument(MUNICIPALITY_ID, 3)).thenReturn(document);
+		when(integrator.printCalculation(MUNICIPALITY_ID, 31)).thenReturn(calculation);
+
+		assertThat(client.printDecision(98)).isEqualTo(decision);
+		assertThat(client.printDocument(3)).isEqualTo(document);
+		assertThat(client.printCalculation(31)).isEqualTo(calculation);
+	}
+
+	@Test
+	void anAnswerThatIsNotAPdfIsABadGateway() {
+		when(integrator.printDecision(MUNICIPALITY_ID, 98)).thenReturn("<html>".getBytes(StandardCharsets.UTF_8));
+
+		assertThatThrownBy(() -> client.printDecision(98))
+			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> {
+				assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY);
+				assertThat(problem.getDetail()).isEqualTo("Lifecare did not answer with a PDF");
+			});
+	}
+
+	@Test
+	void anEmptyPrintIsABadGateway() {
+		when(integrator.printDocument(MUNICIPALITY_ID, 3)).thenReturn(null);
+		when(integrator.printCalculation(MUNICIPALITY_ID, 31)).thenReturn("%PD".getBytes(StandardCharsets.UTF_8));
+
+		assertThatThrownBy(() -> client.printDocument(3))
+			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY));
+		assertThatThrownBy(() -> client.printCalculation(31))
+			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY));
+	}
+
+	@Test
+	void aPrintFromAnIntegratorThatCannotBeReachedIsABadGateway() {
+		when(integrator.printCalculation(MUNICIPALITY_ID, 31)).thenThrow(new IllegalStateException("connection reset"));
+
+		assertThatThrownBy(() -> client.printCalculation(31))
+			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> {
+				assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY);
+				assertThat(problem.getDetail()).isEqualTo("lifecare-integrator could not be reached (IllegalStateException)");
+			});
+	}
+
+	@Test
+	void aPrintTheIntegratorRefusesPassesItsProblemOn() {
+		final var notFound = Problem.valueOf(NOT_FOUND, "Beslutet finns inte");
+		when(integrator.printDecision(MUNICIPALITY_ID, 98)).thenThrow(notFound);
+
+		assertThatThrownBy(() -> client.printDecision(98)).isSameAs(notFound);
 	}
 
 	// Answers and errors

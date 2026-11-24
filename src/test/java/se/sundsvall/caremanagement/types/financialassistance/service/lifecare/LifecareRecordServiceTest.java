@@ -3,7 +3,6 @@ package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
@@ -19,7 +18,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
-import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareDocumentRequest;
@@ -40,7 +38,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -53,7 +50,6 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareRecordService.PATH_PRINT_DOCUMENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareRecordService.PATH_READ_NOTE_FOR_EDIT;
 
 @ExtendWith(MockitoExtension.class)
@@ -101,8 +97,6 @@ class LifecareRecordServiceTest {
 	private LifecareAccessRecorder recorder;
 	@Mock
 	private LifecareCaseHistoryService caseHistoryService;
-	@Mock
-	private ProfessionalWebProperties properties;
 	@Spy
 	private LifecareRecordFilter recordFilter = new LifecareRecordFilter(Set.of("EK"));
 
@@ -287,7 +281,7 @@ class LifecareRecordServiceTest {
 		givenClientList();
 
 		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 7), NOT_FOUND, LifecareRecordService.NOT_THE_CLIENTS);
-		verify(client, never()).getPdf(anyString(), anyMap());
+		verify(client, never()).printDocument(anyInt());
 		verifyNoInteractions(caseHistoryService, recorder);
 	}
 
@@ -474,8 +468,7 @@ class LifecareRecordServiceTest {
 	void readDocumentPdfPrintsAWrittenDocumentWithTheTemplate() {
 		final var pdf = "%PDF-1.7".getBytes();
 		givenClientList();
-		when(properties.documentPrintTemplateId()).thenReturn("template-1");
-		when(client.getPdf(PATH_PRINT_DOCUMENT, Map.of("templateId", "template-1", "documentId", "3", "hideRevisions", "true"))).thenReturn(pdf);
+		when(client.printDocument(3)).thenReturn(pdf);
 
 		assertThat(service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3)).isEqualTo(pdf);
 		verify(recorder).read(ERRAND, "DOCUMENT", "Hämtade ett dokument som PDF ur Lifecare", "3");
@@ -485,8 +478,7 @@ class LifecareRecordServiceTest {
 	@Test
 	void readDocumentPdfIsNotServedWhenTheReadCannotBeLogged() {
 		givenClientList();
-		when(properties.documentPrintTemplateId()).thenReturn("template-1");
-		when(client.getPdf(PATH_PRINT_DOCUMENT, Map.of("templateId", "template-1", "documentId", "3", "hideRevisions", "true"))).thenReturn("%PDF-1.7".getBytes());
+		when(client.printDocument(3)).thenReturn("%PDF-1.7".getBytes());
 		doThrow(new IllegalStateException("log down")).when(recorder).read(any(), anyString(), anyString(), anyString());
 
 		assertThatThrownBy(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3)).isInstanceOf(IllegalStateException.class);
@@ -496,8 +488,7 @@ class LifecareRecordServiceTest {
 	void readDocumentPdfPrintsABlankettWithTheTemplate() {
 		final var pdf = "%PDF-1.7".getBytes();
 		givenClientList();
-		when(properties.documentPrintTemplateId()).thenReturn("template-1");
-		when(client.getPdf(PATH_PRINT_DOCUMENT, Map.of("templateId", "template-1", "documentId", "5", "hideRevisions", "true"))).thenReturn(pdf);
+		when(client.printDocument(5)).thenReturn(pdf);
 
 		assertThat(service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 5)).isEqualTo(pdf);
 		verify(recorder).read(ERRAND, "DOCUMENT", "Hämtade ett dokument som PDF ur Lifecare", "5");
@@ -507,8 +498,7 @@ class LifecareRecordServiceTest {
 	@Test
 	void readDocumentPdfIsNotLoggedWhenLifecareRefusesThePrint() {
 		givenClientList();
-		when(properties.documentPrintTemplateId()).thenReturn("template-1");
-		when(client.getPdf(eq(PATH_PRINT_DOCUMENT), anyMap())).thenThrow(Problem.valueOf(BAD_GATEWAY, "refused"));
+		when(client.printDocument(anyInt())).thenThrow(Problem.valueOf(BAD_GATEWAY, "refused"));
 
 		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 3), BAD_GATEWAY, "refused");
 		verifyNoInteractions(recorder);
@@ -523,7 +513,7 @@ class LifecareRecordServiceTest {
 			"""));
 
 		assertRefused(() -> service.readDocumentPdf(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, 8), NOT_FOUND, LifecareRecordService.NO_PDF);
-		verify(client, never()).getPdf(anyString(), anyMap());
+		verify(client, never()).printDocument(anyInt());
 		verify(caseHistoryService).listDocuments(eq(MUNICIPALITY_ID), any(), eq(LocalDate.of(2026, Month.SEPTEMBER, 23)), eq(LocalDate.of(2026, Month.SEPTEMBER, 23)));
 	}
 

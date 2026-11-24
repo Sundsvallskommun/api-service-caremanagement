@@ -1,14 +1,12 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
-import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseHistoryService;
 import se.sundsvall.caremanagement.lifecare.service.model.DocumentView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.CreateLifecareDocumentRequest;
@@ -68,7 +66,6 @@ public class LifecareRecordService {
 	static final String PATH_DOCUMENT_PROPOSAL = "services/{serviceId}/documents/proposal";
 	static final String PATH_READ_NOTE_FOR_EDIT = "journal-notes/{id}/edit";
 	static final String PATH_READ_DOCUMENT_FOR_EDIT = "documents/{id}/edit";
-	static final String PATH_PRINT_DOCUMENT = "RenderPdf/PrintDocument";
 
 	/** The document kinds Lifecare prints through a print template rather than holding a file for. */
 	static final List<String> PRINTED_KINDS = List.of("Regular", "Form");
@@ -98,16 +95,14 @@ public class LifecareRecordService {
 	private final LifecareErrandService errandService;
 	private final LifecareAccessRecorder recorder;
 	private final LifecareCaseHistoryService caseHistoryService;
-	private final ProfessionalWebProperties properties;
 	private final LifecareRecordFilter recordFilter;
 
 	LifecareRecordService(final ProfessionalWebClient client, final LifecareErrandService errandService, final LifecareAccessRecorder recorder,
-		final LifecareCaseHistoryService caseHistoryService, final ProfessionalWebProperties properties, final LifecareRecordFilter recordFilter) {
+		final LifecareCaseHistoryService caseHistoryService, final LifecareRecordFilter recordFilter) {
 		this.client = client;
 		this.errandService = errandService;
 		this.recorder = recorder;
 		this.caseHistoryService = caseHistoryService;
-		this.properties = properties;
 		this.recordFilter = recordFilter;
 	}
 
@@ -163,7 +158,8 @@ public class LifecareRecordService {
 	 *
 	 * <p>
 	 * The document must be in the applicant's ProfessionalWeb list under Dokument. A written document or a blankett is
-	 * printed by Lifecare with the configured print template, the way Lifecare's own Skriv ut does; nothing is saved in
+	 * printed by Lifecare through lifecare-integrator, with the print template the integrator is configured with, the way
+	 * Lifecare's own Skriv ut does; nothing is saved in
 	 * Lifecare. Lifecare ties print templates to the document's owner and refuses a template the owner lacks, which answers
 	 * 502. Any other document is read from Lifecare's FC API, whose documents carry their own ids, so the FC document is
 	 * picked by the row's title and date: none yields 404, several 409 rather than a guess.
@@ -376,11 +372,7 @@ public class LifecareRecordService {
 	}
 
 	private byte[] printDocument(final int id) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put("templateId", properties.documentPrintTemplateId());
-		params.put("documentId", String.valueOf(id));
-		params.put("hideRevisions", "true");
-		return client.getPdf(PATH_PRINT_DOCUMENT, params);
+		return client.printDocument(id);
 	}
 
 	private byte[] storedDocumentPdf(final String municipalityId, final LifecareErrand errand, final JsonNode row) {

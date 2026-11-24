@@ -1,17 +1,14 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
-import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -19,9 +16,6 @@ class LifecareDecisionClientTest {
 
 	@Mock
 	private ProfessionalWebClient clientMock;
-
-	@Mock
-	private ProfessionalWebProperties propertiesMock;
 
 	@InjectMocks
 	private LifecareDecisionClient client;
@@ -63,13 +57,11 @@ class LifecareDecisionClientTest {
 	}
 
 	@Test
-	void printsTheBeslutWithTheConfiguredTemplate() {
+	void printsTheBeslut() {
 		final var pdf = "%PDF-1.7".getBytes();
-		when(propertiesMock.decisionPrintTemplateId()).thenReturn("template-1");
-		when(clientMock.getPdf("RenderPdf/PrintDecision", Map.of("templateId", "template-1", "decisionId", "98", "hideRevisions", "true"))).thenReturn(pdf);
+		when(clientMock.printDecision(98)).thenReturn(pdf);
 
 		assertThat(client.printDecision(98)).isSameAs(pdf);
-		verify(propertiesMock).decisionPrintTemplateId();
 	}
 
 	@Test

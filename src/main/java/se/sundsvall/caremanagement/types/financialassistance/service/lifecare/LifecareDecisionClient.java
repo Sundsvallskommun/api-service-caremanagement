@@ -1,9 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
 
-import java.util.LinkedHashMap;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
-import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -22,14 +20,10 @@ class LifecareDecisionClient {
 	 */
 	static final String AMOUNT_TYPE_TOTAL_SUM = "TotalSum";
 
-	static final String PATH_PRINT = "RenderPdf/PrintDecision";
-
 	private final ProfessionalWebClient client;
-	private final ProfessionalWebProperties properties;
 
-	LifecareDecisionClient(final ProfessionalWebClient client, final ProfessionalWebProperties properties) {
+	LifecareDecisionClient(final ProfessionalWebClient client) {
 		this.client = client;
-		this.properties = properties;
 	}
 
 	/**
@@ -77,17 +71,13 @@ class LifecareDecisionClient {
 	}
 
 	/**
-	 * The beslut rendered as PDF by Lifecare's own print template.
+	 * The beslut rendered as PDF by Lifecare's own print.
 	 *
 	 * @param  decisionId the beslut
 	 * @return            the PDF
 	 */
 	byte[] printDecision(final int decisionId) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put("templateId", properties.decisionPrintTemplateId());
-		params.put("decisionId", String.valueOf(decisionId));
-		params.put("hideRevisions", "true");
-		return client.getPdf(PATH_PRINT, params);
+		return client.printDecision(decisionId);
 	}
 
 	/**

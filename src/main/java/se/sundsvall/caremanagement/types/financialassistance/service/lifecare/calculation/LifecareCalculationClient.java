@@ -1,9 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation;
 
-import java.util.LinkedHashMap;
 import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
-import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
@@ -16,22 +14,13 @@ import tools.jackson.databind.node.ObjectNode;
 @Component
 class LifecareCalculationClient {
 
-	/**
-	 * The print container's owner for a beräkning, as Lifecare's web app asks for it. The owner code is the one the web
-	 * app sends for every beräkning; what it stands for is not known.
-	 */
-	static final String CALCULATION_OWNER_TYPE = "BERAK";
-	static final String CALCULATION_OWNER_CODE = "999999999";
-
 	private static final String START_DATE = "startDate";
 	private static final String END_DATE = "endDate";
 
 	private final ProfessionalWebClient client;
-	private final ProfessionalWebProperties properties;
 
-	LifecareCalculationClient(final ProfessionalWebClient client, final ProfessionalWebProperties properties) {
+	LifecareCalculationClient(final ProfessionalWebClient client) {
 		this.client = client;
-		this.properties = properties;
 	}
 
 	/**
@@ -177,19 +166,13 @@ class LifecareCalculationClient {
 	}
 
 	/**
-	 * The beräkning rendered as PDF by Lifecare's own print template. Not under api2: it is the page Lifecare's web app
-	 * opens to print a beräkning.
+	 * The beräkning rendered as PDF by Lifecare's own print.
 	 *
 	 * @param  calculationId the beräkning
 	 * @return               the PDF
 	 */
 	byte[] print(final int calculationId) {
-		final var params = new LinkedHashMap<String, String>();
-		params.put("templateId", properties.calculationPrintTemplateId());
-		params.put("ownerType", CALCULATION_OWNER_TYPE);
-		params.put("ownerCode", CALCULATION_OWNER_CODE);
-		params.put("objectId", String.valueOf(calculationId));
-		return client.getPdf("RenderPdf/PrintContainer", params);
+		return client.printCalculation(calculationId);
 	}
 
 }

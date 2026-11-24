@@ -83,9 +83,6 @@ class LifecareSettingsBindingTest {
 
 		@Test
 		void professionalWebKeepsItsDefaults() {
-			assertThat(professionalWebProperties.decisionPrintTemplateId()).isEqualTo("885bfb68-c97b-47c0-921d-ef00caaa2423");
-			assertThat(professionalWebProperties.calculationPrintTemplateId()).isEqualTo("7936e9ec-e32a-40cf-9dea-d95b16e021f0");
-			assertThat(professionalWebProperties.documentPrintTemplateId()).isEqualTo("b9f20b49-c8ba-4c44-ad33-b2bf8f0b688a");
 			assertThat(professionalWebProperties.testDecisionMaker()).isNullOrEmpty();
 		}
 
@@ -106,10 +103,7 @@ class LifecareSettingsBindingTest {
 		"integration.lifecare-familycare.open-actualisation-statuses=Pågående,Vilande",
 		"integration.lifecare-familycare.caseworker-lookback-months=5",
 		"integration.lifecare-familycare.users-limit=25",
-		"integration.lifecare-professionalweb.test-decision-maker=Test Beslutsfattare",
-		"integration.lifecare-professionalweb.decision-print-template-id=decision-template",
-		"integration.lifecare-professionalweb.calculation-print-template-id=calculation-template",
-		"integration.lifecare-professionalweb.document-print-template-id=document-template"
+		"integration.lifecare-professionalweb.test-decision-maker=Test Beslutsfattare"
 	})
 	@ActiveProfiles("junit")
 	class WithEverythingSet {
@@ -162,9 +156,6 @@ class LifecareSettingsBindingTest {
 
 		@Test
 		void professionalWebUsesTheSetValues() {
-			assertThat(professionalWebProperties.decisionPrintTemplateId()).isEqualTo("decision-template");
-			assertThat(professionalWebProperties.calculationPrintTemplateId()).isEqualTo("calculation-template");
-			assertThat(professionalWebProperties.documentPrintTemplateId()).isEqualTo("document-template");
 			assertThat(professionalWebProperties.testDecisionMaker()).isEqualTo("Test Beslutsfattare");
 		}
 	}

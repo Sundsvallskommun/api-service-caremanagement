@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import tools.jackson.databind.JsonNode;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 /**
  * The ProfessionalWeb pass-through of api-service-lifecare-integrator. Same service, gateway and OAuth2 registration
@@ -149,5 +150,14 @@ public interface ProfessionalWebIntegratorClient {
 
 	@PutMapping(path = "/{municipalityId}/professional-web/documents/{id}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	JsonNode updateDocument(@PathVariable final String municipalityId, @PathVariable final int id, @RequestBody final JsonNode body);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/decisions/{decisionId}/pdf", produces = APPLICATION_PDF_VALUE)
+	byte[] printDecision(@PathVariable final String municipalityId, @PathVariable final int decisionId);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/documents/{id}/pdf", produces = APPLICATION_PDF_VALUE)
+	byte[] printDocument(@PathVariable final String municipalityId, @PathVariable final int id);
+
+	@GetMapping(path = "/{municipalityId}/professional-web/calculations/{calculationId}/pdf", produces = APPLICATION_PDF_VALUE)
+	byte[] printCalculation(@PathVariable final String municipalityId, @PathVariable final int calculationId);
 
 }

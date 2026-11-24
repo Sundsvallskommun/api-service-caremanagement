@@ -269,6 +269,28 @@ public class ProfessionalWebClient {
 		return read(() -> integrator.updateDocument(MUNICIPALITY_ID, id, body));
 	}
 
+	/** A beslut as Lifecare's own print renders it. */
+	public byte[] printDecision(final int decisionId) {
+		return pdf(() -> integrator.printDecision(MUNICIPALITY_ID, decisionId));
+	}
+
+	/** A written document or blankett as Lifecare's own print renders it. */
+	public byte[] printDocument(final int id) {
+		return pdf(() -> integrator.printDocument(MUNICIPALITY_ID, id));
+	}
+
+	/** A beräkning as Lifecare's own print renders it. */
+	public byte[] printCalculation(final int calculationId) {
+		return pdf(() -> integrator.printCalculation(MUNICIPALITY_ID, calculationId));
+	}
+
+	/** A PDF from the integrator; anything else is a 502. */
+	private static byte[] pdf(final Supplier<byte[]> call) {
+		return Optional.ofNullable(ProfessionalWebErrors.call(call))
+			.filter(body -> startsWith(body, PDF_SIGNATURE))
+			.orElseThrow(() -> Problem.valueOf(BAD_GATEWAY, ERROR_NOT_A_PDF));
+	}
+
 	/** An answer from the integrator; a missing node when it answered without a body. */
 	private static JsonNode read(final Supplier<JsonNode> call) {
 		return Optional.ofNullable(ProfessionalWebErrors.call(call)).orElse(MissingNode.getInstance());

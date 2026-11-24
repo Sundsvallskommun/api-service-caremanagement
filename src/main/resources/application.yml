@@ -115,10 +115,9 @@ integration:
     url: ${INTEGRATION_LIFECARE_INTEGRATOR_URL}
     connect-timeout: 5
     read-timeout: 90
-  # Lifecare ProfessionalWeb, the internal api2 endpoints Lifecare's own web client uses (normberäkning editing,
-  # decisions, payments, payees, reminders, journal notes, documents, job stimulus). Every call goes through
-  # lifecare-integrator's POST /{municipalityId}/professional-web/exchange, and the integrator holds the integration
-  # account. The print template ids default in ProfessionalWebProperties.
+  # Lifecare ProfessionalWeb (normberäkning editing, decisions, payments, payees, reminders, journal notes, documents,
+  # job stimulus, prints). Every call goes to one of lifecare-integrator's /{municipalityId}/professional-web/...
+  # resources; the integrator holds the integration account and the print templates.
   lifecare-professionalweb:
     # Test environments only: the decision maker to put on every decision while the caseworkers are not yet in
     # Lifecare's list of decision makers. Unset means the signed-in caseworker (X-Sent-By).

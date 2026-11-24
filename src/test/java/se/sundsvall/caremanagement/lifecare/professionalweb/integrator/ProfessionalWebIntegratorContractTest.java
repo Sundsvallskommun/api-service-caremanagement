@@ -70,7 +70,10 @@ class ProfessionalWebIntegratorContractTest {
 		Map.entry("createJournalNote", "POST journal-notes"),
 		Map.entry("createDocument", "POST documents"),
 		Map.entry("updateJournalNote", "PUT journal-notes/{id}"),
-		Map.entry("updateDocument", "PUT documents/{id}"));
+		Map.entry("updateDocument", "PUT documents/{id}"),
+		Map.entry("printDecision", "GET decisions/{decisionId}/pdf"),
+		Map.entry("printDocument", "GET documents/{id}/pdf"),
+		Map.entry("printCalculation", "GET calculations/{calculationId}/pdf"));
 
 	private static Map<String, Object> paths;
 
@@ -88,6 +91,16 @@ class ProfessionalWebIntegratorContractTest {
 		resourceMethods().forEach(method -> actual.put(method.getName(), verb(method) + " " + path(method).substring(PREFIX.length())));
 
 		assertThat(actual).isEqualTo(new TreeMap<>(EXPECTED));
+	}
+
+	@Test
+	void thePrintsAskForAPdf() {
+		resourceMethods().stream()
+			.filter(method -> method.getName().startsWith("print"))
+			.forEach(method -> {
+				assertThat(method.getAnnotation(GetMapping.class).produces()).as(method.getName()).containsExactly("application/pdf");
+				assertThat(method.getReturnType()).as(method.getName()).isEqualTo(byte[].class);
+			});
 	}
 
 	@Test

@@ -1,6 +1,5 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation;
 
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,13 +8,10 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
-import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.entry;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationFixtures.json;
@@ -26,11 +22,7 @@ class LifecareCalculationClientTest {
 
 	@Mock
 	private ProfessionalWebClient professionalWeb;
-	@Mock
-	private ProfessionalWebProperties properties;
 
-	@Captor
-	private ArgumentCaptor<Map<String, String>> paramsCaptor;
 	@Captor
 	private ArgumentCaptor<JsonNode> bodyCaptor;
 
@@ -38,7 +30,7 @@ class LifecareCalculationClientTest {
 
 	@BeforeEach
 	void setUp() {
-		client = new LifecareCalculationClient(professionalWeb, properties);
+		client = new LifecareCalculationClient(professionalWeb);
 	}
 
 	@Test
@@ -144,14 +136,12 @@ class LifecareCalculationClientTest {
 	}
 
 	@Test
-	void printsTheBeräkningWithLifecaresTemplate() {
-		when(properties.calculationPrintTemplateId()).thenReturn("template");
-		when(professionalWeb.getPdf(eq("RenderPdf/PrintContainer"), paramsCaptor.capture())).thenReturn(new byte[] {
+	void printsTheBeräkning() {
+		final var pdf = new byte[] {
 			1
-		});
+		};
+		when(professionalWeb.printCalculation(31)).thenReturn(pdf);
 
-		assertThat(client.print(31)).containsExactly(1);
-		assertThat(paramsCaptor.getValue()).containsExactly(entry("templateId", "template"), entry("ownerType", "BERAK"), entry("ownerCode", "999999999"),
-			entry("objectId", "31"));
+		assertThat(client.print(31)).isSameAs(pdf);
 	}
 }
