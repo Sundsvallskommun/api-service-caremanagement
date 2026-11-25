@@ -21,6 +21,8 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.BooleanNode;
+import tools.jackson.databind.node.MissingNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -60,8 +62,6 @@ class LifecarePaymentRegistrationServiceTest {
 	@Mock
 	private LifecareAccessRecorder accessRecorder;
 	@Mock
-	private LifecarePaymentApi paymentApi;
-	@Mock
 	private ProfessionalWebClient client;
 	@Mock
 	private PlatformTransactionManager transactionManager;
@@ -84,7 +84,7 @@ class LifecarePaymentRegistrationServiceTest {
 		when(errandService.load(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(ERRAND);
 		when(client.readPaymentProposal(1)).thenReturn(underlag());
 		when(client.readLatestPayments(1)).thenReturn(json("[]"));
-		when(paymentApi.hasHouseholdOn(1, "2026-09-21")).thenReturn(true);
+		when(client.hasHousehold(1, "2026-09-21")).thenReturn(BooleanNode.TRUE);
 	}
 
 	@Test
@@ -100,6 +100,7 @@ class LifecarePaymentRegistrationServiceTest {
 		assertThat(bodyCaptor.getValue().get("billingNumber").asString()).isEqualTo("123");
 		verify(errandService).linkPayment(ERRAND, "4");
 		verify(accessRecorder).read(ERRAND, "PAYEES", "Läste utbetalningsunderlag i Lifecare");
+		verify(client).hasHousehold(1, "2026-09-21");
 		// The errand is locked before the duplicate check and held over the create, and released before the link.
 		final var order = inOrder(transactionManager, errandService, client);
 		order.verify(transactionManager).getTransaction(any());
@@ -144,7 +145,16 @@ class LifecarePaymentRegistrationServiceTest {
 
 	@Test
 	void doesNotSendAnUtbetalningForAPersonWithoutHushallOnThePaymentDate() {
-		when(paymentApi.hasHouseholdOn(1, "2026-09-21")).thenReturn(false);
+		when(client.hasHousehold(1, "2026-09-21")).thenReturn(BooleanNode.FALSE);
+
+		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), UNPROCESSABLE_CONTENT,
+			"inget hushåll");
+		verify(client, never()).createPayment(anyInt(), any());
+	}
+
+	@Test
+	void doesNotSendAnUtbetalningWhenTheHushallAnswerIsEmpty() {
+		when(client.hasHousehold(1, "2026-09-21")).thenReturn(MissingNode.getInstance());
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), UNPROCESSABLE_CONTENT,
 			"inget hushåll");
@@ -159,7 +169,7 @@ class LifecarePaymentRegistrationServiceTest {
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())), UNPROCESSABLE_CONTENT,
 			"inget hushåll");
-		verify(paymentApi, never()).hasHouseholdOn(anyInt(), anyString());
+		verify(client, never()).hasHousehold(anyInt(), anyString());
 		verify(client, never()).createPayment(anyInt(), any());
 	}
 
@@ -182,7 +192,7 @@ class LifecarePaymentRegistrationServiceTest {
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDate)), UNPROCESSABLE_CONTENT,
 			"inget hushåll");
-		verify(paymentApi, never()).hasHouseholdOn(anyInt(), anyString());
+		verify(client, never()).hasHousehold(anyInt(), anyString());
 		verify(client, never()).createPayment(anyInt(), any());
 	}
 

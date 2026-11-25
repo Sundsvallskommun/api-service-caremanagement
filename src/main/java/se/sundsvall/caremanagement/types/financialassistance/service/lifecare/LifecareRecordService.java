@@ -337,7 +337,7 @@ public class LifecareRecordService {
 	}
 
 	/**
-	 * The record in the shape Lifecare's own editor works on (inEdit=true), the object that goes back on save.
+	 * The record in the shape Lifecare's own editor works on, the object that goes back on save.
 	 */
 	private ObjectNode readEditable(final Kind kind, final int id) {
 		if (kind == NOTE) {

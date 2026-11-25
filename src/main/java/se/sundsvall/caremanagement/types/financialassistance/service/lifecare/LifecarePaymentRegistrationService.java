@@ -48,15 +48,13 @@ public class LifecarePaymentRegistrationService {
 	private final LifecareErrandService errandService;
 	private final LifecareAccessRecorder accessRecorder;
 	private final ProfessionalWebClient client;
-	private final LifecarePaymentApi paymentApi;
 	private final TransactionTemplate transactionTemplate;
 
-	LifecarePaymentRegistrationService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final ProfessionalWebClient client, final LifecarePaymentApi paymentApi,
+	LifecarePaymentRegistrationService(final LifecareErrandService errandService, final LifecareAccessRecorder accessRecorder, final ProfessionalWebClient client,
 		final PlatformTransactionManager transactionManager) {
 		this.errandService = errandService;
 		this.accessRecorder = accessRecorder;
 		this.client = client;
-		this.paymentApi = paymentApi;
 		this.transactionTemplate = new TransactionTemplate(transactionManager);
 	}
 
@@ -80,7 +78,7 @@ public class LifecarePaymentRegistrationService {
 		// Lifecare's web app checks the person has a hushåll on the payment date before it saves; so does this.
 		final var personId = text(field(underlag, "payment"), "susPersonId");
 		final var payDate = text(body, "payDate");
-		if (!StringUtils.hasText(personId) || !StringUtils.hasText(payDate) || !paymentApi.hasHouseholdOn(serviceId, payDate)) {
+		if (!StringUtils.hasText(personId) || !StringUtils.hasText(payDate) || !client.hasHousehold(serviceId, payDate).asBoolean(false)) {
 			throw refuse("Personen har inget hushåll i Lifecare på utbetalningsdagen.");
 		}
 
