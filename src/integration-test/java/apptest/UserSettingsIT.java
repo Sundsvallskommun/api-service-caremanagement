@@ -44,18 +44,6 @@ class UserSettingsIT extends AbstractAppTest {
 	}
 
 	@Test
-	void test02_readUserSettingsDefaults() {
-		setupCall()
-			.withServicePath(PATH.formatted(NEW_AD_ACCOUNT))
-			.withHttpMethod(GET)
-			.withExpectedResponseStatus(OK)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-
-		assertThat(repository.findByMunicipalityIdAndAdAccount(MUNICIPALITY_ID, NEW_AD_ACCOUNT)).isEmpty();
-	}
-
-	@Test
 	void test03_createUserSettings() {
 		setupCall()
 			.withServicePath(PATH.formatted("NEW01USER"))

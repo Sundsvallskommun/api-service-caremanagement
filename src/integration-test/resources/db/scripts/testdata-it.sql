@@ -33,8 +33,7 @@ INSERT INTO errand (id, municipality_id, namespace, title, type_slug, status, de
 
 -- Stakeholders
 INSERT INTO stakeholder (id, errand_id, external_id, external_id_type, role, first_name, last_name, organization_name, address, care_of, zip_code, city, country, created, modified) VALUES
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', '198001011234', 'PRIVATE', 'APPLICANT', 'Joe',  'Doe', NULL, 'Storgatan 1', NULL, '85248', 'Sundsvall', 'Sweden', '2025-01-02 09:00:00.000000', '2025-01-02 09:00:00.000000'),
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab', '22222222-2222-2222-2222-222222222222', '198101011234', 'PRIVATE', 'APPLICANT', 'Jane', 'Doe', NULL, 'Storgatan 2', NULL, '85248', 'Sundsvall', 'Sweden', '2025-01-03 10:00:00.000000', '2025-01-03 10:00:00.000000');
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', '198001011234', 'PRIVATE', 'APPLICANT', 'Joe',  'Doe', NULL, 'Storgatan 1', NULL, '85248', 'Sundsvall', 'Sweden', '2025-01-02 09:00:00.000000', '2025-01-02 09:00:00.000000');
 
 -- Contact channels for the first stakeholder
 INSERT INTO contact_channel (stakeholder_id, `key`, `value`) VALUES
