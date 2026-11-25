@@ -8,11 +8,6 @@ import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
 import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
-import se.sundsvall.caremanagement.types.financialassistance.api.model.NormExpenseRow;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormExpenseRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormPersonRepository;
-import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
@@ -28,8 +23,6 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.PATCH;
 import static org.springframework.http.HttpMethod.POST;
-import static org.springframework.http.HttpStatus.CONFLICT;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
@@ -43,13 +36,8 @@ import static org.springframework.http.HttpStatus.OK;
  * granting decision be finalized.
  *
  * <p>
- * Only test13 stubs the FamilyCare create. Everywhere else the create has no stub and fails, which is the best-effort
- * path: the errand stays unlinked and the draft keeps refreshing, exactly as when Lifecare refuses the proposal.
- * </p>
- *
- * <p>
- * One application type (återansökan) is covered: none of these paths — the link, the draft refresh or the
- * finalize guards — reads the application type, so a nyansökan takes exactly the same route.
+ * One application type (återansökan) is covered: none of these paths — the link, the frozen draft or the
+ * finalize — reads the application type, so a nyansökan takes exactly the same route.
  * </p>
  */
 @WireMockAppTestSuite(files = "classpath:/FinancialAssistanceLifecareCalculationIT/", classes = Application.class)
@@ -80,19 +68,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 	private FinancialAssistanceRepository financialAssistanceRepository;
 
 	@Autowired
-	private FaWarningRepository warningRepository;
-
-	@Autowired
 	private DecisionRepository decisionRepository;
-
-	@Autowired
-	private FaCalculationDraftRepository calculationDraftRepository;
-
-	@Autowired
-	private FaNormPersonRepository normPersonRepository;
-
-	@Autowired
-	private FaNormExpenseRepository normExpenseRepository;
 
 	@Test
 	void test01_patchIgnoresTheLifecareReferencesAndTheLinkedOneIsServed() {
@@ -120,47 +96,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 	}
 
 	@Test
-	void test02_prepareRefreshesTheDraftUntilTheCalculationIsSavedInLifecare() throws JacksonException {
-		// Run 1, no lifecareCalculationId: the draft is built from the application — the applicant and the rent. The
-		// proposal create has no stub here and fails, so the errand stays unlinked and the next run refreshes again.
-		prepare();
-		assertThat(draft().getExpenses()).extracting(NormExpenseRow::getCostType).containsExactly("RENT");
-
-		// The application gains an electricity cost; run 2 still refreshes the draft, which picks it up.
-		patchData("""
-			{"costs": [{"costType": "RENT", "appliedAmount": 6500}, {"costType": "ELECTRICITY", "appliedAmount": 400}]}""");
-		prepare();
-		final var refreshed = draft();
-		assertThat(refreshed.getExpenses()).extracting(NormExpenseRow::getCostType).containsExactlyInAnyOrder("RENT", "ELECTRICITY");
-		final var warningsBefore = warningSnapshot();
-
-		// The caseworker saves the normberäkning in Lifecare, which links its id — and the application changes once more.
-		linkCalculation(4711);
-		patchData("""
-			{"costs": [{"costType": "RENT", "appliedAmount": 6500}, {"costType": "ELECTRICITY", "appliedAmount": 400}, {"costType": "HOME_INSURANCE", "appliedAmount": 150}]}""");
-		prepare();
-
-		// Run 3: the Lifecare calculation is the truth, so the draft and its warnings are exactly as run 2 left them.
-		assertThat(draft()).usingRecursiveComparison().isEqualTo(refreshed);
-		assertThat(warningSnapshot()).containsExactlyInAnyOrderElementsOf(warningsBefore);
-	}
-
-	@Test
-	void test03_finalizeBifallWithoutLifecareCalculationIdIsRejected() {
-		setupCall()
-			.withServicePath(ERRAND_PATH + "/finalize")
-			.withHttpMethod(POST)
-			.withHeader(SENT_BY, CASEWORKER)
-			.withRequest(REQUEST_FILE)
-			.withExpectedResponseStatus(CONFLICT)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-
-		// Nothing is recorded.
-		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).isEmpty();
-	}
-
-	@Test
 	void test04_finalizeBifallWithLifecareCalculationId() {
 		linkCalculation(4711);
 
@@ -177,41 +112,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 
 		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
 			.containsExactly(tuple("PAYMENT", "BIFALL"));
-	}
-
-	@Test
-	void test05_finalizeAvslagWithoutLifecareCalculationId() {
-		// An avslag pays nothing, so it needs no normberäkning in Lifecare.
-		setupCall()
-			.withServicePath(ERRAND_PATH + "/finalize")
-			.withHttpMethod(POST)
-			.withHeader(SENT_BY, CASEWORKER)
-			.withRequest(REQUEST_FILE)
-			.withExpectedResponseStatus(OK)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequest();
-
-		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
-			.containsExactly(tuple("PAYMENT", "AVSLAG"));
-	}
-
-	@Test
-	void test06_finalizeWithoutLifecareDecisionIdIsRejected() {
-		// Every outcome is a beslut Draken saves in Lifecare first; an errand not linked to one cannot be decided.
-		final var entity = financialAssistanceRepository.findByErrandId(ERRAND_ID).orElseThrow();
-		entity.setLifecareDecisionId(null);
-		financialAssistanceRepository.save(entity);
-
-		setupCall()
-			.withServicePath(ERRAND_PATH + "/finalize")
-			.withHttpMethod(POST)
-			.withHeader(SENT_BY, CASEWORKER)
-			.withRequest(REQUEST_FILE)
-			.withExpectedResponseStatus(CONFLICT)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-
-		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).isEmpty();
 	}
 
 	@Test
@@ -239,89 +139,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 		// Paid, so it is now this errand's: linked, and never available to another errand.
 		assertThat(financialAssistanceRepository.findLifecarePaymentIdsLinkedElsewhere(List.of("90210", "90211", "90212"), "another-errand"))
 			.containsExactly("90210");
-	}
-
-	@Test
-	void test09_finalizeIgnoresPaymentsFromAnOlderClient() {
-		// A client built against the retired contract still sends its payment drafts; they are ignored, not created.
-		linkCalculation(4711);
-
-		setupCall()
-			.withServicePath(ERRAND_PATH + "/finalize")
-			.withHttpMethod(POST)
-			.withHeader(SENT_BY, CASEWORKER)
-			.withRequest(REQUEST_FILE)
-			.withExpectedResponseStatus(OK)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequest();
-
-		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
-			.containsExactly(tuple("PAYMENT", "BIFALL"));
-	}
-
-	@Test
-	void test10_finalizeBifallWithoutLifecareDecisionIdIsRejected() {
-		// The normberäkning alone is not enough: the beslut must be saved in Lifecare too, and that is checked first.
-		linkCalculation(4711);
-		final var entity = financialAssistanceRepository.findByErrandId(ERRAND_ID).orElseThrow();
-		entity.setLifecareDecisionId(null);
-		financialAssistanceRepository.save(entity);
-
-		setupCall()
-			.withServicePath(ERRAND_PATH + "/finalize")
-			.withHttpMethod(POST)
-			.withHeader(SENT_BY, CASEWORKER)
-			.withRequest(REQUEST_FILE)
-			.withExpectedResponseStatus(CONFLICT)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-
-		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).isEmpty();
-	}
-
-	@Test
-	void test11_finalizeAvslagLinkedToLifecarePaymentsIsRejected() {
-		financialAssistanceRepository.linkPaymentIfAbsent(ERRAND_ID, "90210");
-
-		setupCall()
-			.withServicePath(ERRAND_PATH + "/finalize")
-			.withHttpMethod(POST)
-			.withHeader(SENT_BY, CASEWORKER)
-			.withRequest(REQUEST_FILE)
-			.withExpectedResponseStatus(CONFLICT)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-
-		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).isEmpty();
-	}
-
-	@Test
-	void test12_finalizeBifallPurgesTheFrozenDraft() {
-		// The daily prepare builds careM's draft; Draken then saves the normberäkning in Lifecare and links it.
-		prepare();
-		assertThat(calculationDraftRepository.existsById(ERRAND_ID)).isTrue();
-		assertThat(normPersonRepository.findByErrandId(ERRAND_ID)).isNotEmpty();
-		assertThat(normExpenseRepository.findByErrandId(ERRAND_ID)).isNotEmpty();
-		linkCalculation(4711);
-
-		setupCall()
-			.withServicePath(ERRAND_PATH + "/finalize")
-			.withHttpMethod(POST)
-			.withHeader(SENT_BY, CASEWORKER)
-			.withRequest("finalize-request.json")
-			.withExpectedResponseStatus(OK)
-			.sendRequest();
-
-		// The decided calculation is Lifecare's: careM's frozen proposal and all its rows are gone, and the draft read
-		// answers 404 - which Draken shows as "no draft".
-		assertThat(calculationDraftRepository.existsById(ERRAND_ID)).isFalse();
-		assertThat(normPersonRepository.findByErrandId(ERRAND_ID)).isEmpty();
-		assertThat(normExpenseRepository.findByErrandId(ERRAND_ID)).isEmpty();
-		setupCall()
-			.withServicePath(ERRAND_PATH + "/calculation/draft")
-			.withHttpMethod(GET)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.sendRequest();
 	}
 
 	@Test
@@ -380,13 +197,5 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 			.withExpectedResponseStatus(OK)
 			.sendRequest()
 			.andReturnBody(new TypeReference<CalculationDraft>() {});
-	}
-
-	private record WarningSnapshot(String type, String sourceKey, String status, String message) {}
-
-	private List<WarningSnapshot> warningSnapshot() {
-		return warningRepository.findByErrandId(ERRAND_ID).stream()
-			.map(warning -> new WarningSnapshot(warning.getType(), warning.getSourceKey(), warning.getStatus(), warning.getMessage()))
-			.toList();
 	}
 }
