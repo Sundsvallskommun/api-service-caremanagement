@@ -2,6 +2,10 @@
 
 Every change to the service, newest date first. One short line per change.
 
+## 2026-11-25
+
+- Let the ProfessionalWeb error decoder retry a request whose token lifecare-integrator rejected, and cap the error body it reads.
+
 ## 2026-11-24
 
 - Run the ProfessionalWeb integration tests against lifecare-integrator's resources, with a payment, a refused decision and the document list added.

@@ -2,8 +2,10 @@ package se.sundsvall.caremanagement.lifecare.professionalweb.integrator;
 
 import feign.Request;
 import feign.Response;
+import feign.RetryableException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -73,6 +75,31 @@ class ProfessionalWebIntegratorErrorDecoderTest {
 
 		assertThat(problem.getStatus().value()).isEqualTo(422);
 		assertThat(problem.getDetail()).isEqualTo("lifecare-integrator answered 422");
+	}
+
+	@Test
+	void aRejectedTokenIsRetryableSoThatTheTokenIsRenewed() {
+		final var response = responseBuilder(401)
+			.headers(Map.of("WWW-Authenticate", List.of("Bearer error=\"invalid_token\"")))
+			.body("{\"detail\":\"Invalid Credentials\"}", StandardCharsets.UTF_8)
+			.build();
+
+		final var exception = decoder.decode("ProfessionalWebIntegratorClient#x()", response);
+
+		assertThat(exception).isInstanceOfSatisfying(RetryableException.class, retryable -> assertThat(retryable.status()).isEqualTo(401));
+		assertThat(exception.getCause()).isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(problem.getStatus().value()).isEqualTo(502));
+	}
+
+	@Test
+	void anUnauthorizedAnswerWithoutARejectedTokenIsABadGateway() {
+		final var response = responseBuilder(401)
+			.headers(Map.of("WWW-Authenticate", List.of("Bearer error=\"insufficient_scope\"")))
+			.build();
+
+		final var problem = decode(response);
+
+		assertThat(problem.getStatus().value()).isEqualTo(502);
+		assertThat(problem.getDetail()).isEqualTo("lifecare-integrator answered 401");
 	}
 
 	private ThrowableProblem decode(final int status, final String body) {
