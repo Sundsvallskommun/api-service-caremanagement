@@ -99,8 +99,6 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 	void test04_finalizeBifallWithLifecareCalculationId() {
 		linkCalculation(4711);
 
-		// The OAuth token may already be cached by an earlier test in this context, so the stubs are not verified
-		// one by one; processMessageCorrelated=true in the response is the engine stub answering.
 		setupCall()
 			.withServicePath(ERRAND_PATH + "/finalize")
 			.withHttpMethod(POST)
@@ -108,7 +106,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 			.withRequest(REQUEST_FILE)
 			.withExpectedResponseStatus(OK)
 			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequest();
+			.sendRequestAndVerifyResponse();
 
 		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
 			.containsExactly(tuple("PAYMENT", "BIFALL"));
@@ -164,8 +162,7 @@ class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
 	}
 
 	/**
-	 * One daily prepare run. The rule tables in the engine are not stubbed — every DMN evaluation is best-effort and
-	 * degrades to "no rule warning" — so the stubs are not verified here.
+	 * One daily prepare run. Its stubs are not verified here; the calling test checks what the run did.
 	 */
 	private void prepare() {
 		setupCall()

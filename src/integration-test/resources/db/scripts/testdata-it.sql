@@ -51,9 +51,7 @@ INSERT INTO notification (id, errand_id, municipality_id, namespace, owner_id, c
     ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'assignee1', 'reporter1', 'CREATE', 'ERRAND',   'Nytt ärende har tilldelats dig', NULL, 0, '2099-01-01 00:00:00.000000', '2025-01-02 09:00:00.000000', NULL),
     ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeef', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'assignee1', 'operaton',  'CREATE', 'DECISION', 'Utbetalningsbeslut: beviljat', NULL, 0, '2099-01-01 00:00:00.000000', '2025-01-02 09:05:00.000000', NULL);
 
--- Co-caseworker on errand 1111... (assignee1's medhandläggare), seeded so NotificationIT/CoCaseworkerIT can prove
--- notification visibility widens to a co-caseworker without duplicating the notification row (backlog/svar-
--- verksamheten-2026-09-23.md punkt 4).
+-- Co-caseworker on errand 1111... (assignee1's medhandläggare), which CoCaseworkerIT reads and removes.
 INSERT INTO errand_co_caseworker (id, errand_id, municipality_id, namespace, user_id, created) VALUES
     ('ffffffff-ffff-ffff-ffff-ffffffffffff', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'coworker1', '2025-01-02 09:00:00.000000');
 

@@ -4,11 +4,12 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-25
 
+- Correct stale comments in the integration tests and verify the stubs of the Lifecare bifall finalize test.
 - Switch the process message retry schedule off in the integration-test profile, where the tests call the retry worker themselves.
 - Check in the errand delete integration test that the errand's child rows and its calculation draft's rows go with it.
 - Make the hushåll check before a payment in the payment registration service itself and drop its one-method wrapper.
 - Merge the finalize and withdrawal process message integration tests into one class among the other integration tests.
-- Drop the integration-test listener that reset caches and circuit breakers between test classes; the service has no caches and the happy-path tests open no circuit breaker.
+- Drop the integration-test listener that reset caches and circuit breakers between test classes; the service has no caches and no test makes enough failing calls to open a circuit breaker.
 - Keep the process message retry integration tests to the withdrawal, its queuing and a delivered retry.
 - Drop the errand delete cascade integration test, its seeded child rows and an unused ErrandIT resource folder.
 - Unit test the not-found reads of an attachment and a notification, and drop their integration tests.
