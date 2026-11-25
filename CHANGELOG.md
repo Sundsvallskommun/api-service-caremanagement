@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-25
 
+- Refuse a payment without a payment date before the household check instead of asking it with an empty date.
 - Pass the integrator's 403 and 404 on unchanged on Create of a decision, payment or calculation, as 400 and 422 are.
 - Let the ProfessionalWeb error decoder retry a request whose token lifecare-integrator rejected, and cap the error body it reads.
 

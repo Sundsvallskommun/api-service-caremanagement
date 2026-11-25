@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.transaction.PlatformTransactionManager;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentCreated;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentRequest;
 import se.sundsvall.dept44.problem.Problem;
 import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.JsonNode;
@@ -168,6 +169,20 @@ class LifecarePaymentRegistrationServiceTest {
 
 		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, tooMuch)), UNPROCESSABLE_CONTENT,
 			"räcker inte");
+		verify(client, never()).createPayment(anyInt(), any());
+	}
+
+	@Test
+	void doesNotSendAnUtbetalningWithoutAPaymentDate() {
+		final var underlag = underlag();
+		((ObjectNode) underlag.get("payment")).put("payDate", "");
+		when(client.readPaymentProposal(1)).thenReturn(underlag);
+		final var withoutDate = new LifecarePaymentRequest(null, BigDecimal.ONE, "2026-09", "Bankgiro via Plusgiro", "Kontoinnehavare A", null, null, null, "Sundsvall", "",
+			"11111111", null, null, "123", null, null);
+
+		assertProblem(catchThrowable(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, withoutDate)), UNPROCESSABLE_CONTENT,
+			"inget hushåll");
+		verify(paymentApi, never()).hasHouseholdOn(anyInt(), anyString());
 		verify(client, never()).createPayment(anyInt(), any());
 	}
 

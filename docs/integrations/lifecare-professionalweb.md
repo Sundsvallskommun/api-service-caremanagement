@@ -75,7 +75,8 @@ the session, and does the session escalation. careM authenticates only to the in
 - **The document list is read by partyId.** careM sends the applicant's partyId and no personnummer. When the
   integrator cannot resolve the partyId, its 404 reaches the caller.
 - **The household check is asked by insats.** `services/{serviceId}/household` takes the payment date; the integrator
-  reads the person off the insats's payment underlag itself.
+  reads the person off the insats's payment underlag itself. A payment without a date is refused with 422 before the
+  check is asked.
 - **Nothing is logged.** Answers carry personnummer and bodies carry what the caseworker wrote. The paths
   `/**/professional-web/**` are excluded from logbook in `application.yml`.
 - **No health indicator.** careM holds no session, so it has nothing of its own to report on ProfessionalWeb.

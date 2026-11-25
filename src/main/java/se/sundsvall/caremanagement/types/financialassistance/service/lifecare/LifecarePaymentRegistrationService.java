@@ -23,7 +23,6 @@ import static se.sundsvall.caremanagement.types.financialassistance.service.life
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.integer;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.refuse;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.text;
-import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentNodes.textOrEmpty;
 import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
 
 /**
@@ -81,7 +80,8 @@ public class LifecarePaymentRegistrationService {
 		final var body = buildPaymentCreate(underlag, request);
 		// Lifecare's web app checks the person has a hushåll on the payment date before it saves; so does this.
 		final var personId = text(field(underlag, "payment"), "susPersonId");
-		if (!StringUtils.hasText(personId) || !paymentApi.hasHouseholdOn(serviceId, textOrEmpty(body, "payDate"))) {
+		final var payDate = text(body, "payDate");
+		if (!StringUtils.hasText(personId) || !StringUtils.hasText(payDate) || !paymentApi.hasHouseholdOn(serviceId, payDate)) {
 			throw refuse("Personen har inget hushåll i Lifecare på utbetalningsdagen.");
 		}
 
