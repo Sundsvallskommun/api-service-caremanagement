@@ -21,6 +21,14 @@ class LifecareDecisionClientTest {
 	private LifecareDecisionClient client;
 
 	@Test
+	void readsTheUnderlagForABeslutWithoutANormberakning() {
+		final var answer = JsonNodeFactory.instance.objectNode();
+		when(clientMock.readDecisionProposal(22, "", 0)).thenReturn(answer);
+
+		assertThat(client.readProposal(22)).isSameAs(answer);
+	}
+
+	@Test
 	void readsTheUnderlagFromANormberakningAsLifecaresCalculationViewAsksForIt() {
 		final var answer = JsonNodeFactory.instance.objectNode();
 		when(clientMock.readDecisionProposal(22, "TotalSum", 25)).thenReturn(answer);

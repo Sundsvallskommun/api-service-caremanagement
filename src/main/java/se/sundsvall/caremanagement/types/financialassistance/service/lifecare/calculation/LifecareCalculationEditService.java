@@ -58,13 +58,13 @@ class LifecareCalculationEditService {
 	private static final String START_DATE = "startDate";
 	private static final String END_DATE = "endDate";
 
-	private final LifecareCalculationClient client;
-	private final ProfessionalWebClient professionalWebClient;
+	private final LifecareCalculationClient calculationClient;
+	private final ProfessionalWebClient client;
 	private final LifecareAccessRecorder recorder;
 
-	LifecareCalculationEditService(final LifecareCalculationClient client, final ProfessionalWebClient professionalWebClient, final LifecareAccessRecorder recorder) {
+	LifecareCalculationEditService(final LifecareCalculationClient calculationClient, final ProfessionalWebClient client, final LifecareAccessRecorder recorder) {
+		this.calculationClient = calculationClient;
 		this.client = client;
-		this.professionalWebClient = professionalWebClient;
 		this.recorder = recorder;
 	}
 
@@ -85,7 +85,7 @@ class LifecareCalculationEditService {
 	 * @return               the view
 	 */
 	NormberakningDraft readDraftView(final LifecareErrand errand, final int calculationId) {
-		final var forEdit = professionalWebClient.readCalculationForEdit(calculationId);
+		final var forEdit = client.readCalculationForEdit(calculationId);
 		recorder.read(errand, TARGET, READ_CALCULATION, String.valueOf(calculationId));
 		return toLifecareDraftView(forEdit, applicationMonthOf(errand));
 	}
@@ -98,7 +98,7 @@ class LifecareCalculationEditService {
 	 * @return               the catalogues
 	 */
 	NormberakningTypes readTypes(final LifecareErrand errand, final int calculationId) {
-		final var forEdit = professionalWebClient.readCalculationForEdit(calculationId);
+		final var forEdit = client.readCalculationForEdit(calculationId);
 		recorder.read(errand, TARGET, READ_CALCULATION, String.valueOf(calculationId));
 		return NormberakningTypes.create()
 			.withNorms(toNormOptions(forEdit.path("norms")))
@@ -119,12 +119,12 @@ class LifecareCalculationEditService {
 	 */
 	JsonNode change(final LifecareErrand errand, final int calculationId, final CalculationChange change, final boolean finalize) {
 		final var serviceId = errand.requireServiceId();
-		final var forEdit = professionalWebClient.readCalculationForEdit(calculationId);
+		final var forEdit = client.readCalculationForEdit(calculationId);
 		final var before = asObject(forEdit.path(CALCULATION));
 		if (truthy(before, "isFinalized")) {
 			throw Problem.valueOf(UNPROCESSABLE_CONTENT, "Normberäkningen är sparad som slutlig i Lifecare och kan inte ändras.");
 		}
-		final var jobStimulus = professionalWebClient.readJobStimulus(serviceId);
+		final var jobStimulus = client.readJobStimulus(serviceId);
 		recorder.read(errand, TARGET, READ_UNDERLAG);
 
 		final var types = forEdit.path(INCOME_TYPES);
@@ -134,7 +134,7 @@ class LifecareCalculationEditService {
 		final var counted = withCountedAmounts(before, placeAndMark(changed, jobStimulus, keepPlacements));
 		final var calculation = withJobStimulusIncomes(withSharedCost(before, counted), types);
 
-		final var updated = professionalWebClient.updateCalculation(calculationId, CalculationBodyBuilder.update(calculation, householdSizeOfSaved(calculation), finalize));
+		final var updated = client.updateCalculation(calculationId, CalculationBodyBuilder.update(calculation, householdSizeOfSaved(calculation), finalize));
 		final String description;
 		if (finalize) {
 			description = "Sparade normberäkningen som slutlig i Lifecare";
@@ -160,7 +160,7 @@ class LifecareCalculationEditService {
 		body.set(END_DATE, calculation.path(END_DATE).deepCopy());
 		body.set(NORM_ID, calculation.path(NORM_ID).deepCopy());
 		body.set(PERSONS, array(objects(calculation, PERSONS).stream().filter(person -> truthy(person, INCLUDED)).map(ObjectNode::deepCopy).toList()));
-		final var placed = professionalWebClient.placePersons(body);
+		final var placed = client.placePersons(body);
 
 		withPlacedPersons(calculation, objects(placed, PERSONS), keepPlacements);
 		// The norm comes back with its rows and gemensamma kostnader: the new one's, when the norm was changed.
@@ -170,7 +170,7 @@ class LifecareCalculationEditService {
 		}
 		withNormRowNames(calculation);
 
-		final var marked = client.withJobStimuli(calculation.deepCopy(), jobStimulus);
+		final var marked = calculationClient.withJobStimuli(calculation.deepCopy(), jobStimulus);
 		setOrRemove(calculation, "hasApplicantJobStimuli", marked.path("hasApplicantJobStimuli"));
 		setOrRemove(calculation, "hasCoApplicantJobStimuli", marked.path("hasCoApplicantJobStimuli"));
 		return calculation;
@@ -187,7 +187,7 @@ class LifecareCalculationEditService {
 		objects(calculation, PERSONS).stream()
 			.filter(member -> truthy(member, INCLUDED) && integer(member, NORM_ROW_ID) > 0 && integer(member, DEVIATION_DAYS) > 0)
 			.forEach(member -> normRow(calculation, member.path(NORM_ROW_ID)).ifPresent(row -> setOrRemove(member, AMOUNT,
-				client.amountFor(member.deepCopy(), row.deepCopy(), calculation.path(START_DATE), calculation.path(END_DATE)))));
+				calculationClient.amountFor(member.deepCopy(), row.deepCopy(), calculation.path(START_DATE), calculation.path(END_DATE)))));
 		return calculation;
 	}
 
@@ -203,7 +203,7 @@ class LifecareCalculationEditService {
 		objects(calculation, PERSONS).stream()
 			.filter(member -> needsRecount(before, member))
 			.forEach(member -> normRow(calculation, member.path(NORM_ROW_ID)).ifPresent(row -> setOrRemove(member, AMOUNT,
-				client.amountFor(member.deepCopy(), row.deepCopy(), calculation.path(START_DATE), calculation.path(END_DATE)))));
+				calculationClient.amountFor(member.deepCopy(), row.deepCopy(), calculation.path(START_DATE), calculation.path(END_DATE)))));
 		return calculation;
 	}
 
@@ -216,7 +216,7 @@ class LifecareCalculationEditService {
 			return calculation;
 		}
 		sharedCostShare(calculation).ifPresent(shared -> {
-			final var amount = client.sharedCost(calculation.path(START_DATE), calculation.path(END_DATE), shared.normShared());
+			final var amount = calculationClient.sharedCost(calculation.path(START_DATE), calculation.path(END_DATE), shared.normShared());
 			if (!amount.isNumber()) {
 				throw Problem.valueOf(BAD_GATEWAY, "Lifecare did not count the gemensamma kostnader");
 			}

@@ -43,15 +43,15 @@ public class LifecareFinalizeService {
 	static final String ERROR_NO_DECIDER = "a decision can only be recorded by an identified user - the X-Sent-By header is required";
 
 	private final LifecareErrandService errandService;
-	private final ProfessionalWebClient lifecare;
+	private final ProfessionalWebClient client;
 	private final LifecareAccessRecorder accessRecorder;
 	private final FinancialAssistanceFinalizeService finalizeService;
 	private final Validator validator;
 
-	LifecareFinalizeService(final LifecareErrandService errandService, final ProfessionalWebClient lifecare, final LifecareAccessRecorder accessRecorder,
+	LifecareFinalizeService(final LifecareErrandService errandService, final ProfessionalWebClient client, final LifecareAccessRecorder accessRecorder,
 		final FinancialAssistanceFinalizeService finalizeService, final Validator validator) {
 		this.errandService = errandService;
-		this.lifecare = lifecare;
+		this.client = client;
 		this.accessRecorder = accessRecorder;
 		this.finalizeService = finalizeService;
 		this.validator = validator;
@@ -86,7 +86,7 @@ public class LifecareFinalizeService {
 	private FinalizeDecision decisionFromLifecare(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
 		final var decisionId = errand.decision().orElseThrow(() -> Problem.valueOf(BAD_REQUEST, ERROR_NOT_SAVED));
-		final var saved = lifecare.readDecision(decisionId);
+		final var saved = client.readDecision(decisionId);
 		accessRecorder.read(errand, TARGET_DECISION, "Läste beslutet i Lifecare", String.valueOf(decisionId));
 
 		final var view = toView(saved);

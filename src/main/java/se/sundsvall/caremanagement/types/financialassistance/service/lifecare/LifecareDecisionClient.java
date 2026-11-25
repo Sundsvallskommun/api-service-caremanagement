@@ -5,9 +5,8 @@ import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClien
 import tools.jackson.databind.JsonNode;
 
 /**
- * The underlag for a beslut made from a normberäkning, through lifecare-integrator's resources. Every answer carries
- * the
- * personnummer of the persons the beslut concerns: never log one.
+ * The underlag for a new beslut, through lifecare-integrator's resources. Every answer carries the personnummer of the
+ * persons the beslut concerns: never log one.
  */
 @Component
 class LifecareDecisionClient {
@@ -24,9 +23,14 @@ class LifecareDecisionClient {
 		this.client = client;
 	}
 
+	/** The underlag for a new beslut on the insats: the blank beslut, the beslutstyper and the beslutsfattare. */
+	JsonNode readProposal(final int serviceId) {
+		return client.readDecisionProposal(serviceId, "", 0);
+	}
+
 	/**
 	 * When the normberäkning is saved as final, Lifecare fills the blank beslut in with its period and its TotalSum amount,
-	 * without sign; otherwise the answer is the same as for a beslut made without one. Lifecare keeps no link between the
+	 * without sign; otherwise the answer is the same as {@link #readProposal(int)}. Lifecare keeps no link between the
 	 * beslut and the normberäkning.
 	 */
 	JsonNode readProposal(final int serviceId, final int calculationId) {

@@ -97,7 +97,7 @@ public class LifecareDecisionService {
 	 */
 	public List<LifecareDecisionType> types(final String municipalityId, final String namespace, final String errandId) {
 		final var errand = errandService.load(municipalityId, namespace, errandId);
-		final var proposal = client.readDecisionProposal(errand.requireServiceId(), "", 0);
+		final var proposal = lifecare.readProposal(errand.requireServiceId());
 		accessRecorder.read(errand, TARGET_DECISION, "Läste beslutstyper i Lifecare");
 		return toTypes(proposal);
 	}
@@ -160,7 +160,7 @@ public class LifecareDecisionService {
 		final var decisionMaker = decisionMaker();
 
 		final var calculationId = errand.calculation();
-		final var proposal = calculationId.map(id -> lifecare.readProposal(serviceId, id)).orElseGet(() -> client.readDecisionProposal(serviceId, "", 0));
+		final var proposal = calculationId.map(id -> lifecare.readProposal(serviceId, id)).orElseGet(() -> lifecare.readProposal(serviceId));
 		final var saved = errand.decision().map(client::readDecision);
 		accessRecorder.read(errand, TARGET_DECISION, "Läste beslutsunderlag i Lifecare");
 		final var prefill = calculationId.flatMap(id -> toPrefill(proposal, id));
