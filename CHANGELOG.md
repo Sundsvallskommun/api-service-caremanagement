@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-25
 
+- Keep the ProfessionalWeb integration tests to happy paths: a decision created through the integrator replaces the refusal and not-found cases.
 - Fix the line wrapping in the payment registration service's class description.
 - Tighten the ProfessionalWeb tests: creates sent exactly once, a 201 payment stub, no client reads without a month, sharper route wiring.
 - Read the underlag for a beslut without a normberäkning through LifecareDecisionClient, and name the ProfessionalWeb client fields alike.

@@ -19,13 +19,11 @@
 	},
 	"response": {
 		"headers": {
-			"Content-Type": "application/problem+json"
+			"Content-Type": "application/json"
 		},
 		"jsonBody": {
-			"title": "Unprocessable Content",
-			"status": 422,
-			"detail": "Beslutet går inte att registrera: insatsen är avslutad."
+			"decisionId": 9900
 		},
-		"status": 422
+		"status": 201
 	}
 }

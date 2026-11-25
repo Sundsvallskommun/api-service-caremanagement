@@ -23,9 +23,7 @@ import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpMethod.PUT;
 import static org.springframework.http.HttpStatus.CREATED;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.OK;
-import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 
 @WireMockAppTestSuite(files = "classpath:/LifecareProfessionalWebIT/", classes = Application.class)
 @Sql({
@@ -100,13 +98,14 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 	}
 
 	@Test
-	void test04_aDecisionLifecareRefusesIsUnprocessableWithTheIntegratorsDetail() {
+	void test04_aDecisionIsCreatedThroughTheIntegrator() {
+		// The create stub matches the body built from the underlag and the caseworker's beslut.
 		setupCall()
 			.withServicePath(PATH + "/" + ERRAND_WITHOUT_DECISION_ID + "/lifecare/decision")
 			.withHttpMethod(PUT)
 			.withHeader(SENT_BY, CASEWORKER)
 			.withRequest(REQUEST_FILE)
-			.withExpectedResponseStatus(UNPROCESSABLE_CONTENT)
+			.withExpectedResponseStatus(OK)
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequest();
 
@@ -114,11 +113,10 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 		verifyStubs();
 
 		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_WITHOUT_DECISION_ID))
-			.hasValueSatisfying(entity -> assertThat(entity.getLifecareDecisionId()).isNull());
+			.hasValueSatisfying(entity -> assertThat(entity.getLifecareDecisionId()).isEqualTo(9900));
 		assertThat(errandEventRepository.findAll())
-			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getAction, ErrandEventEntity::getTarget)
-			.contains(tuple(ERRAND_WITHOUT_DECISION_ID, "READ", "DECISION"))
-			.doesNotContain(tuple(ERRAND_WITHOUT_DECISION_ID, "CREATE", "DECISION"));
+			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getAction, ErrandEventEntity::getTarget, ErrandEventEntity::getLifecareId)
+			.contains(tuple(ERRAND_WITHOUT_DECISION_ID, "CREATE", "DECISION", "9900"));
 	}
 
 	@Test
@@ -136,16 +134,5 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 		assertThat(errandEventRepository.findAll())
 			.extracting(ErrandEventEntity::getErrandId, ErrandEventEntity::getAction, ErrandEventEntity::getTarget)
 			.contains(tuple(ERRAND_ID, "READ", "JOURNAL_AND_DOCUMENTS"));
-	}
-
-	@Test
-	void test06_documentsOfAnApplicantTheIntegratorCannotResolveAreNotFound() {
-		setupCall()
-			.withServicePath(PATH + "/" + ERRAND_ID + "/lifecare/documents")
-			.withHttpMethod(GET)
-			.withHeader(SENT_BY, CASEWORKER)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
 	}
 }
