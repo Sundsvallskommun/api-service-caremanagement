@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-25
 
+- Switch the process message retry schedule off in the integration-test profile, where the tests call the retry worker themselves.
 - Check in the errand delete integration test that the errand's child rows and its calculation draft's rows go with it.
 - Make the hushåll check before a payment in the payment registration service itself and drop its one-method wrapper.
 - Merge the finalize and withdrawal process message integration tests into one class among the other integration tests.

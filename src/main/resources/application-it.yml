@@ -18,6 +18,9 @@ caremanagement:
 scheduler:
   process-start-retry:
     cron: '-'
+  # The retry of a queued process message would deliver it between a test's own calls to the retry worker.
+  process-message-retry:
+    cron: '-'
 financial-assistance:
   eligibility:
     return-all-types: false
