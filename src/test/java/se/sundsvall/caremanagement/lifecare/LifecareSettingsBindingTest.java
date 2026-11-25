@@ -17,6 +17,10 @@ import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebPrope
 import se.sundsvall.caremanagement.lifecare.service.CaseworkerResolver;
 import se.sundsvall.caremanagement.lifecare.service.LifecareCaseService;
 
+import static java.time.Month.APRIL;
+import static java.time.Month.JANUARY;
+import static java.time.Month.JUNE;
+import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -31,7 +35,7 @@ class LifecareSettingsBindingTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String PARTY_ID = "6a5c3d18-1f2b-4e77-9c0a-2b3d4e5f6a7b";
-	private static final LocalDate REFERENCE_DATE = LocalDate.of(2026, 6, 15);
+	private static final LocalDate REFERENCE_DATE = LocalDate.of(2026, JUNE, 15);
 
 	@Nested
 	@SpringBootTest(classes = Application.class)
@@ -54,7 +58,7 @@ class LifecareSettingsBindingTest {
 		void lookbackIsThirteenMonths() {
 			lifecareCaseService.summarize(MUNICIPALITY_ID, PARTY_ID, REFERENCE_DATE);
 
-			verify(familyCare).getActualisations(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2025, 5, 15), REFERENCE_DATE);
+			verify(familyCare).getActualisations(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2025, MAY, 15), REFERENCE_DATE);
 		}
 
 		@Test
@@ -77,7 +81,7 @@ class LifecareSettingsBindingTest {
 
 			caseworkerResolver.resolve(MUNICIPALITY_ID, PARTY_ID, REFERENCE_DATE);
 
-			verify(familyCare).getServices(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2023, 6, 15), REFERENCE_DATE);
+			verify(familyCare).getServices(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2023, JUNE, 15), REFERENCE_DATE);
 			verify(familyCare).getUsers(MUNICIPALITY_ID, 1000, null, null, null);
 		}
 
@@ -124,7 +128,7 @@ class LifecareSettingsBindingTest {
 		void theSetLookbackIsUsed() {
 			lifecareCaseService.summarize(MUNICIPALITY_ID, PARTY_ID, REFERENCE_DATE);
 
-			verify(familyCare).getActualisations(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2026, 4, 15), REFERENCE_DATE);
+			verify(familyCare).getActualisations(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2026, APRIL, 15), REFERENCE_DATE);
 		}
 
 		@Test
@@ -150,7 +154,7 @@ class LifecareSettingsBindingTest {
 
 			caseworkerResolver.resolve(MUNICIPALITY_ID, PARTY_ID, REFERENCE_DATE);
 
-			verify(familyCare).getServices(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2026, 1, 15), REFERENCE_DATE);
+			verify(familyCare).getServices(MUNICIPALITY_ID, PARTY_ID, LocalDate.of(2026, JANUARY, 15), REFERENCE_DATE);
 			verify(familyCare).getUsers(eq(MUNICIPALITY_ID), eq(25), any(), any(), any());
 		}
 
