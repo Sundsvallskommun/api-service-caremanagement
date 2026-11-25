@@ -31,10 +31,9 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * <p>
  * Payment/Create is not idempotent and moves money, so every step leans towards not paying: one the builder cannot
  * vouch for is refused with the reason and nothing is sent; one Lifecare already holds is refused (409) rather than
- * made
- * again, which is also what makes a retry after an unanswered call safe; a refusal Lifecare itself gave is passed on in
- * Lifecare's words; and a call Lifecare did not answer is reported as such, since whether it paid is then unknown. It
- * is never retried. Once made, the utbetalning is linked to the errand in the same request.
+ * made again, which is also what makes a retry after an unanswered call safe; a refusal Lifecare itself gave is passed
+ * on in Lifecare's words; and a call Lifecare did not answer is reported as such, since whether it paid is then
+ * unknown. It is never retried. Once made, the utbetalning is linked to the errand in the same request.
  * </p>
  */
 @Service
