@@ -16,17 +16,9 @@ import se.sundsvall.dept44.problem.ThrowableProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 
 class ProfessionalWebErrorsTest {
-
-	@Test
-	void isRefusal() {
-		assertThat(ProfessionalWebErrors.isRefusal(Problem.valueOf(BAD_REQUEST, "x"))).isTrue();
-		assertThat(ProfessionalWebErrors.isRefusal(Problem.valueOf(UNPROCESSABLE_CONTENT, "x"))).isTrue();
-		assertThat(ProfessionalWebErrors.isRefusal(Problem.valueOf(BAD_GATEWAY, "x"))).isFalse();
-	}
 
 	@Test
 	void returnsTheAnswer() {
@@ -42,7 +34,7 @@ class ProfessionalWebErrorsTest {
 			throw timeout;
 		})).isInstanceOfSatisfying(ThrowableProblem.class, problem -> {
 			assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY);
-			assertThat(problem.getDetail()).isEqualTo("lifecare-integrator could not be reached (RetryableException)");
+			assertThat(problem.getDetail()).isEqualTo("The call to lifecare-integrator failed (RetryableException)");
 		});
 	}
 
@@ -54,7 +46,7 @@ class ProfessionalWebErrorsTest {
 			throw open;
 		})).isInstanceOfSatisfying(ThrowableProblem.class, problem -> {
 			assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY);
-			assertThat(problem.getDetail()).isEqualTo("lifecare-integrator could not be reached (CallNotPermittedException)");
+			assertThat(problem.getDetail()).isEqualTo("The call to lifecare-integrator failed (CallNotPermittedException)");
 		});
 	}
 
@@ -69,24 +61,27 @@ class ProfessionalWebErrorsTest {
 
 	@ParameterizedTest
 	@ValueSource(ints = {
-		400, 422
+		400, 403, 404, 422
 	})
-	void aRefusalIsOneFromLifecare(final int status) {
-		assertThat(ProfessionalWebErrors.isRefusal(Problem.valueOf(HttpStatus.valueOf(status), "x"))).isTrue();
+	void anAnswerFromLifecareIsPassedOn(final int status) {
+		assertThat(ProfessionalWebErrors.isPassedOn(Problem.valueOf(HttpStatus.valueOf(status), "x"))).isTrue();
 	}
 
 	@ParameterizedTest
 	@ValueSource(ints = {
-		403, 404, 502
+		401, 409, 500, 502
 	})
-	void anythingElseIsNoRefusal(final int status) {
-		assertThat(ProfessionalWebErrors.isRefusal(Problem.valueOf(HttpStatus.valueOf(status), "x"))).isFalse();
+	void anyOtherStatusIsNotPassedOn(final int status) {
+		assertThat(ProfessionalWebErrors.isPassedOn(Problem.valueOf(HttpStatus.valueOf(status), "x"))).isFalse();
 	}
 
 	@Test
-	void anUnreachableIntegratorIsNoRefusal() {
-		assertThatThrownBy(() -> ProfessionalWebErrors.call(() -> {
-			throw new IllegalStateException("connection reset");
-		})).isInstanceOfSatisfying(ThrowableProblem.class, problem -> assertThat(ProfessionalWebErrors.isRefusal(problem)).isFalse());
+	void aProblemWithoutAStatusIsNotPassedOn() {
+		assertThat(ProfessionalWebErrors.isPassedOn(Problem.builder().withDetail("x").build())).isFalse();
+	}
+
+	@Test
+	void aFailureThatIsNoProblemIsNotPassedOn() {
+		assertThat(ProfessionalWebErrors.isPassedOn(new IllegalStateException("connection reset"))).isFalse();
 	}
 }

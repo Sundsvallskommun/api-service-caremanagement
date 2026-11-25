@@ -13,7 +13,6 @@ import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebError
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentCreated;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecarePaymentRequest;
 import se.sundsvall.dept44.problem.Problem;
-import se.sundsvall.dept44.problem.ThrowableProblem;
 import tools.jackson.databind.JsonNode;
 
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
@@ -107,12 +106,10 @@ public class LifecarePaymentRegistrationService {
 		final JsonNode created;
 		try {
 			created = client.createPayment(serviceId, body);
-		} catch (final ThrowableProblem problem) {
-			if (ProfessionalWebErrors.isRefusal(problem)) {
-				throw problem;
+		} catch (final RuntimeException e) {
+			if (ProfessionalWebErrors.isPassedOn(e)) {
+				throw e;
 			}
-			throw Problem.valueOf(BAD_GATEWAY, NO_ANSWER);
-		} catch (final RuntimeException _) {
 			throw Problem.valueOf(BAD_GATEWAY, NO_ANSWER);
 		}
 		// Lifecare answered, so something may have been paid: without an id the caseworker has to look in Lifecare.

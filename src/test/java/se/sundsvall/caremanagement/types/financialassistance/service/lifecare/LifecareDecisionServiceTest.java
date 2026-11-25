@@ -6,11 +6,14 @@ import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebProperties;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionProposal;
@@ -35,7 +38,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
@@ -308,31 +310,18 @@ class LifecareDecisionServiceTest {
 		verify(accessRecorderMock).written(errand, "CREATE", "DECISION", "Registrerade beslutet i Lifecare", "98");
 	}
 
-	@Test
-	void passesOnLifecaresOwnRefusalOfACreate() {
+	@ParameterizedTest
+	@ValueSource(ints = {
+		400, 403, 404, 422
+	})
+	void passesOnLifecaresAnswerToACreateWithItsStatusAndDetail(final int status) {
 		loaded(null);
 		caseworker();
 		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
-		when(clientMock.createDecision(eq(1), any())).thenThrow(Problem.valueOf(UNPROCESSABLE_CONTENT, "Beslutsdatum saknas"));
+		final var answer = Problem.valueOf(HttpStatus.valueOf(status), "Beslutsdatum saknas");
+		when(clientMock.createDecision(eq(1), any())).thenThrow(answer);
 
-		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
-			.hasMessageContaining("Beslutsdatum saknas");
-		verify(errandServiceMock, never()).linkDecision(any(), anyInt());
-	}
-
-	@Test
-	void passesOnLifecaresBadRequestOfACreate() {
-		loaded(null);
-		caseworker();
-		when(clientMock.readDecisionProposal(1, "", 0)).thenReturn(tree(PROPOSAL));
-		when(clientMock.createDecision(eq(1), any())).thenThrow(Problem.valueOf(BAD_REQUEST, "Ogiltigt beslutsdatum"));
-
-		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL))
-			.isInstanceOf(ThrowableProblem.class)
-			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
-			.hasMessageContaining("Ogiltigt beslutsdatum");
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, BIFALL)).isSameAs(answer);
 		verify(errandServiceMock, never()).linkDecision(any(), anyInt());
 	}
 

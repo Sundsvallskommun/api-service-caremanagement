@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -34,7 +36,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecarePaymentFixtures.json;
@@ -170,21 +171,15 @@ class LifecarePaymentRegistrationServiceTest {
 		verify(client, never()).createPayment(anyInt(), any());
 	}
 
-	@Test
-	void passesARefusalFromLifecareOnInLifecaresWords() {
-		final var refusal = Problem.valueOf(UNPROCESSABLE_CONTENT, "Lifecare godtog inte uppgifterna.");
-		when(client.createPayment(eq(1), any())).thenThrow(refusal);
+	@ParameterizedTest
+	@ValueSource(ints = {
+		400, 403, 404, 422
+	})
+	void passesLifecaresAnswerToTheCreateOnWithItsStatusAndDetail(final int status) {
+		final var answer = Problem.valueOf(HttpStatus.valueOf(status), "Lifecare godtog inte uppgifterna.");
+		when(client.createPayment(eq(1), any())).thenThrow(answer);
 
-		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())).isSameAs(refusal);
-		verify(errandService, never()).linkPayment(any(), anyString());
-	}
-
-	@Test
-	void passesABadRequestFromLifecareOnInLifecaresWords() {
-		final var refusal = Problem.valueOf(BAD_REQUEST, "Ogiltigt konto");
-		when(client.createPayment(eq(1), any())).thenThrow(refusal);
-
-		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())).isSameAs(refusal);
+		assertThatThrownBy(() -> service.register(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, payment())).isSameAs(answer);
 		verify(errandService, never()).linkPayment(any(), anyString());
 	}
 

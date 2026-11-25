@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.sundsvall.caremanagement.eventlog.spi.LifecareAccessEntry;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebErrors;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareCalculationView;
 import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.NormberakningPreviousCalculation;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareAccessRecorder;
@@ -21,10 +22,8 @@ import tools.jackson.databind.node.MissingNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationBodyBuilder.PERSONS;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.applyDraft;
 import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.calculation.CalculationDraftFill.withDays;
@@ -208,8 +207,8 @@ public class ErrandLifecareCalculationService {
 		try {
 			return client.createCalculation(serviceId, body);
 		} catch (final RuntimeException e) {
-			if (e instanceof final ThrowableProblem problem && (problem.getStatus() == BAD_REQUEST || problem.getStatus() == UNPROCESSABLE_CONTENT)) {
-				throw problem;
+			if (ProfessionalWebErrors.isPassedOn(e)) {
+				throw e;
 			}
 			LOG.warn("Calculation/Create on insats {} got no answer ({})", serviceId, e.getClass().getSimpleName());
 			throw Problem.valueOf(BAD_GATEWAY, "Lifecare svarade inte när normberäkningen sparades. Kontrollera i Lifecare om den finns innan du sparar igen.");

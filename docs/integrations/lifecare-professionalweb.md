@@ -1,9 +1,10 @@
 # Lifecare ProfessionalWeb
 
 The internal api2 endpoints Lifecare's own web client calls, in the module `WESE.FC.ProfessionalWeb`, reached through
-lifecare-integrator's resources. The service uses them for what the public FamilyCare API lacks: editing a normberäkning, decisions, payments and payees, reminders,
-journal notes and documents, job stimulus periods, and Lifecare's PDF prints. The API is undocumented and unversioned
-on Lifecare's side, so all of it stays behind `ProfessionalWebClient`.
+lifecare-integrator's resources. The service uses them for what the public FamilyCare API lacks: editing a
+normberäkning, decisions, payments and payees, reminders, journal notes and documents, job stimulus periods, and
+Lifecare's PDF prints. The API is undocumented and unversioned on Lifecare's side, so all of it stays behind
+`ProfessionalWebClient`.
 
 ## Used by
 
@@ -62,23 +63,26 @@ the session, and does the session escalation. careM authenticates only to the in
 - **Error mapping** (`ProfessionalWebIntegratorErrorDecoder`, `ProfessionalWebErrors`): the integrator's 400, 403,
   404 and 422 keep their status, anything else is a 502. The integrator's `detail`, which carries Lifecare's sentence
   when there is one, becomes the problem's detail. A problem without a detail gets `lifecare-integrator answered
-  <status>`. A timeout, an integrator that cannot be reached or an open circuit is a 502.
-- **400 and 422 are Lifecare refusing.** On Create of a decision, payment or calculation they pass on; any other
-  failure answers that it is not known whether Lifecare saved it, so the caseworker checks before saving again.
+  <status>`. A timeout, an integrator that cannot be reached or an open circuit is a 502. A 401 whose
+  `WWW-Authenticate` says `invalid_token` is retryable, so dept44's OAuth2 retryer drops the token and tries once more
+  with a new one.
+- **On Create, only no answer is uncertain.** On Create of a decision, payment or calculation, the integrator's 400,
+  403, 404 and 422 pass on with its status and detail. Any other failure (502, a timeout, an open circuit, an
+  integrator that cannot be reached) answers that it is not known whether Lifecare saved it, so the caseworker checks
+  before saving again.
 - **A print that is not a PDF is a 502.** The integrator answers the parameter questions some templates ask, such as
   "Beslut" for a decision with a medsökande, so careM only checks that the answer starts with `%PDF`.
 - **The document list is read by partyId.** careM sends the applicant's partyId and no personnummer. When the
   integrator cannot resolve the partyId, its 404 reaches the caller.
 - **The household check is asked by insats.** `services/{serviceId}/household` takes the payment date; the integrator
   reads the person off the insats's payment underlag itself.
-- **Nothing is logged.** Answers carry personnummer and bodies carry what the
-  caseworker wrote. The paths `/**/professional-web/**` are excluded from logbook in `application.yml`.
+- **Nothing is logged.** Answers carry personnummer and bodies carry what the caseworker wrote. The paths
+  `/**/professional-web/**` are excluded from logbook in `application.yml`.
 - **No health indicator.** careM holds no session, so it has nothing of its own to report on ProfessionalWeb.
 - **Its own circuit breaker.** The Feign client `ProfessionalWebIntegratorClient` has the circuit breaker
   `lifecare-integrator-professionalweb`, so it does not share one with the FamilyCare reads. Its
   `ProfessionalWebCircuitBreakerFailures` does not count 400, 403, 404 or 422 as failures, so refused writes do not
-  open it. The municipality id is
-  fixed at 2281.
+  open it. The municipality id is fixed at 2281.
 - **Payment/Create is not idempotent.** careM never sends it again. `LifecarePaymentRegistrationService` refuses a
   payment Lifecare already holds (409) instead of making it again.
 - **Lifecare accesses are logged per errand** by `LifecareAccessRecorder`. A read whose access cannot be logged is not

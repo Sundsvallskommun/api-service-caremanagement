@@ -10,8 +10,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 
 /**
  * Maps errors from lifecare-integrator's ProfessionalWeb resources onto careM's problems. Lifecare's sentence in the
@@ -20,7 +18,7 @@ import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 public final class ProfessionalWebErrors {
 
 	/** The integrator's statuses careM passes on; any other is a 502. */
-	public static final List<Integer> PASSED_ON_STATUSES = List.of(400, 403, 404, 422);
+	private static final List<Integer> PASSED_ON_STATUSES = List.of(400, 403, 404, 422);
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -29,20 +27,29 @@ public final class ProfessionalWebErrors {
 	public static ThrowableProblem fromIntegrator(final int status, final byte[] body) {
 		final var detail = integratorDetail(body).orElse("lifecare-integrator answered " + status);
 		if (PASSED_ON_STATUSES.contains(status)) {
-			return problem(HttpStatus.valueOf(status), detail);
+			return Problem.valueOf(HttpStatus.valueOf(status), detail);
 		}
-		return problem(BAD_GATEWAY, detail);
+		return Problem.valueOf(BAD_GATEWAY, detail);
 	}
 
-	/** A problem from the integrator passes unchanged; a timeout, an unreachable integrator or an open circuit is a 502. */
+	/** A problem from the integrator passes unchanged; any other failure of the call is a 502. */
 	public static <T> T call(final Supplier<T> call) {
 		try {
 			return call.get();
 		} catch (final ThrowableProblem problem) {
 			throw problem;
 		} catch (final RuntimeException e) {
-			throw problem(BAD_GATEWAY, "lifecare-integrator could not be reached (" + e.getClass().getSimpleName() + ")");
+			throw Problem.valueOf(BAD_GATEWAY, "The call to lifecare-integrator failed (" + e.getClass().getSimpleName() + ")");
 		}
+	}
+
+	/**
+	 * Whether a failure is an answer from Lifecare that careM passes on (400, 403, 404, 422), as opposed to the
+	 * integrator or Lifecare not answering. After a Create, only the latter leaves it uncertain whether it was written.
+	 */
+	public static boolean isPassedOn(final Throwable failure) {
+		return failure instanceof final ThrowableProblem problem
+			&& Optional.ofNullable(problem.getStatus()).map(status -> PASSED_ON_STATUSES.contains(status.value())).orElse(false);
 	}
 
 	private static Optional<String> integratorDetail(final byte[] body) {
@@ -56,16 +63,5 @@ public final class ProfessionalWebErrors {
 		} catch (final JacksonException _) {
 			return Optional.empty();
 		}
-	}
-
-	/** Whether a problem is Lifecare turning a request down (400 or 422), as opposed to not answering. */
-	public static boolean isRefusal(final ThrowableProblem problem) {
-		return Optional.ofNullable(problem.getStatus())
-			.map(status -> status.value() == BAD_REQUEST.value() || status.value() == UNPROCESSABLE_CONTENT.value())
-			.orElse(false);
-	}
-
-	private static ThrowableProblem problem(final HttpStatus status, final String detail) {
-		return Problem.valueOf(status, detail);
 	}
 }

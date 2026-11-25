@@ -238,12 +238,10 @@ public class LifecareDecisionService {
 		final JsonNode created;
 		try {
 			created = client.createDecision(serviceId, body);
-		} catch (final ThrowableProblem problem) {
-			if (ProfessionalWebErrors.isRefusal(problem)) {
-				throw problem;
+		} catch (final RuntimeException e) {
+			if (ProfessionalWebErrors.isPassedOn(e)) {
+				throw e;
 			}
-			throw Problem.valueOf(BAD_GATEWAY, ERROR_CREATE_UNCERTAIN);
-		} catch (final RuntimeException _) {
 			throw Problem.valueOf(BAD_GATEWAY, ERROR_CREATE_UNCERTAIN);
 		}
 		return integer(created.path("decisionId"))

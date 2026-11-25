@@ -5,12 +5,15 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.http.HttpStatus;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareAccessRecorder;
 import se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareErrand;
@@ -31,7 +34,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
@@ -249,17 +251,17 @@ class ErrandLifecareCalculationServiceTest {
 			.hasMessageContaining("Lifecare svarade inte");
 	}
 
-	@Test
-	void passesOnLifecaresRefusalOfACreate() {
+	@ParameterizedTest
+	@ValueSource(ints = {
+		400, 403, 404, 422
+	})
+	void passesOnLifecaresAnswerToACreateWithItsStatusAndDetail(final int status) {
 		errandIs(UNLINKED);
-		when(client.createCalculation(eq(1), any())).thenThrow(Problem.valueOf(UNPROCESSABLE_CONTENT, "Datum saknas"));
+		final var answer = Problem.valueOf(HttpStatus.valueOf(status), "Datum saknas");
+		when(client.createCalculation(eq(1), any())).thenThrow(answer);
 
-		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false))
-			.hasFieldOrPropertyWithValue("status", UNPROCESSABLE_CONTENT)
-			.hasMessageContaining("Datum saknas");
-
-		doThrow(Problem.valueOf(BAD_REQUEST, "Fel")).when(client).createCalculation(eq(1), any());
-		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false)).hasFieldOrPropertyWithValue("status", BAD_REQUEST);
+		assertThatThrownBy(() -> service.save(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, false)).isSameAs(answer);
+		verify(errandService, never()).linkCalculation(any(), anyInt());
 	}
 
 	@Test

@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-25
 
+- Pass the integrator's 403 and 404 on unchanged on Create of a decision, payment or calculation, as 400 and 422 are.
 - Let the ProfessionalWeb error decoder retry a request whose token lifecare-integrator rejected, and cap the error body it reads.
 
 ## 2026-11-24

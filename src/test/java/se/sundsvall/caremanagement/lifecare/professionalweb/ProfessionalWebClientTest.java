@@ -386,7 +386,7 @@ class ProfessionalWebClientTest {
 		assertThatThrownBy(() -> client.printCalculation(31))
 			.isInstanceOfSatisfying(ThrowableProblem.class, problem -> {
 				assertThat(problem.getStatus()).isEqualTo(BAD_GATEWAY);
-				assertThat(problem.getDetail()).isEqualTo("lifecare-integrator could not be reached (IllegalStateException)");
+				assertThat(problem.getDetail()).isEqualTo("The call to lifecare-integrator failed (IllegalStateException)");
 			});
 	}
 
