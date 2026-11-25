@@ -5,7 +5,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 import se.sundsvall.caremanagement.Application;
+import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentDataRepository;
+import se.sundsvall.caremanagement.conversation.integration.db.MessageAttachmentRepository;
+import se.sundsvall.caremanagement.conversation.integration.db.MessageReadReceiptRepository;
+import se.sundsvall.caremanagement.conversation.integration.db.MessageRepository;
 import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
+import se.sundsvall.caremanagement.formsnapshot.integration.db.FormSnapshotRepository;
+import se.sundsvall.caremanagement.notes.integration.db.NoteRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaCalculationDraftRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormExpenseRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaNormPersonRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FaWarningRepository;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
@@ -32,9 +43,52 @@ class ErrandIT extends AbstractAppTest {
 	private static final String NAMESPACE = "MY_NAMESPACE";
 	private static final String EXISTING_ERRAND_ID = "11111111-1111-1111-1111-111111111111";
 	private static final String PATH = "/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands";
+	private static final String ERRAND_WITH_CHILDREN_ID = "44444444-4444-4444-4444-444444444444";
+	private static final String MESSAGE_ID = "cccccccc-cccc-cccc-cccc-cccccccccc01";
+	private static final String MESSAGE_ATTACHMENT_ID = "cccccccc-cccc-cccc-cccc-ccccccccca01";
+	private static final int MESSAGE_ATTACHMENT_DATA_ID = 1;
+	private static final String MESSAGE_READ_RECEIPT_ID = "cccccccc-cccc-cccc-cccc-cccccccccr01";
+	private static final String NOTE_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbn01";
+	private static final String NORM_PERSON_ID = "dddddddd-dddd-dddd-dddd-dddddddddp01";
+	private static final String NORM_EXPENSE_ID = "dddddddd-dddd-dddd-dddd-dddddddddx01";
+	private static final String WARNING_ID = "dddddddd-dddd-dddd-dddd-dddddddddc01";
+	private static final String FORM_SNAPSHOT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-fffff0000001";
 
 	@Autowired
 	private ErrandRepository repository;
+
+	@Autowired
+	private MessageRepository messageRepository;
+
+	@Autowired
+	private MessageAttachmentRepository messageAttachmentRepository;
+
+	@Autowired
+	private MessageAttachmentDataRepository messageAttachmentDataRepository;
+
+	@Autowired
+	private MessageReadReceiptRepository messageReadReceiptRepository;
+
+	@Autowired
+	private NoteRepository noteRepository;
+
+	@Autowired
+	private FinancialAssistanceRepository financialAssistanceRepository;
+
+	@Autowired
+	private FaCalculationDraftRepository calculationDraftRepository;
+
+	@Autowired
+	private FaNormPersonRepository normPersonRepository;
+
+	@Autowired
+	private FaNormExpenseRepository normExpenseRepository;
+
+	@Autowired
+	private FaWarningRepository warningRepository;
+
+	@Autowired
+	private FormSnapshotRepository formSnapshotRepository;
 
 	@Test
 	void test01_createErrand() {
@@ -81,15 +135,38 @@ class ErrandIT extends AbstractAppTest {
 
 	@Test
 	void test05_deleteErrand() {
-		assertThat(repository.existsById(EXISTING_ERRAND_ID)).isTrue();
+		assertThat(repository.existsById(ERRAND_WITH_CHILDREN_ID)).isTrue();
+		assertThat(messageRepository.existsById(MESSAGE_ID)).isTrue();
+		assertThat(messageAttachmentRepository.existsById(MESSAGE_ATTACHMENT_ID)).isTrue();
+		assertThat(messageAttachmentDataRepository.existsById(MESSAGE_ATTACHMENT_DATA_ID)).isTrue();
+		assertThat(messageReadReceiptRepository.existsById(MESSAGE_READ_RECEIPT_ID)).isTrue();
+		assertThat(noteRepository.existsById(NOTE_ID)).isTrue();
+		assertThat(financialAssistanceRepository.existsById(ERRAND_WITH_CHILDREN_ID)).isTrue();
+		assertThat(calculationDraftRepository.existsById(ERRAND_WITH_CHILDREN_ID)).isTrue();
+		assertThat(normPersonRepository.existsById(NORM_PERSON_ID)).isTrue();
+		assertThat(normExpenseRepository.existsById(NORM_EXPENSE_ID)).isTrue();
+		assertThat(warningRepository.existsById(WARNING_ID)).isTrue();
+		assertThat(formSnapshotRepository.existsById(FORM_SNAPSHOT_ID)).isTrue();
 
 		setupCall()
-			.withServicePath(PATH + "/" + EXISTING_ERRAND_ID)
+			.withServicePath(PATH + "/" + ERRAND_WITH_CHILDREN_ID)
 			.withHttpMethod(DELETE)
 			.withExpectedResponseStatus(NO_CONTENT)
 			.withExpectedResponseBodyIsNull()
 			.sendRequestAndVerifyResponse();
 
-		assertThat(repository.existsById(EXISTING_ERRAND_ID)).isFalse();
+		// The schema's ON DELETE CASCADE removes the errand's child rows, and the draft's rows with the draft.
+		assertThat(repository.existsById(ERRAND_WITH_CHILDREN_ID)).isFalse();
+		assertThat(messageRepository.existsById(MESSAGE_ID)).isFalse();
+		assertThat(messageAttachmentRepository.existsById(MESSAGE_ATTACHMENT_ID)).isFalse();
+		assertThat(messageAttachmentDataRepository.existsById(MESSAGE_ATTACHMENT_DATA_ID)).isFalse();
+		assertThat(messageReadReceiptRepository.existsById(MESSAGE_READ_RECEIPT_ID)).isFalse();
+		assertThat(noteRepository.existsById(NOTE_ID)).isFalse();
+		assertThat(financialAssistanceRepository.existsById(ERRAND_WITH_CHILDREN_ID)).isFalse();
+		assertThat(calculationDraftRepository.existsById(ERRAND_WITH_CHILDREN_ID)).isFalse();
+		assertThat(normPersonRepository.existsById(NORM_PERSON_ID)).isFalse();
+		assertThat(normExpenseRepository.existsById(NORM_EXPENSE_ID)).isFalse();
+		assertThat(warningRepository.existsById(WARNING_ID)).isFalse();
+		assertThat(formSnapshotRepository.existsById(FORM_SNAPSHOT_ID)).isFalse();
 	}
 }

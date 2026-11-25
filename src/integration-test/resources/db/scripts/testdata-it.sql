@@ -56,3 +56,40 @@ INSERT INTO notification (id, errand_id, municipality_id, namespace, owner_id, c
 -- verksamheten-2026-09-23.md punkt 4).
 INSERT INTO errand_co_caseworker (id, errand_id, municipality_id, namespace, user_id, created) VALUES
     ('ffffffff-ffff-ffff-ffff-ffffffffffff', '11111111-1111-1111-1111-111111111111', '2281', 'MY_NAMESPACE', 'coworker1', '2025-01-02 09:00:00.000000');
+
+-- Child rows on errand 4444..., which ErrandIT deletes to check that the schema's ON DELETE CASCADE removes them. Kept
+-- off errand 1111... because the attachment listing there also lists conversation attachments.
+INSERT INTO errand_message (id, errand_id, direction, body, author, created, in_reply_to_id) VALUES
+    ('cccccccc-cccc-cccc-cccc-cccccccccc01', '44444444-4444-4444-4444-444444444444', 'OUTBOUND', 'Please supply the missing document', 'assignee1', '2025-01-02 09:10:00.000000', NULL);
+
+INSERT INTO message_attachment (id, message_id, file_name, mime_type, file_size, created, sender_role) VALUES
+    ('cccccccc-cccc-cccc-cccc-ccccccccca01', 'cccccccc-cccc-cccc-cccc-cccccccccc01', 'note.txt', 'text/plain', 5, '2025-01-02 09:10:00.000000', 'CASEWORKER');
+
+INSERT INTO message_attachment_data (id, message_attachment_id, file) VALUES
+    (1, 'cccccccc-cccc-cccc-cccc-ccccccccca01', 0x48656c6c6f); -- "Hello"
+
+INSERT INTO message_read_receipt (id, message_id, reader_side, read_by, read_at) VALUES
+    ('cccccccc-cccc-cccc-cccc-cccccccccr01', 'cccccccc-cccc-cccc-cccc-cccccccccc01', 'CLIENT', '198001011234', '2025-01-02 09:15:00.000000');
+
+INSERT INTO errand_note (id, errand_id, body, author, created, modified_by, modified) VALUES
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbn01', '44444444-4444-4444-4444-444444444444', 'Internal note on the errand', 'assignee1', '2025-01-02 09:20:00.000000', NULL, NULL);
+
+INSERT INTO errand_financial_assistance (errand_id) VALUES
+    ('44444444-4444-4444-4444-444444444444');
+
+-- The calculation draft and the warning hang off the errand directly, not off errand_financial_assistance; the draft's
+-- norm persons and expenses hang off the draft.
+INSERT INTO errand_financial_assistance_calculation_draft (errand_id, application_month, created) VALUES
+    ('44444444-4444-4444-4444-444444444444', '2025-01', '2025-01-02 09:30:00.000000');
+
+INSERT INTO errand_fa_norm_person (id, errand_id, origin, role, name, created) VALUES
+    ('dddddddd-dddd-dddd-dddd-dddddddddp01', '44444444-4444-4444-4444-444444444444', 'SYSTEM', 'APPLICANT', 'Joe Doe', '2025-01-02 09:30:00.000000');
+
+INSERT INTO errand_fa_norm_expense (id, errand_id, origin, cost_type, process_amount, created) VALUES
+    ('dddddddd-dddd-dddd-dddd-dddddddddx01', '44444444-4444-4444-4444-444444444444', 'SYSTEM', 'RENT', 6500.00, '2025-01-02 09:30:00.000000');
+
+INSERT INTO errand_financial_assistance_warning (id, errand_id, type, source_key, message, status, auto_resolved, created) VALUES
+    ('dddddddd-dddd-dddd-dddd-dddddddddc01', '44444444-4444-4444-4444-444444444444', 'MISSING_SSBTEK', 'Dagersättning', 'Saknas i SSBTEK', 'OPEN', b'0', '2025-01-02 09:30:00.000000');
+
+INSERT INTO errand_form_snapshot (id, errand_id, municipality_id, namespace, type_slug, schema_version, content_hash, payload, created) VALUES
+    ('aaaaaaaa-aaaa-aaaa-aaaa-fffff0000001', '44444444-4444-4444-4444-444444444444', '2281', 'MY_NAMESPACE', 'TYPE-1', 'v1', '0000000000000000000000000000000000000000000000000000000000000000', '{}', '2025-01-02 09:30:00.000000');
