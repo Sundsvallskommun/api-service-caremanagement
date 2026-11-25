@@ -14,7 +14,9 @@ import java.util.Objects;
  * the type has no Lifecare counterpart.</li>
  * <li>{@code group} — a stable code for the Mina-sidor form section the type is shown under ({@code HOUSING},
  * {@code WORK_AND_STUDIES}, {@code HEALTH}, {@code OTHER}); null for income (a flat list).</li>
- * <li>{@code citizenReportable} — whether the type is offered on the citizen form.</li>
+ * <li>{@code citizenReportable} — whether an applicant may report the type, i.e. whether the code is accepted on the
+ * citizen payload. It does not control what the Mina-sidor form renders: that list is hardcoded in the frontend,
+ * which never calls the metadata endpoint (see {@code FinancialAssistanceTypes}).</li>
  * </ul>
  *
  * <p>
@@ -39,7 +41,7 @@ public class TypeOption {
 	})
 	private String group;
 
-	@Schema(description = "Whether the type is offered on the citizen Mina-sidor form", examples = "true")
+	@Schema(description = "Whether an applicant may report the type, i.e. whether the code is accepted on the citizen payload. Does not control what the Mina-sidor form renders — that list is maintained in the frontend.", examples = "true")
 	private boolean citizenReportable;
 
 	public static TypeOption create() {

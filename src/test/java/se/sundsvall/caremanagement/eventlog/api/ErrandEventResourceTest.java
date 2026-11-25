@@ -43,7 +43,7 @@ class ErrandEventResourceTest {
 	@Test
 	void list() {
 		final var event = new ErrandEventEntry("ev1", ERRAND_ID, MUNICIPALITY_ID, NAMESPACE, "HTTP", "READ", "errand", "Öppnade ärendet",
-			"GET", "/path", "joe001doe", "adAccount", "req-1", 200, FIXED_TIMESTAMP);
+			"GET", "/path", null, "joe001doe", "adAccount", "req-1", 200, FIXED_TIMESTAMP);
 		when(serviceMock.listForErrand(eq(MUNICIPALITY_ID), eq(NAMESPACE), eq(ERRAND_ID), isNull(), isNull(), isNull(), eq(true))).thenReturn(List.of(event));
 
 		final var response = webTestClient.get()

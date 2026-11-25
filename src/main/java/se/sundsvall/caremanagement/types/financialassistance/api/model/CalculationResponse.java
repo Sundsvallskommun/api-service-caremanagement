@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,8 +9,9 @@ import java.util.Objects;
 /**
  * Result of building and posting an SSBTEK-driven calculation: the id of the calculation created in Lifecare
  * FamilyCare, plus the warnings the caseworker must review — incomes Drakel could not auto-transfer ({@code
- * unhandledIncomes}) and benefits whose net income changed beyond the threshold between the rule periods ({@code
- * changeWarnings}). The warnings are human-readable lines; the structured form lives in the service layer.
+ * unhandledIncomes}) and income types whose amount differs beyond the threshold from the previous normberäkning, or
+ * that are new since it ({@code changeWarnings}, computed by careM). The warnings are human-readable lines; the
+ * structured form lives in the service layer.
  */
 @Schema(description = "The created Lifecare calculation id plus the income warnings to review.")
 public class CalculationResponse {
@@ -17,16 +19,19 @@ public class CalculationResponse {
 	@Schema(description = "The id of the calculation created in Lifecare FamilyCare", examples = "4711")
 	private Integer calculationId;
 
-	@Schema(description = "SSBTEK incomes that could not be auto-transferred and must be reviewed", examples = "[\"Bostadstillägg (NOT_ON_WHITELIST)\"]")
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "SSBTEK incomes that could not be auto-transferred and must be reviewed", examples = "[\"Bostadstillägg (NOT_ON_WHITELIST)\"]"))
 	private List<String> unhandledIncomes = new ArrayList<>();
 
-	@Schema(description = "Benefits whose net income changed beyond the threshold between the periods", examples = "[\"Bostadsbidrag: -23% (comparison 2400 -> control 1850)\"]")
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "Income types whose amount this month differs from the previous normberäkning beyond the threshold, or that are new since it", examples = "[\"Bostadsbidrag: 1250 kr i föregående normberäkning → 1300 kr nu\"]"))
 	private List<String> changeWarnings = new ArrayList<>();
 
 	@Schema(description = "Whether this month's calculation covers every income type the previous month's did — false means SSBTEK data is still missing and the process should poll again", examples = "true")
 	private boolean informationComplete = true;
 
-	@Schema(description = "Previous-month income types not yet present this month (the SSBTEK data still being awaited)", examples = "[\"Bostadsbidrag\"]")
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "Previous-month income types not yet present this month (the SSBTEK data still being awaited)", examples = "[\"Bostadsbidrag\"]"))
 	private List<String> missingIncomeTypes = new ArrayList<>();
 
 	public static CalculationResponse create() {

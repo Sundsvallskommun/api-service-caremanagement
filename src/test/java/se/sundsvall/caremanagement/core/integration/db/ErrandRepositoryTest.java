@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.core.integration.db;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -108,6 +109,67 @@ class ErrandRepositoryTest {
 
 		assertThat(result).extracting(ErrandEntity::getErrandNumber)
 			.containsExactlyInAnyOrder("ERRAND-1", "ERRAND-2");
+	}
+
+	@Test
+	void findWithoutProcessInstanceSelectsUnstartedReceivedErrandsOfTheTypesInTheWindow() {
+		final var now = OffsetDateTime.now();
+		save(errand("MATCH-NEW", "RECEIVED", "financial-assistance-new", now.minusHours(1)),
+			errand("MATCH-RENEWAL", "RECEIVED", "financial-assistance-renewal", now.minusHours(2)),
+			// the other side of every condition, one at a time
+			errand("STARTED", "RECEIVED", "financial-assistance-new", now.minusHours(1)).withProcessInstanceId("instance-1"),
+			errand("FROZEN", "NEEDS_MANUAL_REVIEW", "financial-assistance-new", now.minusHours(1)),
+			errand("UNDER-REVIEW", "UNDER_REVIEW", "financial-assistance-new", now.minusHours(1)),
+			errand("OTHER-TYPE", "RECEIVED", "another-type", now.minusHours(1)),
+			errand("TOO-YOUNG", "RECEIVED", "financial-assistance-new", now.minusMinutes(1)),
+			errand("TOO-OLD", "RECEIVED", "financial-assistance-new", now.minusDays(30)),
+			errand("OTHER-NAMESPACE", "RECEIVED", "financial-assistance-new", now.minusHours(1)).withNamespace(OTHER_NAMESPACE),
+			errand("OTHER-MUNICIPALITY", "RECEIVED", "financial-assistance-new", now.minusHours(1)).withMunicipalityId(OTHER_MUNICIPALITY_ID));
+
+		final var result = repository.findWithoutProcessInstance(MUNICIPALITY_ID, NAMESPACE,
+			List.of("financial-assistance-new", "financial-assistance-renewal"), "RECEIVED", now.minusDays(7), now.minusMinutes(10));
+
+		// oldest first
+		assertThat(result).extracting(ErrandEntity::getErrandNumber).containsExactly("MATCH-RENEWAL", "MATCH-NEW");
+	}
+
+	@Test
+	void findWithoutProcessInstanceIncludesTheBoundsOfTheWindow() {
+		save(errand("AT-FROM", "RECEIVED", "financial-assistance-new", MAY),
+			errand("AT-TO", "RECEIVED", "financial-assistance-new", JUNE),
+			errand("BEFORE", "RECEIVED", "financial-assistance-new", MAY.minusSeconds(1)),
+			errand("AFTER", "RECEIVED", "financial-assistance-new", JUNE.plusSeconds(1)));
+
+		final var result = repository.findWithoutProcessInstance(MUNICIPALITY_ID, NAMESPACE, List.of("financial-assistance-new"), "RECEIVED", MAY, JUNE);
+
+		assertThat(result).extracting(ErrandEntity::getErrandNumber).containsExactly("AT-FROM", "AT-TO");
+	}
+
+	@Test
+	void findWithoutProcessInstanceIsEmptyForNoTypes() {
+		save(errand("E", "RECEIVED", "financial-assistance-new", OffsetDateTime.now().minusHours(1)));
+
+		assertThat(repository.findWithoutProcessInstance(MUNICIPALITY_ID, NAMESPACE, List.of(), "RECEIVED", OffsetDateTime.now().minusDays(7), OffsetDateTime.now())).isEmpty();
+	}
+
+	/**
+	 * Saves the errands with the {@code created} each was given: the auditing listener stamps now on insert, so it is put
+	 * back before the flush.
+	 */
+	private void save(final ErrandEntity... errands) {
+		final var created = new ArrayList<OffsetDateTime>();
+		for (final var errand : errands) {
+			created.add(errand.getCreated());
+		}
+		final var saved = repository.saveAll(List.of(errands));
+		for (var i = 0; i < saved.size(); i++) {
+			saved.get(i).setCreated(created.get(i));
+		}
+		repository.flush();
+	}
+
+	private static ErrandEntity errand(final String errandNumber, final String status, final String typeSlug, final OffsetDateTime created) {
+		return errand(MUNICIPALITY_ID, NAMESPACE, status, typeSlug, errandNumber).withCreated(created);
 	}
 
 	private static ErrandEntity errand(final String municipalityId, final String namespace, final String status, final String typeSlug,

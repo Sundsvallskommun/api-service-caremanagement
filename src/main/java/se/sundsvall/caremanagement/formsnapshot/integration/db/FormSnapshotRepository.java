@@ -11,6 +11,4 @@ public interface FormSnapshotRepository extends JpaRepository<FormSnapshotEntity
 	Optional<FormSnapshotEntity> findByErrandId(String errandId);
 
 	boolean existsByErrandId(String errandId);
-
-	void deleteByErrandId(String errandId);
 }

@@ -25,10 +25,10 @@ public class ArchiveActualisationRequest {
 	@Schema(description = "The document title shown in Lifecare. Defaults to the uploaded file name when omitted.", examples = "Tilläggsansökan")
 	private String title;
 
-	@Schema(description = "The Lifecare InsertDocumentType code for the document. Server default when omitted.", examples = "ANSOKAN")
+	@Schema(description = "The Lifecare InsertDocumentType id, from the actualisation proposal's attachmentTypes. Server default when omitted.", examples = "1")
 	private String documentType;
 
-	@Schema(description = "The Lifecare InsertDocumentSenderType code for the document. Server default when omitted.", examples = "ENSKILD")
+	@Schema(description = "The Lifecare InsertDocumentSenderType id, from the chosen attachment type's senderTypes. Server default when omitted.", examples = "1")
 	private String documentSenderType;
 
 	@Schema(description = "The sender name shown in Lifecare. Server default when omitted.", examples = "Draken")

@@ -2,6 +2,7 @@ package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -29,8 +30,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_APPLICATION;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
@@ -57,6 +61,7 @@ class DraftServiceTest {
 
 	@Test
 	void refreshUpsertsHeaderThenDelegatesEachSectionAndAssemblesChanges() {
+		when(headerRepositoryMock.existsById(ERRAND_ID)).thenReturn(true);
 		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
 
 		final var freshPersons = List.of(FaNormPersonEntity.create().withOrigin(ORIGIN_SYSTEM).withRole(ROLE_CHILD));
@@ -81,6 +86,145 @@ class DraftServiceTest {
 		verify(headerRepositoryMock).save(header.capture());
 		assertThat(header.getValue().getNormId()).isEqualTo(7);
 		assertThat(header.getValue().getNormType()).isEqualTo(List.of("NATIONAL_NORM"));
+	}
+
+	@Test
+	void firstRefreshBuildsTheDraftButReportsNoChanges() {
+		// With no previous draft every row would read as new - "Ny utgift: Boendekostnad" for a rent the previous
+		// normberäkning already carried.
+		when(headerRepositoryMock.existsById(ERRAND_ID)).thenReturn(false);
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
+		final var freshExpenses = List.of(FaNormExpenseEntity.create().withOrigin(ORIGIN_SYSTEM).withCostType("RENT"));
+		when(sectionReconcilerMock.reconcilePersons(any(), any())).thenReturn(new SectionReconciler.Diff(List.of("Sökande"), List.of()));
+		when(sectionReconcilerMock.reconcileIncomes(any(), any())).thenReturn(new SectionReconciler.Diff(List.of("Bostadsbidrag"), List.of()));
+		when(sectionReconcilerMock.reconcileExpenses(ERRAND_ID, freshExpenses)).thenReturn(new SectionReconciler.Diff(List.of("Boendekostnad"), List.of()));
+
+		final var changes = service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(), freshExpenses);
+
+		verify(sectionReconcilerMock).reconcileExpenses(ERRAND_ID, freshExpenses);
+		assertThat(changes.addedIncomes()).isEmpty();
+		assertThat(changes.addedExpenses()).isEmpty();
+		assertThat(changes.addedPersons()).isEmpty();
+		assertThat(changes.droppedIncomes()).isEmpty();
+		assertThat(changes.droppedExpenses()).isEmpty();
+		assertThat(changes.droppedPersons()).isEmpty();
+	}
+
+	@Test
+	void refreshLeavesANormTheCaseworkerPickedAlone() {
+		// The daily run used to put its own norm back every night, over whatever the caseworker had chosen in Draken.
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(9).withNormSetByCaseworker(true)));
+		when(sectionReconcilerMock.reconcilePersons(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileIncomes(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileExpenses(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+
+		service.refresh(ERRAND_ID, "2026-06", 7, List.of("NATIONAL_NORM"), List.of(), List.of(), List.of());
+
+		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
+		verify(headerRepositoryMock).save(header.capture());
+		assertThat(header.getValue().getNormId()).isEqualTo(9);
+	}
+
+	@Test
+	void refreshUpdatesANormTheProcessSet() {
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.of(FaCalculationDraftEntity.create().withErrandId(ERRAND_ID).withNormId(4)));
+		when(sectionReconcilerMock.reconcilePersons(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileIncomes(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileExpenses(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+
+		service.refresh(ERRAND_ID, "2026-06", 1, List.of("NATIONAL_NORM"), List.of(), List.of(), List.of());
+
+		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
+		verify(headerRepositoryMock).save(header.capture());
+		assertThat(header.getValue().getNormId()).isEqualTo(1);
+	}
+
+	@Test
+	void refreshCopiesTheNormTypesInsteadOfSharingTheErrandsCollection() {
+		when(headerRepositoryMock.findById(ERRAND_ID)).thenReturn(Optional.empty());
+		when(sectionReconcilerMock.reconcilePersons(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileIncomes(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+		when(sectionReconcilerMock.reconcileExpenses(any(), any())).thenReturn(new SectionReconciler.Diff(List.of(), List.of()));
+
+		// the caller hands in the errand entity's own collection - Hibernate fails the flush if the draft keeps that instance
+		final var errandNormTypes = new ArrayList<>(List.of("NATIONAL_NORM"));
+
+		service.refresh(ERRAND_ID, "2026-06", 7, errandNormTypes, List.of(), List.of(), List.of());
+
+		final var header = ArgumentCaptor.forClass(FaCalculationDraftEntity.class);
+		verify(headerRepositoryMock).save(header.capture());
+		assertThat(header.getValue().getNormType())
+			.isEqualTo(errandNormTypes)
+			.isNotSameAs(errandNormTypes);
+	}
+
+	@Test
+	void duplicateIncomeWarnsWhenTheSameTypeComesFromBothTheProcessAndTheCaseworker() {
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(20).withTypeName("Bostadsbidrag")));
+
+		final var warnings = service.duplicateIncomeWarnings(ERRAND_ID);
+
+		assertThat(warnings).singleElement().satisfies(warning -> {
+			assertThat(warning.type()).isEqualTo(WarningService.TYPE_INCOME_DUPLICATED);
+			assertThat(warning.sourceKey()).isEqualTo("income-duplicate:20");
+			assertThat(warning.message()).contains("Bostadsbidrag").contains("räknas två gånger");
+		});
+	}
+
+	@Test
+	void duplicateIncomeNamesTheApplicationWhenTheProcessRowCameFromIt() {
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_APPLICATION).withTypeId(25).withTypeName("Swish/Insättningar/Överföringar"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(25).withTypeName("Swish/Insättningar/Överföringar")));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).singleElement()
+			.satisfies(warning -> assertThat(warning.message())
+				.isEqualTo("Möjlig dubbelföring: Swish/Insättningar/Överföringar finns både från ansökan och tillagd av handläggare "
+					+ "— kontrollera att inkomsten inte räknas två gånger"));
+	}
+
+	@Test
+	void duplicateIncomeIsSilentBetweenSsbtekAndTheApplication() {
+		// an SSBTEK income and a declared one of the same type are two incomes, summed in the calculation - not a duplicate
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(4).withTypeName("Underhållsstöd"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_APPLICATION).withTypeId(4).withTypeName("Underhållsstöd")));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void duplicateIncomeIsSilentWhenAllRowsComeFromTheProcess() {
+		// two SSBTEK rows of the same type are summed by the feeder, not double-counted - nothing to warn about
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(21).withTypeName("Barnbidrag")));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void duplicateIncomeClearsOnceTheCaseworkerDeletesOneSideOfThePair() {
+		// deleting the duplicate row is how the warning is resolved; the source key stops being produced and it auto-closes
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(20).withTypeName("Bostadsbidrag"),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(20).withTypeName("Bostadsbidrag").withDeleted(true)));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).isEmpty();
+	}
+
+	@Test
+	void duplicateIncomeIgnoresRowsWithoutATypeAndFallsBackOnAMissingTypeName() {
+		when(incomeRepositoryMock.findByErrandId(ERRAND_ID)).thenReturn(List.of(
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(null),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(null),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_SYSTEM).withTypeId(30),
+			FaNormIncomeEntity.create().withOrigin(ORIGIN_CASEWORKER).withTypeId(30)));
+
+		assertThat(service.duplicateIncomeWarnings(ERRAND_ID)).singleElement()
+			.satisfies(warning -> assertThat(warning.message()).startsWith("Möjlig dubbelföring: Inkomst"));
 	}
 
 	@Test
@@ -134,10 +278,19 @@ class DraftServiceTest {
 	void addIncomeThrows404WhenNoHeader() {
 		when(headerRepositoryMock.existsById(ERRAND_ID)).thenReturn(false);
 
-		assertThatThrownBy(() -> service.addIncome(ERRAND_ID, new NormIncomeInput()))
+		assertThatThrownBy(() -> service.addIncome(ERRAND_ID, NormIncomeInput.create().withTypeName("Lön efter skatt")))
 			.isInstanceOf(ThrowableProblem.class)
 			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
 			.hasMessage("Not Found: No draft calculation for errand");
+	}
+
+	@Test
+	void addIncomeRejectsARowWithNeitherTypeIdNorTypeName() {
+		assertThatThrownBy(() -> service.addIncome(ERRAND_ID, NormIncomeInput.create().withTypeName("  ")))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", BAD_REQUEST)
+			.hasMessage("Bad Request: An income row needs a typeId or a typeName");
+		verifyNoInteractions(incomeRepositoryMock);
 	}
 
 	@Test
@@ -242,6 +395,7 @@ class DraftServiceTest {
 			.withHasCustomHouseholdSize(true).withHouseholdSize(1));
 
 		assertThat(header.getNormId()).isEqualTo(9);
+		assertThat(header.getNormSetByCaseworker()).isTrue();
 		assertThat(header.getHasCustomHouseholdSize()).isTrue();
 		assertThat(header.getHouseholdSize()).isEqualTo(1);
 		assertThat(draft.getNormId()).isEqualTo(9);

@@ -1,0 +1,65 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/services/7700/payments",
+		"bodyPatterns": [
+			{
+				"matchesJsonPath": "$[?(@.serviceId == 7700)]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.amount == 1)]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.paymentMethod == 14)]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.payDate == '2026-09-21')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.concernedMonth == '202609')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.accountNumber == '11111111')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.name == 'Kontoinnehavare A')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.billingNumber == '123')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.susPersonId == '19800101T001')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.balanceId == 1)]"
+			},
+			{
+				"matchesJsonPath": "$.balance[?(@.id == 1 && @.balanceAmount == 3.0)]"
+			},
+			{
+				"matchesJsonPath": "$.postings[?(@.purpose == 1 && @.amount == 1)]"
+			},
+			{
+				"matchesJsonPath": "$.paymentPersons[?(@.personIdAndName == '800101-T001 Efternamn, Förnamn')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.creditAccount == '' && @.simpleAccount == '')]"
+			},
+			{
+				"matchesJsonPath": {
+					"expression": "$.aktualiseringId",
+					"absent": true
+				}
+			}
+		]
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"paymentId": 4242
+		},
+		"status": 201
+	}
+}

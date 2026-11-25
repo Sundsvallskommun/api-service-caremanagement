@@ -1,0 +1,42 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-lifecare-integrator/2281/payments",
+		"queryParameters": {
+			"partyId": {
+				"equalTo": "aaaaaaaa-0000-4000-8000-000000000001"
+			}
+		}
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"payments": [
+				{
+					"id": 90210,
+					"serviceId": 7700,
+					"concernedMonth": "2026-10",
+					"payDate": "2026-09-28",
+					"amount": 5200
+				},
+				{
+					"id": 90211,
+					"serviceId": 8800,
+					"concernedMonth": "2026-10",
+					"payDate": "2026-09-28",
+					"amount": 1000
+				},
+				{
+					"id": 90212,
+					"serviceId": 7700,
+					"concernedMonth": "2026-09",
+					"payDate": "2026-08-28",
+					"amount": 5100
+				}
+			]
+		},
+		"status": 200
+	}
+}

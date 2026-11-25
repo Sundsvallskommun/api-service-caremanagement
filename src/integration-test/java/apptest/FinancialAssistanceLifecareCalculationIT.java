@@ -1,0 +1,198 @@
+package apptest;
+
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.jdbc.Sql;
+import se.sundsvall.caremanagement.Application;
+import se.sundsvall.caremanagement.decisions.integration.db.DecisionRepository;
+import se.sundsvall.caremanagement.decisions.integration.db.model.DecisionEntity;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.CalculationDraft;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.FinancialAssistanceRepository;
+import se.sundsvall.dept44.test.AbstractAppTest;
+import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
+import static net.javacrumbs.jsonunit.core.Option.IGNORING_EXTRA_FIELDS;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.PATCH;
+import static org.springframework.http.HttpMethod.POST;
+import static org.springframework.http.HttpStatus.NO_CONTENT;
+import static org.springframework.http.HttpStatus.OK;
+
+/**
+ * The contract between Draken and careM around the Lifecare normberäkning. The first daily prepare that finds the
+ * SSBTEK basis complete posts careM's draft to Lifecare as the proposal and links it on the errand as
+ * {@code lifecareCalculationId}; when that create fails — or the caseworker saves a calculation first — careM creates
+ * it
+ * through the errand's /lifecare calculation route and links it there. Either way, from then on the daily prepare
+ * leaves careM's draft alone, and only then may a
+ * granting decision be finalized.
+ *
+ * <p>
+ * One application type (återansökan) is covered: none of these paths — the link, the frozen draft or the
+ * finalize — reads the application type, so a nyansökan takes exactly the same route.
+ * </p>
+ */
+@WireMockAppTestSuite(files = "classpath:/FinancialAssistanceLifecareCalculationIT/", classes = Application.class)
+@Sql({
+	"/db/scripts/truncate.sql",
+	"/db/scripts/testdata-it.sql",
+	"/db/scripts/testdata-lifecare-calculation-it.sql"
+})
+class FinancialAssistanceLifecareCalculationIT extends AbstractAppTest {
+
+	private static final String REQUEST_FILE = "request.json";
+	private static final String RESPONSE_FILE = "response.json";
+	private static final String ERRAND_ID = "77777777-7777-7777-7777-777777777777";
+	private static final String APPLICANT_PARTY_ID = "aaaaaaaa-0000-4000-8000-000000000001";
+	private static final String PATH = "/2281/MY_NAMESPACE/errands/financial-assistance";
+	private static final String ERRAND_PATH = PATH + "/" + ERRAND_ID;
+	private static final String SENT_BY = "X-Sent-By";
+	private static final String CASEWORKER = "joe01doe; type=adAccount";
+	private static final String PREPARE_REQUEST = """
+		{
+			"errandId": "%s",
+			"applicant": "%s",
+			"applicationMonth": "2026-10",
+			"classifiedIncomes": "[]"
+		}""".formatted(ERRAND_ID, APPLICANT_PARTY_ID);
+
+	@Autowired
+	private FinancialAssistanceRepository financialAssistanceRepository;
+
+	@Autowired
+	private DecisionRepository decisionRepository;
+
+	@Test
+	void test01_patchIgnoresTheLifecareReferencesAndTheLinkedOneIsServed() {
+		// A client may not point the errand at a Lifecare object: the references are careM's to link.
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/data")
+			.withHttpMethod(PATCH)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(NO_CONTENT)
+			.sendRequest();
+		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> {
+			assertThat(entity.getLifecareCalculationId()).isNull();
+			assertThat(entity.getLifecareDecisionId()).isEqualTo(815); // the seeded beslut, not the client's 4712
+		});
+
+		// Linked the way careM links it when it saves the calculation in Lifecare, it is served on the errand.
+		linkCalculation(4711);
+		setupCall()
+			.withServicePath(ERRAND_PATH)
+			.withHttpMethod(GET)
+			.withJsonAssertOptions(List.of(IGNORING_EXTRA_FIELDS, IGNORING_ARRAY_ORDER))
+			.withExpectedResponseStatus(OK)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequest();
+	}
+
+	@Test
+	void test04_finalizeBifallWithLifecareCalculationId() {
+		linkCalculation(4711);
+
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/finalize")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(OK)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequestAndVerifyResponse();
+
+		assertThat(decisionRepository.findByErrandIdOrderByCreatedDesc(ERRAND_ID)).extracting(DecisionEntity::getDecisionType, DecisionEntity::getValue)
+			.containsExactly(tuple("PAYMENT", "BIFALL"));
+	}
+
+	@Test
+	void test07_paymentStatusFindsTheBifallsPaymentOnTheInsatsAndLinksIt() {
+		// A bifall as Draken makes it today: the payment is registered in Lifecare, careM is told nothing about it.
+		linkCalculation(4711);
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/finalize")
+			.withHttpMethod(POST)
+			.withHeader(SENT_BY, CASEWORKER)
+			.withRequest("finalize-request.json")
+			.withExpectedResponseStatus(OK)
+			.sendRequest();
+
+		// The process's check: of the applicant's Lifecare payments, only the one on the errand's insats (7700) for the
+		// application month counts - not the other insats's, not the previous month's.
+		setupCall()
+			.withServicePath(PATH + "/payment-status")
+			.withHttpMethod(POST)
+			.withRequest(REQUEST_FILE)
+			.withExpectedResponseStatus(OK)
+			.withExpectedResponse(RESPONSE_FILE)
+			.sendRequest();
+
+		// Paid, so it is now this errand's: linked, and never available to another errand.
+		assertThat(financialAssistanceRepository.findLifecarePaymentIdsLinkedElsewhere(List.of("90210", "90211", "90212"), "another-errand"))
+			.containsExactly("90210");
+	}
+
+	@Test
+	void test13_prepareCreatesTheProposalInLifecareAndFreezesTheDraft() throws JacksonException {
+		// Run 1 finds the basis complete and posts the draft to Lifecare — the applicant's personnummer on the body and on
+		// the household row, the errand's EB insats (the stub matches on all three) — and links the created id.
+		prepare();
+		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> assertThat(entity.getLifecareCalculationId()).isEqualTo(9001));
+		final var proposed = draft();
+
+		// The link is first-come: a second create (Draken's BFF racing the prepare) cannot replace it.
+		assertThat(financialAssistanceRepository.linkLifecareCalculationIfAbsent(ERRAND_ID, 9002)).isZero();
+		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> assertThat(entity.getLifecareCalculationId()).isEqualTo(9001));
+
+		// Run 2, after the application gains a cost: the proposal is frozen, so the draft is not refreshed and nothing
+		// new is created in Lifecare.
+		patchData("""
+			{"costs": [{"costType": "RENT", "appliedAmount": 6500}, {"costType": "ELECTRICITY", "appliedAmount": 400}]}""");
+		prepare();
+		assertThat(draft()).usingRecursiveComparison().isEqualTo(proposed);
+		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_ID)).hasValueSatisfying(entity -> assertThat(entity.getLifecareCalculationId()).isEqualTo(9001));
+		wiremock.verify(1, postRequestedFor(urlPathEqualTo("/api-lifecare-integrator/2281/calculations")));
+	}
+
+	/**
+	 * One daily prepare run. Its stubs are not verified here; the calling test checks what the run did.
+	 */
+	private void prepare() {
+		setupCall()
+			.withServicePath(PATH + "/calculation/prepare")
+			.withHttpMethod(POST)
+			.withRequest(PREPARE_REQUEST)
+			.withExpectedResponseStatus(OK)
+			.sendRequest();
+	}
+
+	/** Links a calculation the way careM does once it has saved one in Lifecare. */
+	private void linkCalculation(final int calculationId) {
+		assertThat(financialAssistanceRepository.linkLifecareCalculationIfAbsent(ERRAND_ID, calculationId)).isOne();
+	}
+
+	private void patchData(final String data) {
+		setupCall()
+			.withServicePath(ERRAND_PATH + "/data")
+			.withHttpMethod(PATCH)
+			.withRequest(data)
+			.withExpectedResponseStatus(NO_CONTENT)
+			.sendRequest();
+	}
+
+	private CalculationDraft draft() throws JacksonException {
+		return setupCall()
+			.withServicePath(ERRAND_PATH + "/calculation/draft")
+			.withHttpMethod(GET)
+			.withExpectedResponseStatus(OK)
+			.sendRequest()
+			.andReturnBody(new TypeReference<CalculationDraft>() {});
+	}
+}

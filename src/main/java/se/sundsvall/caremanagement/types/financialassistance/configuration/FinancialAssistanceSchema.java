@@ -8,6 +8,10 @@ import se.sundsvall.caremanagement.errandtypes.service.ErrandTypeSchemaContribut
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_NEW;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_RENEWAL;
 import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.APPLICATION_TYPE_SUPPLEMENTARY;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_AVSLAG;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_BIFALL;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.OUTCOME_DELAVSLAG;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceModuleConfig.outcomeCarriesAmount;
 
 /**
  * The financial assistance form-field catalogue: the superset of {@code data.*} fields the three application types
@@ -22,7 +26,7 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * server timestamp) are deliberately omitted from the collectable fields.
  * </p>
  */
-final class FinancialAssistanceSchema {
+public final class FinancialAssistanceSchema {
 
 	private FinancialAssistanceSchema() {}
 
@@ -39,13 +43,17 @@ final class FinancialAssistanceSchema {
 	 * The allowed decision alternatives for every financial assistance type (the Decision-form outcome dropdown).
 	 * {@code carriesAmount} is
 	 * false
-	 * for the outcomes that imply a 0 belopp (avslag/avvisning), which the frontend uses to zero the amount.
+	 * for the outcomes that imply a 0 belopp (avslag), which the frontend uses to zero the amount.
+	 *
+	 * <p>
+	 * The {@code DELAVSLAG} code keeps its name while the label reads "Delvis bifall" — verksamheten's own wording,
+	 * asked for 2026-09-21 along with dropping {@code AVVISNING} altogether.
+	 * </p>
 	 */
 	private static final List<DecisionOption> DECISION_OPTIONS = List.of(
-		decisionOption("BIFALL", "Bifall", true),
-		decisionOption("DELAVSLAG", "Delavslag", true),
-		decisionOption("AVSLAG", "Avslag", false),
-		decisionOption("AVVISNING", "Avvisning", false));
+		decisionOption(OUTCOME_BIFALL, "Bifall"),
+		decisionOption(OUTCOME_DELAVSLAG, "Delvis bifall"),
+		decisionOption(OUTCOME_AVSLAG, "Avslag"));
 
 	/** The superset of collectable fields, in form order. */
 	private static final List<FieldDescriptor> CATALOG = List.of(
@@ -97,15 +105,20 @@ final class FinancialAssistanceSchema {
 		return new Contribution(typeSlug, applicationType, forApplicationType(applicationType), DECISION_OPTIONS);
 	}
 
+	/** The decision outcomes a caseworker can pick — the same catalogue the errand-type schema exposes. */
+	public static List<DecisionOption> decisionOptions() {
+		return DECISION_OPTIONS;
+	}
+
 	private record Contribution(String typeSlug, String applicationType, List<FieldDescriptor> fields, List<DecisionOption> decisionOptions)
 		implements
 		ErrandTypeSchemaContribution {}
 
-	private static DecisionOption decisionOption(final String code, final String displayName, final boolean carriesAmount) {
+	private static DecisionOption decisionOption(final String code, final String displayName) {
 		return DecisionOption.create()
 			.withCode(code)
 			.withDisplayName(displayName)
-			.withCarriesAmount(carriesAmount);
+			.withCarriesAmount(outcomeCarriesAmount(code));
 	}
 
 	private static FieldDescriptor scalar(final String name, final String type, final boolean required,

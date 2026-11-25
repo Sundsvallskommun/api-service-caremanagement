@@ -158,7 +158,7 @@ class ErrandServiceTest {
 			.thenReturn(new PageImpl<>(of(ErrandEntity.create().withId(ERRAND_ID))));
 
 		final Specification<ErrandEntity> extra = (root, _, cb) -> cb.equal(root.get("status"), "OPEN");
-		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, extra, false, null, PageRequest.of(0, 10));
+		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, extra, false, false, null, PageRequest.of(0, 10));
 
 		assertThat(page.getErrands()).hasSize(1);
 		assertThat(specCaptor.getValue()).isNotNull();
@@ -170,7 +170,7 @@ class ErrandServiceTest {
 		when(repositoryMock.findAll(any(Specification.class), any(PageRequest.class)))
 			.thenReturn(new PageImpl<>(of()));
 
-		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, null, false, null, PageRequest.of(0, 10));
+		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, null, false, false, null, PageRequest.of(0, 10));
 		assertThat(page.getErrands()).isEmpty();
 	}
 
@@ -181,10 +181,24 @@ class ErrandServiceTest {
 		when(errandNotificationFilterMock.hasUnacknowledgedNotifications(MUNICIPALITY_ID, NAMESPACE, "jane01doe"))
 			.thenReturn((root, _, cb) -> cb.conjunction());
 
-		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, null, true, "jane01doe", PageRequest.of(0, 10));
+		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, null, true, false, "jane01doe", PageRequest.of(0, 10));
 
 		assertThat(page.getErrands()).hasSize(1);
 		verify(errandNotificationFilterMock).hasUnacknowledgedNotifications(MUNICIPALITY_ID, NAMESPACE, "jane01doe");
+	}
+
+	@Test
+	void findErrandsAppliesUnhandledNotificationFilter() {
+		when(repositoryMock.findAll(any(Specification.class), any(PageRequest.class)))
+			.thenReturn(new PageImpl<>(of(ErrandEntity.create().withId(ERRAND_ID))));
+		when(errandNotificationFilterMock.hasUnhandledNotifications(MUNICIPALITY_ID, NAMESPACE, "jane01doe"))
+			.thenReturn((root, _, cb) -> cb.conjunction());
+
+		final var page = service.findErrands(MUNICIPALITY_ID, NAMESPACE, null, false, true, "jane01doe", PageRequest.of(0, 10));
+
+		assertThat(page.getErrands()).hasSize(1);
+		verify(errandNotificationFilterMock).hasUnhandledNotifications(MUNICIPALITY_ID, NAMESPACE, "jane01doe");
+		verify(errandNotificationFilterMock, never()).hasUnacknowledgedNotifications(any(), any(), any());
 	}
 
 	@Test

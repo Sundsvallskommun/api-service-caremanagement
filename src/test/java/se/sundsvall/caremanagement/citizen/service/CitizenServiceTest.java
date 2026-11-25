@@ -3,6 +3,8 @@ package se.sundsvall.caremanagement.citizen.service;
 import generated.se.sundsvall.citizen.CitizenExtended;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -45,54 +47,32 @@ class CitizenServiceTest {
 		assertThat(service.getPersonalNumber(MUNICIPALITY_ID, PARTY_ID)).isEmpty();
 	}
 
-	@Test
-	void resolvesPartyId() {
-		when(citizenClientMock.getGuid(MUNICIPALITY_ID, PERSONAL_NUMBER)).thenReturn(PARTY_ID);
-
-		assertThat(service.getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).contains(PARTY_ID);
-	}
-
-	@Test
-	void emptyPartyIdWhenNoContent() {
-		when(citizenClientMock.getGuid(MUNICIPALITY_ID, PERSONAL_NUMBER)).thenReturn(null);
-
-		assertThat(service.getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).isEmpty();
-	}
-
-	@Test
-	void emptyPartyIdWhenBlank() {
-		when(citizenClientMock.getGuid(MUNICIPALITY_ID, PERSONAL_NUMBER)).thenReturn("   ");
-
-		assertThat(service.getPartyId(MUNICIPALITY_ID, PERSONAL_NUMBER)).isEmpty();
-	}
-
-	@Test
-	void protectedWhenClassifiedSet() {
-		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true))
-			.thenReturn(new CitizenExtended().classified("PROTECTED"));
+	@ParameterizedTest
+	@CsvSource(nullValues = "NULL", value = {
+		"J, N", "N, J", "J, J", "j, N", "N, x", "J, NULL", "NULL, J"
+	})
+	void protectedWhenAFlagIsSet(final String classified, final String protectedNr) {
+		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, false))
+			.thenReturn(new CitizenExtended().classified(classified).protectedNR(protectedNr));
 
 		assertThat(service.hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isTrue();
 	}
 
-	@Test
-	void protectedWhenProtectedNrSet() {
-		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true))
-			.thenReturn(new CitizenExtended().protectedNR("PROTECTED_IDENTITY"));
-
-		assertThat(service.hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isTrue();
-	}
-
-	@Test
-	void notProtectedWhenNeitherFlagSet() {
-		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true)).thenReturn(new CitizenExtended());
+	@ParameterizedTest
+	@CsvSource(nullValues = "NULL", value = {
+		"N, N", "n, N", "' N ', N", "NULL, NULL", "'', ''", "N, NULL", "NULL, N"
+	})
+	void notProtectedWhenNoFlagIsSet(final String classified, final String protectedNr) {
+		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, false))
+			.thenReturn(new CitizenExtended().classified(classified).protectedNR(protectedNr));
 
 		assertThat(service.hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isFalse();
 	}
 
 	@Test
-	void notProtectedWhenNoCitizenRecord() {
-		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, true)).thenReturn(null);
+	void protectedWhenNoCitizenRecord() {
+		when(citizenClientMock.getCitizen(MUNICIPALITY_ID, PARTY_ID, false)).thenReturn(null);
 
-		assertThat(service.hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isFalse();
+		assertThat(service.hasProtectedIdentity(MUNICIPALITY_ID, PARTY_ID)).isTrue();
 	}
 }

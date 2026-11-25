@@ -1,0 +1,33 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-lifecare-integrator/2281/calculations/proposal",
+		"queryParameters": {
+			"partyId": {
+				"equalTo": "aaaaaaaa-0000-4000-8000-000000000001"
+			}
+		}
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"services": [
+				{
+					"id": 7700,
+					"name": "Ekonomiskt bistånd"
+				}
+			],
+			"norms": [
+				{
+					"id": 12,
+					"name": "Riksnorm 2026",
+					"validFrom": "2026-01-01",
+					"validTo": "2026-12-31"
+				}
+			]
+		},
+		"status": 200
+	}
+}

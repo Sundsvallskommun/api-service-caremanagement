@@ -12,6 +12,7 @@ import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanEquals;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanHashCode;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidBeanToString;
 import static com.google.code.beanmatchers.BeanMatchers.hasValidGettersAndSetters;
+import static java.time.Month.SEPTEMBER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
 
@@ -39,6 +40,8 @@ class PlanningTest {
 		final var workExtent = "FULL";
 		final var workDescription = "Permanent employment";
 		final var sickLeaveLevel = "100";
+		final var sickLeaveFrom = LocalDate.of(2026, SEPTEMBER, 1);
+		final var sickLeaveTo = LocalDate.of(2026, SEPTEMBER, 30);
 		final var sfiStudyPath = "1";
 		final var sfiCourse = "B";
 		final var otherDescription = "Internship";
@@ -49,6 +52,8 @@ class PlanningTest {
 			.withWorkExtent(workExtent)
 			.withWorkDescription(workDescription)
 			.withSickLeaveLevel(sickLeaveLevel)
+			.withSickLeaveFrom(sickLeaveFrom)
+			.withSickLeaveTo(sickLeaveTo)
 			.withSfiStudyPath(sfiStudyPath)
 			.withSfiCourse(sfiCourse)
 			.withOtherDescription(otherDescription);
@@ -59,6 +64,8 @@ class PlanningTest {
 		assertThat(result.getWorkExtent()).isEqualTo(workExtent);
 		assertThat(result.getWorkDescription()).isEqualTo(workDescription);
 		assertThat(result.getSickLeaveLevel()).isEqualTo(sickLeaveLevel);
+		assertThat(result.getSickLeaveFrom()).isEqualTo(sickLeaveFrom);
+		assertThat(result.getSickLeaveTo()).isEqualTo(sickLeaveTo);
 		assertThat(result.getSfiStudyPath()).isEqualTo(sfiStudyPath);
 		assertThat(result.getSfiCourse()).isEqualTo(sfiCourse);
 		assertThat(result.getOtherDescription()).isEqualTo(otherDescription);

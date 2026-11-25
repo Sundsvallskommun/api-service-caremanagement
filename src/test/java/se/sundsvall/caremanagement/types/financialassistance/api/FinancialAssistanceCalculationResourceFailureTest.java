@@ -3,8 +3,6 @@ package se.sundsvall.caremanagement.types.financialassistance.api;
 import java.util.Map;
 import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
@@ -67,9 +65,9 @@ class FinancialAssistanceCalculationResourceFailureTest {
 	}
 
 	@Test
-	void commitCalculationInvalidMonth() {
+	void prepareCalculationInvalidMonth() {
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + "/calculation/commit").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-13"))
 			.exchange()
 			.expectStatus().isBadRequest()
@@ -81,15 +79,10 @@ class FinancialAssistanceCalculationResourceFailureTest {
 		verifyNoInteractions(calculationServiceMock);
 	}
 
-	@ParameterizedTest
-	@ValueSource(strings = {
-		"/calculation/prepare",
-		"/calculation/commit",
-		"/calculation/from-application"
-	})
-	void calculationMissingErrandId(final String path) {
+	@Test
+	void prepareCalculationMissingErrandId() {
 		webTestClient.post()
-			.uri(uri -> uri.path(PATH + path).build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
+			.uri(uri -> uri.path(PATH + "/calculation/prepare").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE)))
 			.bodyValue(CalculationRequest.create().withApplicant("f47ac10b-58cc-4372-a567-0e02b2c3d479").withApplicationMonth("2026-06"))
 			.exchange()
 			.expectStatus().isBadRequest()

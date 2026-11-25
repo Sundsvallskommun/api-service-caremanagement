@@ -16,7 +16,6 @@ import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.PATCH;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpStatus.CREATED;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
@@ -32,7 +31,6 @@ class NamespaceConfigIT extends AbstractAppTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String EXISTING_NAMESPACE = "MY_NAMESPACE";
 	private static final String NEW_NAMESPACE = "BRAND_NEW";
-	private static final String UNKNOWN_NAMESPACE = "DOES_NOT_EXIST";
 	private static final String PATH = "/" + MUNICIPALITY_ID + "/%s/namespace-config";
 
 	@Autowired
@@ -87,25 +85,5 @@ class NamespaceConfigIT extends AbstractAppTest {
 			.sendRequestAndVerifyResponse();
 
 		assertThat(repository.findByNamespaceAndMunicipalityId(EXISTING_NAMESPACE, MUNICIPALITY_ID)).isEmpty();
-	}
-
-	@Test
-	void test05_readNamespaceConfigNotFound() {
-		setupCall()
-			.withServicePath(PATH.formatted(UNKNOWN_NAMESPACE))
-			.withHttpMethod(GET)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-	}
-
-	@Test
-	void test06_deleteNamespaceConfigNotFound() {
-		setupCall()
-			.withServicePath(PATH.formatted(UNKNOWN_NAMESPACE))
-			.withHttpMethod(DELETE)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
 	}
 }

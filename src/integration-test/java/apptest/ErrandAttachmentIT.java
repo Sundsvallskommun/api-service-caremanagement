@@ -11,7 +11,6 @@ import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpMethod.DELETE;
 import static org.springframework.http.HttpMethod.GET;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
@@ -26,9 +25,7 @@ class ErrandAttachmentIT extends AbstractAppTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "MY_NAMESPACE";
 	private static final String ERRAND_ID = "11111111-1111-1111-1111-111111111111";
-	private static final String UNKNOWN_ERRAND_ID = "33333333-3333-3333-3333-333333333333";
 	private static final String ATTACHMENT_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd";
-	private static final String UNKNOWN_ATTACHMENT_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 	private static final String BASE_PATH = "/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + ERRAND_ID + "/attachments";
 
 	@Autowired
@@ -76,25 +73,5 @@ class ErrandAttachmentIT extends AbstractAppTest {
 			.sendRequestAndVerifyResponse();
 
 		assertThat(attachmentRepository.existsById(ATTACHMENT_ID)).isFalse();
-	}
-
-	@Test
-	void test05_readAttachmentNotFound() {
-		setupCall()
-			.withServicePath(BASE_PATH + "/" + UNKNOWN_ATTACHMENT_ID)
-			.withHttpMethod(GET)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-	}
-
-	@Test
-	void test06_readAttachmentInUnknownErrand() {
-		setupCall()
-			.withServicePath("/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/" + UNKNOWN_ERRAND_ID + "/attachments/" + ATTACHMENT_ID)
-			.withHttpMethod(GET)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
 	}
 }

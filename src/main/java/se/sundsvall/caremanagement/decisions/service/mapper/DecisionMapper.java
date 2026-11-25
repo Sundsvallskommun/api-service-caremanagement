@@ -18,12 +18,15 @@ public final class DecisionMapper {
 				.withDecisionType(e.getDecisionType())
 				.withValue(e.getValue())
 				.withDescription(e.getDescription())
+				.withCoApplicantReason(e.getCoApplicantReason())
 				.withAmount(e.getAmount())
 				.withDecisionMessage(e.getDecisionMessage())
 				.withDecisionDate(e.getDecisionDate())
 				.withPeriodFrom(e.getPeriodFrom())
 				.withPeriodTo(e.getPeriodTo())
 				.withCreatedBy(e.getCreatedBy())
+				.withLifecareStatus(e.getLifecareStatus())
+				.withLifecareId(e.getLifecareId())
 				.withCreated(e.getCreated()))
 			.orElse(null);
 	}
@@ -35,12 +38,14 @@ public final class DecisionMapper {
 				.withDecisionType(source.getDecisionType())
 				.withValue(source.getValue())
 				.withDescription(source.getDescription())
+				.withCoApplicantReason(source.getCoApplicantReason())
 				.withAmount(source.getAmount())
 				.withDecisionMessage(source.getDecisionMessage())
 				.withDecisionDate(source.getDecisionDate())
 				.withPeriodFrom(source.getPeriodFrom())
 				.withPeriodTo(source.getPeriodTo())
-				.withCreatedBy(source.getCreatedBy()))
+				.withCreatedBy(source.getCreatedBy())
+				.withLifecareStatus(source.getLifecareStatus()))
 			.orElse(null);
 	}
 

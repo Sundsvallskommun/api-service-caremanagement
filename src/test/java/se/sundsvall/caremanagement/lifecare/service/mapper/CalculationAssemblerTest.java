@@ -10,6 +10,7 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalD
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationServiceDTO;
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationSpecialExpensePostDTO;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,7 @@ class CalculationAssemblerTest {
 	void assemblesPersonDatesAndIncomes() {
 		final var income = new PersonBasedCalculationIncomePostDTO().id(10).applicantAmount(2400.0);
 
-		final var body = CalculationAssembler.assemble(PERSON_ID, null, List.of(income), MONTH);
+		final var body = CalculationAssembler.assemble(PERSON_ID, null, List.of(income), MONTH, List.of());
 
 		assertThat(body.getPersonId()).isEqualTo(PERSON_ID);
 		assertThat(body.getCalculationDate()).isEqualTo("2026-06-01T00:00:00");
@@ -44,7 +45,7 @@ class CalculationAssemblerTest {
 
 	@Test
 	void nullIncomesBecomeEmptyList() {
-		final var body = CalculationAssembler.assemble(PERSON_ID, null, (List<PersonBasedCalculationIncomePostDTO>) null, MONTH);
+		final var body = CalculationAssembler.assemble(PERSON_ID, null, (List<PersonBasedCalculationIncomePostDTO>) null, MONTH, List.of());
 
 		assertThat(body.getCalculationIncomes()).isEmpty();
 	}
@@ -58,11 +59,67 @@ class CalculationAssemblerTest {
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(100).fromDate("2020-01-01").toDate("2025-12-31"))
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(200).fromDate("2026-01-01").toDate("2026-12-31"));
 
-		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, List.of(), MONTH);
+		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, List.of(), MONTH, List.of());
 
-		assertThat(body.getServiceId()).isEqualTo(5);
-		assertThat(body.getInvestigationId()).isEqualTo(7);
+		// The proposal's services and investigations are all of the person's open cases: never "take the first".
+		assertThat(body.getServiceId()).isNull();
+		assertThat(body.getInvestigationId()).isNull();
 		assertThat(body.getNormId()).isEqualTo(200); // the norm whose window covers 2026-06
+	}
+
+	/**
+	 * The regression behind FamilyCare's "Cannot contain both investigation and service": a calculation belongs to the
+	 * errand's EB insats, and to nothing else.
+	 */
+	@Test
+	void linksTheErrandsInsatsWhenTheProposalOffersItAndNeverAnInvestigation() {
+		final var proposal = new PersonBasedCalculationProposalDTO()
+			.addServicesItem(new PersonBasedCalculationServiceDTO().id(9).type(31).name("Vux"))
+			.addServicesItem(new PersonBasedCalculationServiceDTO().id(2).type(27).name("Ekonomiskt bistånd"))
+			.addInvestigationsItem(new PersonBasedCalculationInvestigationDTO().id(7));
+		final var sections = new CalculationSections(List.of(), List.of(), List.of(), List.of(), new CalculationHeader(null, null, null, null, null, null, 2));
+
+		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, sections, MONTH, List.of());
+
+		assertThat(body.getServiceId()).isEqualTo(2);
+		assertThat(body.getInvestigationId()).isNull();
+	}
+
+	@Test
+	void leavesTheCalculationUnlinkedWhenTheProposalDoesNotOfferTheErrandsInsats() {
+		final var proposal = new PersonBasedCalculationProposalDTO()
+			.addServicesItem(new PersonBasedCalculationServiceDTO().id(9).type(31));
+		final var withUnofferedInsats = new CalculationSections(List.of(), List.of(), List.of(), List.of(), new CalculationHeader(null, null, null, null, null, null, 2));
+		final var withoutInsats = new CalculationSections(List.of(), List.of(), List.of(), List.of(), new CalculationHeader(null, null, null, null, null, null, null));
+
+		assertThat(CalculationAssembler.assemble(PERSON_ID, proposal, withUnofferedInsats, MONTH, List.of()).getServiceId()).isNull();
+		assertThat(CalculationAssembler.assemble(PERSON_ID, proposal, withoutInsats, MONTH, List.of()).getServiceId()).isNull();
+		assertThat(CalculationAssembler.assemble(PERSON_ID, null, withUnofferedInsats, MONTH, List.of()).getServiceId()).isNull();
+	}
+
+	/**
+	 * The regression behind <em>Saknar norm för angiven hushållsstorlek</em>: FamilyCare offered four norms for
+	 * September 2026 and all four covered the month, so "first that covers" picked Matnorm — a reduced food norm with
+	 * no single-person row — while the application had asked for Riksnorm all along.
+	 */
+	@Test
+	void picksTheNormTheApplicationAskedForWhenSeveralCoverTheMonth() {
+		final var proposal = new PersonBasedCalculationProposalDTO()
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(4).name("Matnorm 2026").fromDate("2026-08-01").toDate("2027-02-28"))
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(3).name("Nettonorm 2026").fromDate("2026-08-01").toDate("2027-02-28"))
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(1).name("Riksnorm 2026").fromDate("2026-06-01").toDate("2027-02-28"));
+
+		assertThat(CalculationAssembler.selectNormId(proposal, MONTH, List.of("NATIONAL_NORM"))).contains(1);
+	}
+
+	/** "Annan norm" names no FamilyCare norm, so it selects nothing and the covering-window default stands. */
+	@Test
+	void fallsBackToTheCoveringNormWhenTheNormTypeNamesNoCatalogueEntry() {
+		final var proposal = new PersonBasedCalculationProposalDTO()
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(4).name("Matnorm 2026").fromDate("2026-06-01").toDate("2027-02-28"))
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(1).name("Riksnorm 2026").fromDate("2026-06-01").toDate("2027-02-28"));
+
+		assertThat(CalculationAssembler.selectNormId(proposal, MONTH, List.of("OTHER_NORM"))).contains(4);
 	}
 
 	@Test
@@ -71,7 +128,7 @@ class CalculationAssemblerTest {
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(100).fromDate("2020-01-01").toDate("2020-12-31"))
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(200).fromDate("2021-01-01").toDate("2021-12-31"));
 
-		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, List.of(), MONTH);
+		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, List.of(), MONTH, List.of());
 
 		assertThat(body.getNormId()).isEqualTo(100);
 	}
@@ -81,12 +138,12 @@ class CalculationAssemblerTest {
 		final var mandatory = new PersonBasedCalculationProposalDTO()
 			.aktualiseringMandatory(true)
 			.addAktualiseringsItem(new PersonBasedCalculationAktualiseringDTO().id(42));
-		assertThat(CalculationAssembler.assemble(PERSON_ID, mandatory, List.of(), MONTH).getAktualiseringId()).isEqualTo(42);
+		assertThat(CalculationAssembler.assemble(PERSON_ID, mandatory, List.of(), MONTH, List.of()).getAktualiseringId()).isEqualTo(42);
 
 		final var notMandatory = new PersonBasedCalculationProposalDTO()
 			.aktualiseringMandatory(false)
 			.addAktualiseringsItem(new PersonBasedCalculationAktualiseringDTO().id(42));
-		assertThat(CalculationAssembler.assemble(PERSON_ID, notMandatory, List.of(), MONTH).getAktualiseringId()).isNull();
+		assertThat(CalculationAssembler.assemble(PERSON_ID, notMandatory, List.of(), MONTH, List.of()).getAktualiseringId()).isNull();
 	}
 
 	// ---- Full sections overload --------------------------------------------------------------------------------------
@@ -98,13 +155,13 @@ class CalculationAssemblerTest {
 		final var specialExpense = new PersonBasedCalculationSpecialExpensePostDTO().id(30);
 		final var person = new PersonBasedCalculationPersonPostDTO().personId(PERSON_ID);
 		final var header = new CalculationHeader(999, LocalDate.of(2026, JUNE, 5), LocalDate.of(2026, JUNE, 25),
-			LocalDate.of(2026, JUNE, 5), true, 3);
+			LocalDate.of(2026, JUNE, 5), true, 3, null);
 
 		final var proposal = new PersonBasedCalculationProposalDTO()
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(200).fromDate("2026-01-01").toDate("2026-12-31"));
 
 		final var sections = new CalculationSections(List.of(income), List.of(expense), List.of(specialExpense), List.of(person), header);
-		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, sections, MONTH);
+		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, sections, MONTH, List.of());
 
 		assertThat(body.getPersonId()).isEqualTo(PERSON_ID);
 		assertThat(body.getCalculationIncomes()).containsExactly(income);
@@ -126,7 +183,7 @@ class CalculationAssemblerTest {
 			.addNormsItem(new PersonBasedCalculationNormDTO().id(200).fromDate("2026-01-01").toDate("2026-12-31"));
 
 		final var sections = new CalculationSections(null, null, null, null, null);
-		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, sections, MONTH);
+		final var body = CalculationAssembler.assemble(PERSON_ID, proposal, sections, MONTH, List.of());
 
 		assertThat(body.getCalculationIncomes()).isEmpty();
 		assertThat(body.getCalculationExpenses()).isEmpty();
@@ -136,5 +193,21 @@ class CalculationAssemblerTest {
 		assertThat(body.getNormId()).isEqualTo(200);
 		assertThat(body.getCalculationFromDate()).isEqualTo("2026-06-01T00:00:00");
 		assertThat(body.getCalculationToDate()).isEqualTo("2026-06-30T00:00:00");
+	}
+
+	@Test
+	void matchingNormIdIsStrict() {
+		final var proposal = new PersonBasedCalculationProposalDTO()
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(4).name("Matnorm 2026").fromDate("2026-01-01").toDate("2026-12-31"))
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(1).name("Riksnorm 2026").fromDate("2026-01-01").toDate("2026-12-31"))
+			.addNormsItem(new PersonBasedCalculationNormDTO().id(9).name("Specnorm 2025").fromDate("2025-01-01").toDate("2025-12-31"));
+		final var september = YearMonth.of(2026, Month.SEPTEMBER);
+
+		assertThat(CalculationAssembler.matchingNormId(proposal, september, List.of("riksnorm"))).contains(1);
+		// a norm that does not cover the month does not match, and nothing falls back to the first covering one
+		assertThat(CalculationAssembler.matchingNormId(proposal, september, List.of("Specnorm"))).isEmpty();
+		assertThat(CalculationAssembler.matchingNormId(proposal, september, List.of())).isEmpty();
+		assertThat(CalculationAssembler.matchingNormId(proposal, september, null)).isEmpty();
+		assertThat(CalculationAssembler.matchingNormId(null, september, List.of("Riksnorm"))).isEmpty();
 	}
 }

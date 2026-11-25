@@ -1,12 +1,26 @@
 #========================================
 # Test profile settings (IT tests)
 #========================================
+# Bind the test server to the loopback address the test clients call. On a wildcard bind (the default) macOS hands
+# the random port out even when another local process already listens on 127.0.0.1 at that number - IntelliJ's
+# SonarLint backend holds a dozen such ports - and the test client, calling localhost, then reaches that process
+# instead: a whole test class fails with 400/404 from a server that is not ours (seen 2026-09-24, Apache-HttpCore on
+# 127.0.0.1:64120). Bound to 127.0.0.1, the random port is only ever one that is free there.
+server:
+  address: 127.0.0.1
 logging:
   level:
     root: INFO
 caremanagement:
   identifier:
     required: false
+# The retry of a failed process start would call the engine (WireMock here) between the calls a test stubs.
+scheduler:
+  process-start-retry:
+    cron: '-'
+  # The retry of a queued process message would deliver it between a test's own calls to the retry worker.
+  process-message-retry:
+    cron: '-'
 financial-assistance:
   eligibility:
     return-all-types: false
@@ -21,10 +35,8 @@ integration:
     url: http://localhost:${wiremock.server.port:}/api-templating
   citizen:
     url: http://localhost:${wiremock.server.port:}/api-citizen
-  lifecare-familycare:
-    url: http://localhost:${wiremock.server.port:}/api-lifecare-familycare
-    domain: it-domain
-    key: it-key
+  lifecare-integrator:
+    url: http://localhost:${wiremock.server.port:}/api-lifecare-integrator
 spring:
   datasource:
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
@@ -52,6 +64,8 @@ spring:
             token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
           financial-aid:
             token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
+          lifecare-integrator:
+            token-uri: http://localhost:${wiremock.server.port:}/api-gateway/token
         registration:
           operaton:
             client-id: the-client-id
@@ -66,5 +80,8 @@ spring:
             client-id: the-client-id
             client-secret: the-client-secret
           financial-aid:
+            client-id: the-client-id
+            client-secret: the-client-secret
+          lifecare-integrator:
             client-id: the-client-id
             client-secret: the-client-secret

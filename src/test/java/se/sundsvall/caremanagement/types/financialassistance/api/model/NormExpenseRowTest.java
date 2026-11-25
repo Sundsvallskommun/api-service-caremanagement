@@ -41,6 +41,7 @@ class NormExpenseRowTest {
 		final var position = 3;
 		final var bucket = "EXPENSE";
 		final var costType = "rent";
+		final var costTypeDisplayName = "Boendekostnad";
 		final var otherSubType = "other";
 		final var specification = "specification";
 		final var appliedAmount = BigDecimal.valueOf(1200.00);
@@ -58,6 +59,7 @@ class NormExpenseRowTest {
 			.withPosition(position)
 			.withBucket(bucket)
 			.withCostType(costType)
+			.withCostTypeDisplayName(costTypeDisplayName)
 			.withOtherSubType(otherSubType)
 			.withSpecification(specification)
 			.withAppliedAmount(appliedAmount)
@@ -75,6 +77,7 @@ class NormExpenseRowTest {
 		assertThat(result.getPosition()).isEqualTo(position);
 		assertThat(result.getBucket()).isEqualTo(bucket);
 		assertThat(result.getCostType()).isEqualTo(costType);
+		assertThat(result.getCostTypeDisplayName()).isEqualTo(costTypeDisplayName);
 		assertThat(result.getOtherSubType()).isEqualTo(otherSubType);
 		assertThat(result.getSpecification()).isEqualTo(specification);
 		assertThat(result.getAppliedAmount()).isEqualTo(appliedAmount);

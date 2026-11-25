@@ -28,13 +28,19 @@ class FinancialAssistanceMetadataTest {
 	void testBuilderMethods() {
 		final var income = List.of(TypeOption.create().withCode("SALARY").withExternalDisplayName("Lön"));
 		final var cost = List.of(TypeOption.create().withCode("RENT").withExternalDisplayName("Hyra (inte parkering/garage)"));
+		final var money = List.of(TypeOption.create().withCode("FORSORJNINGSSTOD"));
+		final var paymentMethods = List.of(TypeOption.create().withCode("BANK_TRANSFER"));
 
 		final var metadata = FinancialAssistanceMetadata.create()
 			.withIncomeTypes(income)
-			.withCostTypes(cost);
+			.withCostTypes(cost)
+			.withMoneyTypes(money)
+			.withPaymentMethods(paymentMethods);
 
 		assertThat(metadata.getIncomeTypes()).isEqualTo(income);
 		assertThat(metadata.getCostTypes()).isEqualTo(cost);
+		assertThat(metadata.getMoneyTypes()).isEqualTo(money);
+		assertThat(metadata.getPaymentMethods()).isEqualTo(paymentMethods);
 		assertThat(metadata).hasNoNullFieldsOrProperties();
 	}
 

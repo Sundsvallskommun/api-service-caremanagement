@@ -36,6 +36,10 @@ public class DecisionEntity {
 	@Column(name = "description", length = 4096)
 	private String description;
 
+	/** The co-applicant's orsak, when the household has one; {@link #description} carries the applicant's. */
+	@Column(name = "co_applicant_reason", length = 255)
+	private String coApplicantReason;
+
 	@Column(name = "amount", precision = 15, scale = 2)
 	private BigDecimal amount;
 
@@ -53,6 +57,17 @@ public class DecisionEntity {
 
 	@Column(name = "created_by")
 	private String createdBy;
+
+	/**
+	 * Where the decision stands in Lifecare: {@code PENDING} when finalize creates it, {@code SYNCED} once finalize has
+	 * receipted it against the beslut careM saved in Lifecare, in the same transaction. Null for a decision that is never
+	 * written to Lifecare (a recommendation, say).
+	 */
+	@Column(name = "lifecare_status", length = 16)
+	private String lifecareStatus;
+
+	@Column(name = "lifecare_id", length = 64)
+	private String lifecareId;
 
 	@Column(name = "created")
 	@TimeZoneStorage(NORMALIZE)
@@ -190,6 +205,19 @@ public class DecisionEntity {
 		return this;
 	}
 
+	public String getCoApplicantReason() {
+		return coApplicantReason;
+	}
+
+	public void setCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
+	}
+
+	public DecisionEntity withCoApplicantReason(final String coApplicantReason) {
+		this.coApplicantReason = coApplicantReason;
+		return this;
+	}
+
 	public DecisionEntity withAmount(final BigDecimal amount) {
 		this.amount = amount;
 		return this;
@@ -225,6 +253,32 @@ public class DecisionEntity {
 		return this;
 	}
 
+	public String getLifecareStatus() {
+		return lifecareStatus;
+	}
+
+	public void setLifecareStatus(final String lifecareStatus) {
+		this.lifecareStatus = lifecareStatus;
+	}
+
+	public DecisionEntity withLifecareStatus(final String lifecareStatus) {
+		this.lifecareStatus = lifecareStatus;
+		return this;
+	}
+
+	public String getLifecareId() {
+		return lifecareId;
+	}
+
+	public void setLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+	}
+
+	public DecisionEntity withLifecareId(final String lifecareId) {
+		this.lifecareId = lifecareId;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object obj) {
 		if (this == obj)
@@ -233,21 +287,25 @@ public class DecisionEntity {
 			return false;
 		return Objects.equals(id, other.id) && Objects.equals(errandId, other.errandId)
 			&& Objects.equals(decisionType, other.decisionType) && Objects.equals(value, other.value)
-			&& Objects.equals(description, other.description) && Objects.equals(amount, other.amount)
+			&& Objects.equals(description, other.description) && Objects.equals(coApplicantReason, other.coApplicantReason)
+			&& Objects.equals(amount, other.amount)
 			&& Objects.equals(decisionMessage, other.decisionMessage) && Objects.equals(decisionDate, other.decisionDate)
 			&& Objects.equals(periodFrom, other.periodFrom) && Objects.equals(periodTo, other.periodTo)
-			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(created, other.created);
+			&& Objects.equals(createdBy, other.createdBy) && Objects.equals(lifecareStatus, other.lifecareStatus)
+			&& Objects.equals(lifecareId, other.lifecareId) && Objects.equals(created, other.created);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, errandId, decisionType, value, description, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, created);
+		return Objects.hash(id, errandId, decisionType, value, description, coApplicantReason, amount, decisionMessage, decisionDate, periodFrom, periodTo, createdBy, lifecareStatus, lifecareId,
+			created);
 	}
 
 	@Override
 	public String toString() {
 		return "DecisionEntity{id='" + id + "', errandId='" + errandId + "', decisionType='" + decisionType
 			+ "', value='" + value + "', amount=" + amount + ", decisionDate=" + decisionDate
-			+ ", periodFrom=" + periodFrom + ", periodTo=" + periodTo + ", createdBy='" + createdBy + "', created=" + created + '}';
+			+ ", periodFrom=" + periodFrom + ", periodTo=" + periodTo + ", createdBy='" + createdBy + "', lifecareStatus='" + lifecareStatus
+			+ "', lifecareId='" + lifecareId + "', created=" + created + '}';
 	}
 }

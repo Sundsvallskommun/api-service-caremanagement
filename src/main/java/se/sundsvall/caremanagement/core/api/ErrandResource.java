@@ -117,12 +117,15 @@ class ErrandResource {
 		@Parameter(name = "hasUnacknowledgedNotifications",
 			description = "When true, only errands that have at least one unacknowledged notification are returned. Combine with notificationOwnerId to scope to a single recipient.",
 			example = "true") @RequestParam(defaultValue = "false") final boolean hasUnacknowledgedNotifications,
+		@Parameter(name = "hasUnhandledNotifications",
+			description = "When true, only errands that have at least one notification not yet marked handled are returned. Handled is a state of its own: a message may have been read without having been dealt with. Combine with notificationOwnerId to scope to a single recipient.",
+			example = "true") @RequestParam(defaultValue = "false") final boolean hasUnhandledNotifications,
 		@Parameter(name = "notificationOwnerId",
-			description = "Scopes the unacknowledged-notification filter to notifications addressed to this recipient (caseworker). Only applied when hasUnacknowledgedNotifications=true.",
+			description = "Scopes the notification filters to notifications addressed to this recipient (caseworker). Only applied when hasUnacknowledgedNotifications=true or hasUnhandledNotifications=true.",
 			example = "jane01doe") @Nullable @RequestParam(required = false) final String notificationOwnerId,
 		@ParameterObject @PageableDefault(sort = "touched", direction = Sort.Direction.DESC) final Pageable pageable) {
 
-		return ok(service.findErrands(municipalityId, namespace, filter, hasUnacknowledgedNotifications, notificationOwnerId, pageable));
+		return ok(service.findErrands(municipalityId, namespace, filter, hasUnacknowledgedNotifications, hasUnhandledNotifications, notificationOwnerId, pageable));
 	}
 
 	@GetMapping(path = "/count", produces = APPLICATION_JSON_VALUE)

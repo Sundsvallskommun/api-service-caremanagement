@@ -1,0 +1,14 @@
+{
+	"decisionId": "${json-unit.any-string}",
+	"lifecareDecision": {
+		"decisionId": "${json-unit.any-string}",
+		"lifecareId": "815",
+		"outcome": "REGISTERED"
+	},
+	"processMessageCorrelated": true,
+	"communication": {
+		"minaSidor": true,
+		"digitalMailbox": false,
+		"letter": false
+	}
+}

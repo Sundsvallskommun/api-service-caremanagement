@@ -22,8 +22,8 @@ public class NormIncomeRow {
 	@Schema(description = "The row id", accessMode = Schema.AccessMode.READ_ONLY)
 	private String id;
 
-	@Schema(description = "Who created the row: the process or a caseworker", allowableValues = {
-		"SYSTEM", "CASEWORKER"
+	@Schema(description = "Who created the row: the process from SSBTEK (SYSTEM), the process from the application's declared incomes (APPLICATION) or a caseworker", allowableValues = {
+		"SYSTEM", "APPLICATION", "CASEWORKER"
 	}, accessMode = Schema.AccessMode.READ_ONLY)
 	private String origin;
 

@@ -3,10 +3,10 @@ package se.sundsvall.caremanagement.types.financialassistance.integration.db.mod
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Objects;
@@ -20,11 +20,13 @@ import static org.hibernate.annotations.TimeZoneStorageType.NORMALIZE;
  * A single financial assistance income warning on an errand — an acknowledgeable object the caseworker reviews in
  * Draken. The daily
  * prepare step reconciles these against the current SSBTEK picture (creating new ones, auto-closing resolved ones);
- * dedup is on {@code (errandId, type, sourceKey)}.
+ * dedup is on {@code (errandId, type, sourceKey)}, which the database keeps unique.
  */
 @Entity
-@Table(name = "errand_financial_assistance_warning", indexes = {
-	@Index(name = "idx_fa_warning_dedup", columnList = "errand_id, type, source_key")
+@Table(name = "errand_financial_assistance_warning", uniqueConstraints = {
+	@UniqueConstraint(name = "uq_fa_warning_dedup", columnNames = {
+		"errand_id", "type", "source_key"
+	})
 })
 public class FaWarningEntity {
 

@@ -52,7 +52,7 @@ import static se.sundsvall.caremanagement.Constants.NAMESPACE_VALIDATION_MESSAGE
 @RestController
 @Validated
 @RequestMapping("/{municipalityId}/{namespace}")
-@Tag(name = "Notifications", description = "User-facing notifications raised against an errand. Recipients (`ownerId`) acknowledge them when seen; expired ones are purged by a daily background job.")
+@Tag(name = "Notifications", description = "User-facing notifications raised against an errand. Recipients (`ownerId`) acknowledge them when seen and mark them handled when acted on; expired ones are purged by a daily background job.")
 @ApiResponses(value = {
 	@ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(oneOf = {
 		Problem.class, ConstraintViolationProblem.class
@@ -117,10 +117,12 @@ class NotificationResource {
 	}
 
 	@PatchMapping(path = "/errands/{errandId}/notifications/{notificationId}", consumes = APPLICATION_JSON_VALUE, produces = ALL_VALUE)
-	@Operation(summary = "Update notification", description = "Partial update. Only `acknowledged`, `description`, `content`, `type`, and `subType` are honoured; other fields in the body are ignored.", responses = {
-		@ApiResponse(responseCode = "204", description = "Successful operation"),
-		@ApiResponse(responseCode = "404", description = "Not found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
-	})
+	@Operation(summary = "Update notification",
+		description = "Partial update. Only `acknowledged`, `handled`, `description`, `content`, `type`, and `subType` are honoured; other fields in the body are ignored. Setting `handled=true` also sets `acknowledged=true`.",
+		responses = {
+			@ApiResponse(responseCode = "204", description = "Successful operation"),
+			@ApiResponse(responseCode = "404", description = "Not found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+		})
 	@Validated(OnUpdate.class)
 	ResponseEntity<Void> updateNotification(
 		@Parameter(name = "municipalityId", example = "2281") @ValidMunicipalityId(groups = OnUpdate.class) @PathVariable final String municipalityId,
@@ -159,6 +161,20 @@ class NotificationResource {
 		@Parameter(name = "errandId") @ValidUuid @PathVariable final String errandId) {
 
 		service.acknowledgeAll(municipalityId, namespace, errandId);
+		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
+	}
+
+	@PutMapping(path = "/errands/{errandId}/notifications/handled", produces = ALL_VALUE)
+	@Operation(summary = "Mark all notifications on an errand handled", description = "Sets `handled=true` (and with it `acknowledged=true`) on every notification belonging to the errand that is not already handled.", responses = {
+		@ApiResponse(responseCode = "204", description = "Successful operation"),
+		@ApiResponse(responseCode = "404", description = "Errand not found", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+	})
+	ResponseEntity<Void> handleAll(
+		@Parameter(name = "municipalityId", example = "2281") @ValidMunicipalityId @PathVariable final String municipalityId,
+		@Parameter(name = "namespace", example = "MY_NAMESPACE") @Pattern(regexp = NAMESPACE_REGEXP, message = NAMESPACE_VALIDATION_MESSAGE) @PathVariable final String namespace,
+		@Parameter(name = "errandId") @ValidUuid @PathVariable final String errandId) {
+
+		service.handleAll(municipalityId, namespace, errandId);
 		return noContent().header(CONTENT_TYPE, ALL_VALUE).build();
 	}
 

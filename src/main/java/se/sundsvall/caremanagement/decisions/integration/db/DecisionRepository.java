@@ -13,5 +13,8 @@ public interface DecisionRepository extends JpaRepository<DecisionEntity, String
 
 	Optional<DecisionEntity> findByErrandIdAndId(String errandId, String id);
 
+	/** Whether a decision of the given type and value is recorded on an errand other than the given one. */
+	boolean existsByDecisionTypeAndValueAndErrandIdNot(String decisionType, String value, String errandId);
+
 	long deleteByErrandId(String errandId);
 }

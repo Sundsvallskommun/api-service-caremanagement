@@ -2,7 +2,7 @@ package se.sundsvall.caremanagement.shared;
 
 /**
  * Cross-cutting guard for errand access. Sub-resource modules (notes, journal, document, conversation,
- * notifications, permits, referrals, status history, RPA, process-messages, …) depend on this thin port
+ * notifications, permits, referrals, status history, process-messages, …) depend on this thin port
  * instead of pulling in the whole {@code core} {@code ErrandService} just to check that the parent errand
  * exists in the caller's tenant. The {@code core} module provides the implementation.
  *

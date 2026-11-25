@@ -4,84 +4,77 @@ import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationCalculati
 import generated.se.sundsvall.lifecarefamilycare.PersonBasedCalculationProposalDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole;
 import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
+import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
 
-import static java.time.Month.MAY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.APPLICANT;
-import static se.sundsvall.caremanagement.lifecare.service.model.ApplicantRole.CO_APPLICANT;
+import static org.assertj.core.api.Assertions.tuple;
 
 class ApplicationIncomeToFamilyCareMapperTest {
 
 	private static PersonBasedCalculationProposalDTO proposal() {
 		return new PersonBasedCalculationProposalDTO()
-			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(11).name("Lön efter skatt"))
-			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(12).name("Swish/Insättningar/Överföringar"))
-			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(13).name("Övriga inkomster"));
-	}
-
-	private static ApplicationIncome income(final String type, final String amount, final LocalDate date, final ApplicantRole role) {
-		return new ApplicationIncome(type, new BigDecimal(amount), date, role);
+			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(30).name("Swish/Insättningar/Överföringar"))
+			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(10).name("Lön efter skatt"))
+			.addCalculationIncomeTypesItem(new PersonBasedCalculationCalculationIncomeTypeDTO().id(40).name("Övriga inkomster"));
 	}
 
 	@Test
-	void resolvesApplicationTypeToFamilyCareTypeIdByName() {
-		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
-			income("SALARY", "18500", LocalDate.of(2026, MAY, 25), APPLICANT),
-			income("SWISH_DEPOSITS", "300", LocalDate.of(2026, MAY, 10), CO_APPLICANT)),
-			proposal());
+	void declaredIncomesResolveToTheProposalsTypesAndSumPerTypeAndRecipient() {
+		final var incomes = List.of(
+			new ApplicationIncome("SWISH_DEPOSITS", null, BigDecimal.valueOf(599), LocalDate.of(2026, Month.SEPTEMBER, 24), "Swish/kontoinsättningar"),
+			new ApplicationIncome("OTHER_INCOME", "APPLICANT", BigDecimal.valueOf(100), LocalDate.of(2026, Month.SEPTEMBER, 1), "Annan inkomst"),
+			new ApplicationIncome("RENT_SHARE_FROM_CHILD", "APPLICANT", BigDecimal.valueOf(200), LocalDate.of(2026, Month.SEPTEMBER, 10), "Hyresdel från barn"),
+			new ApplicationIncome("SALARY", "CO_APPLICANT", BigDecimal.valueOf(6788), null, "Lön"));
 
-		assertThat(lines).hasSize(2);
-		final var salary = lines.stream().filter(line -> line.typeId() == 11).findFirst().orElseThrow();
-		assertThat(salary.typeName()).isEqualTo("Lön efter skatt");
-		assertThat(salary.recipient()).isEqualTo("APPLICANT");
-		assertThat(salary.amount()).isEqualByComparingTo("18500");
-		assertThat(salary.date()).isEqualTo(OffsetDateTime.of(2026, 5, 25, 0, 0, 0, 0, ZoneOffset.UTC));
-		assertThat(salary.note()).isEqualTo("Ansökan");
+		final var result = ApplicationIncomeToFamilyCareMapper.toIncomeLines(incomes, proposal());
 
-		final var swish = lines.stream().filter(line -> line.typeId() == 12).findFirst().orElseThrow();
-		assertThat(swish.recipient()).isEqualTo("CO_APPLICANT");
+		assertThat(result.lines())
+			.extracting(FamilyCareIncomeLine::typeId, FamilyCareIncomeLine::typeName, FamilyCareIncomeLine::recipient, FamilyCareIncomeLine::amount, FamilyCareIncomeLine::date,
+				FamilyCareIncomeLine::note)
+			.containsExactly(
+				tuple(30, "Swish/Insättningar/Överföringar", "APPLICANT", BigDecimal.valueOf(599), OffsetDateTime.of(2026, 9, 24, 0, 0, 0, 0, ZoneOffset.UTC),
+					"Ansökan: Swish/kontoinsättningar"),
+				tuple(40, "Övriga inkomster", "APPLICANT", BigDecimal.valueOf(300), OffsetDateTime.of(2026, 9, 10, 0, 0, 0, 0, ZoneOffset.UTC),
+					"Ansökan: Annan inkomst, Hyresdel från barn"),
+				tuple(10, "Lön efter skatt", "CO_APPLICANT", BigDecimal.valueOf(6788), null, "Ansökan: Lön"));
+		assertThat(result.untransferable()).isEmpty();
 	}
 
 	@Test
-	void foldsTheManyOtherTypesOntoTheSameFamilyCareType() {
-		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
-			income("OTHER_INCOME", "100", null, APPLICANT),
-			income("RENT_SHARE_FROM_CHILD", "200", null, APPLICANT),
-			income("FINANCIAL_AID_OTHER_MUNICIPALITY", "300", null, APPLICANT)),
-			proposal());
+	void anIncomeNoProposalTypeTakesIsReportedNotDropped() {
+		final var pension = new ApplicationIncome("OCCUPATIONAL_PENSION_INSURANCE", null, BigDecimal.valueOf(533), null, "Tjänstepension/försäkringar");
+		final var unknown = new ApplicationIncome("LOTTERY", null, BigDecimal.ONE, null, null);
 
-		// All three map to "Övriga inkomster" (id 13); the downstream feeder folds them — here we just confirm the id.
-		assertThat(lines).hasSize(3).allMatch(line -> line.typeId() == 13);
+		final var result = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(pension, unknown), proposal());
+
+		assertThat(result.lines()).isEmpty();
+		assertThat(result.untransferable()).containsExactly(pension, unknown);
 	}
 
 	@Test
-	void skipsUnknownApplicationTypeAndTypeNotOfferedByProposal() {
-		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
-			income("MADE_UP_TYPE", "100", null, APPLICANT),               // not in the application→FamilyCare table
-			income("CHILD_SUPPORT", "100", null, APPLICANT)),             // maps to "Underhållsstöd", absent from this proposal
-			proposal());
+	void zeroAndMissingAmountsAndNullsAreSkipped() {
+		final var incomes = new java.util.ArrayList<ApplicationIncome>();
+		incomes.add(null);
+		incomes.add(new ApplicationIncome("SWISH_DEPOSITS", null, BigDecimal.ZERO, null, null));
+		incomes.add(new ApplicationIncome("SWISH_DEPOSITS", null, null, null, null));
 
-		assertThat(lines).isEmpty();
+		final var result = ApplicationIncomeToFamilyCareMapper.toIncomeLines(incomes, proposal());
+
+		assertThat(result.lines()).isEmpty();
+		assertThat(result.untransferable()).isEmpty();
 	}
 
 	@Test
-	void nullIncomeTypeIsSkipped() {
-		final var lines = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(
-			income(null, "100", null, APPLICANT)),
-			proposal());
+	void theCodeStandsInForAMissingLabelAndNoInputGivesNothing() {
+		final var result = ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(new ApplicationIncome("SWISH_DEPOSITS", null, BigDecimal.TEN, null, null)), proposal());
 
-		assertThat(lines).isEmpty();
-	}
-
-	@Test
-	void nullInputsYieldEmpty() {
-		assertThat(ApplicationIncomeToFamilyCareMapper.toIncomeLines(null, proposal())).isEmpty();
-		assertThat(ApplicationIncomeToFamilyCareMapper.toIncomeLines(List.of(), new PersonBasedCalculationProposalDTO())).isEmpty();
+		assertThat(result.lines()).extracting(FamilyCareIncomeLine::note).containsExactly("Ansökan: SWISH_DEPOSITS");
+		assertThat(ApplicationIncomeToFamilyCareMapper.toIncomeLines(null, null).lines()).isEmpty();
 	}
 }

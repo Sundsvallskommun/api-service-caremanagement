@@ -25,10 +25,7 @@ class FinancialAssistanceViewTest {
 	private static final OffsetDateTime LAST_DAILY_RUN_AT = OffsetDateTime.parse("2026-06-06T03:00:00Z");
 	private static final FinancialAssistanceData DATA = FinancialAssistanceData.create().withApplicationType("NEW");
 	private static final Decision RECOMMENDATION = Decision.create().withDecisionType("RECOMMENDATION").withValue("OK");
-	private static final SectionApprovals SECTION_APPROVALS = SectionApprovals.create()
-		.withCalculation(SectionApproval.create().withSection("CALCULATION").withApproved(true))
-		.withPayment(SectionApproval.create().withSection("PAYMENT").withApproved(false))
-		.withDecision(SectionApproval.create().withSection("DECISION").withApproved(false));
+	private static final CommunicationChannels COMMUNICATION = CommunicationChannels.create().withMinaSidor(true).withDigitalMailbox(false).withLetter(false);
 
 	@BeforeAll
 	static void setup() {
@@ -63,9 +60,11 @@ class FinancialAssistanceViewTest {
 			.withModified(MODIFIED)
 			.withTouched(TOUCHED)
 			.withLastDailyRunAt(LAST_DAILY_RUN_AT)
+			.withLifecareServiceId(7700)
 			.withData(DATA)
 			.withRecommendation(RECOMMENDATION)
-			.withSectionApprovals(SECTION_APPROVALS);
+			.withCommunication(COMMUNICATION)
+			.withHouseholdSizeChanged(true);
 
 		assertThat(view.getId()).isEqualTo("cb20c51f-fcf3-42c0-b613-de563634a8ec");
 		assertThat(view.getErrandNumber()).isEqualTo("EB-26060042");
@@ -82,9 +81,11 @@ class FinancialAssistanceViewTest {
 		assertThat(view.getModified()).isEqualTo(MODIFIED);
 		assertThat(view.getTouched()).isEqualTo(TOUCHED);
 		assertThat(view.getLastDailyRunAt()).isEqualTo(LAST_DAILY_RUN_AT);
+		assertThat(view.getLifecareServiceId()).isEqualTo(7700);
 		assertThat(view.getData()).isEqualTo(DATA);
 		assertThat(view.getRecommendation()).isEqualTo(RECOMMENDATION);
-		assertThat(view.getSectionApprovals()).isEqualTo(SECTION_APPROVALS);
+		assertThat(view.getCommunication()).isEqualTo(COMMUNICATION);
+		assertThat(view.getHouseholdSizeChanged()).isTrue();
 		assertThat(view).hasNoNullFieldsOrProperties();
 	}
 

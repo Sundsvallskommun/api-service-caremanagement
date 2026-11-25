@@ -18,7 +18,10 @@ public class ActualisationRequest {
 	@ValidUuid
 	private String applicant;
 
-	@Schema(description = "The application month (ISO year-month, yyyy-MM); the actualisation's intake date is the first day of this month", examples = "2026-06", requiredMode = Schema.RequiredMode.REQUIRED)
+	@Schema(
+		description = "The application month (ISO year-month, yyyy-MM). The actualisation's intake date (Ansökningsdatum) is the day the application was submitted, read from the errand's created stamp; when no errandId is given, or the errand is unknown, it falls back to the first day of this month.",
+		examples = "2026-06",
+		requiredMode = Schema.RequiredMode.REQUIRED)
 	@NotNull
 	@Pattern(regexp = "^\\d{4}-(0[1-9]|1[0-2])$", message = "must be an ISO year-month (yyyy-MM)")
 	private String applicationMonth;

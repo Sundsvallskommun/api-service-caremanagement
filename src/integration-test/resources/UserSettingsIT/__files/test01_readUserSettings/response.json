@@ -1,0 +1,6 @@
+{
+	"adAccount": "joe01doe",
+	"ssbtekOpenInNewWindow": false,
+	"created": "${json-unit.any-string}",
+	"modified": "${json-unit.any-string}"
+}

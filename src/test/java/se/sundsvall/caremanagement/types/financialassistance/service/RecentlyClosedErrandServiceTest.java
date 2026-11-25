@@ -34,7 +34,15 @@ class RecentlyClosedErrandServiceTest {
 	private ErrandQueryService errandQueryServiceMock;
 
 	private RecentlyClosedErrandService service() {
-		return new RecentlyClosedErrandService(financialAssistanceRepositoryMock, errandQueryServiceMock, WINDOW_DAYS);
+		return new RecentlyClosedErrandService(financialAssistanceRepositoryMock, errandQueryServiceMock, WINDOW_DAYS, true);
+	}
+
+	@Test
+	void switchedOffFindsNothingAndReadsNothing() {
+		final var disabled = new RecentlyClosedErrandService(financialAssistanceRepositoryMock, errandQueryServiceMock, WINDOW_DAYS, false);
+
+		assertThat(disabled.findRecentlyClosed(MUNICIPALITY_ID, NAMESPACE, List.of(APPLICANT))).isEmpty();
+		verifyNoInteractions(financialAssistanceRepositoryMock, errandQueryServiceMock);
 	}
 
 	private void errand(final String errandId, final String typeSlug, final String status, final OffsetDateTime touched) {

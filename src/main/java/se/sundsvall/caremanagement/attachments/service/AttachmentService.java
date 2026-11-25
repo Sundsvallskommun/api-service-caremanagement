@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
+import static org.springframework.transaction.annotation.Propagation.REQUIRES_NEW;
 import static se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper.toAttachment;
 import static se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper.toAttachmentEntity;
 import static se.sundsvall.caremanagement.attachments.service.mapper.AttachmentMapper.toAttachmentList;
@@ -101,6 +103,72 @@ public class AttachmentService {
 	 */
 	public String createCaseDataAttachment(final String municipalityId, final String namespace, final String errandId, final MultipartFile file) {
 		return createAttachment(municipalityId, namespace, errandId, DOCUMENT_TYPE_CASE_DATA, file);
+	}
+
+	/**
+	 * Whether the errand carries any of the citizen's own uploaded application files ({@code documentType = APPLICATION})
+	 * — the existence question a type module needs (e.g. the financial assistance återansökan attachment rule) without
+	 * listing the attachments, so the {@code Attachment} model never crosses the module boundary.
+	 */
+	@Transactional(readOnly = true)
+	public boolean applicationAttachmentsExist(final String errandId) {
+		return attachmentRepository.existsByErrandIdAndDocumentType(errandId, DOCUMENT_TYPE_APPLICATION);
+	}
+
+	/**
+	 * The documents that make up the citizen's application, for archiving into the case system: the application PDF
+	 * itself — the {@code CASE_DATA} snapshot Mina sidor supplies, stored as {@code {errandNumber}.pdf} — followed by
+	 * careM's merge of the citizen's own uploads, {@value #COMBINED_PDF_FILE_NAME}.
+	 *
+	 * <p>
+	 * Verksamheten asked for both (2026-09-23). They are different documents and either can legitimately be absent: an
+	 * application can arrive with no uploaded files, and an errand created through the API rather than Mina sidor
+	 * carries no case-data snapshot.
+	 *
+	 * <p>
+	 * The merge is a {@code GENERATED} document, not an {@code APPLICATION} one — the citizen's own uploads carry the
+	 * latter and careM's merge of them carries the former. Filtering on {@code APPLICATION} matches nothing, silently,
+	 * and the archive then reports that there was nothing to archive; that shipped once.
+	 *
+	 * <p>
+	 * Returns {@link SourceFile} rather than the {@code Attachment} model for the same reason
+	 * {@link #applicationAttachmentsExist} returns a boolean — the model stays inside this module, while
+	 * {@code SourceFile} already crosses it for {@link #combineToPdf}.
+	 *
+	 * <p>
+	 * A transaction of its own: the Lifecare intake calls this after it has created the actualisation, and treats a
+	 * failed read as best-effort. Joining the intake's transaction, a failure here would mark it rollback-only and undo
+	 * the intake's own writes after all.
+	 *
+	 * @return the application documents in archiving order, possibly empty
+	 */
+	@Transactional(readOnly = true, propagation = REQUIRES_NEW)
+	public List<SourceFile> readApplicationArchiveDocuments(final String errandId) {
+		final var attachments = attachmentRepository.findByErrandId(errandId);
+
+		return Stream.of(
+			firstMatching(attachments, DOCUMENT_TYPE_CASE_DATA, null),
+			firstMatching(attachments, DOCUMENT_TYPE_GENERATED, COMBINED_PDF_FILE_NAME))
+			.flatMap(Optional::stream)
+			.toList();
+	}
+
+	/** The first attachment of the given type, optionally narrowed to one file name, read into memory. */
+	private static Optional<SourceFile> firstMatching(final List<AttachmentEntity> attachments, final String documentType, final String fileName) {
+		return attachments.stream()
+			.filter(attachment -> documentType.equals(attachment.getDocumentType()))
+			.filter(attachment -> (fileName == null) || fileName.equals(attachment.getFileName()))
+			.findFirst()
+			.map(attachment -> new SourceFile(attachment.getFileName(), attachment.getMimeType(), readContent(attachment)));
+	}
+
+	/** The stored bytes of one attachment. */
+	private static byte[] readContent(final AttachmentEntity attachment) {
+		try (final var in = attachment.getAttachmentData().getFile().getBinaryStream()) {
+			return in.readAllBytes();
+		} catch (final IOException | SQLException exception) {
+			throw Problem.valueOf(INTERNAL_SERVER_ERROR, STREAM_ERROR_MESSAGE.formatted(exception.getClass().getSimpleName(), attachment.getId(), exception.getMessage()));
+		}
 	}
 
 	/**

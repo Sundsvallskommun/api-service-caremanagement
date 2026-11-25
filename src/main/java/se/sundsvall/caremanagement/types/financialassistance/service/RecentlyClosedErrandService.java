@@ -34,6 +34,12 @@ import static se.sundsvall.caremanagement.types.financialassistance.configuratio
  * the
  * situation. The window is a policy value — confirm the day count with legal — configured via
  * {@code financial-assistance.eligibility.recently-closed-window-days}.
+ *
+ * <p>
+ * <b>Switched off by default</b> ({@code financial-assistance.eligibility.recently-closed-enabled}): a careM errand is
+ * one month's application and the normal flow ends in CLOSED once the utbetalning is effectuated, so counting CLOSED
+ * errands would freeze next month's ordinary renewal. The guard is meant for an EB insats that ended in Lifecare and
+ * stays off until it reads that. While off, nothing is ever recently closed.
  */
 @Service
 @Transactional(readOnly = true)
@@ -46,13 +52,16 @@ public class RecentlyClosedErrandService {
 	private final FinancialAssistanceRepository financialAssistanceRepository;
 	private final ErrandQueryService errandQueryService;
 	private final int windowDays;
+	private final boolean enabled;
 
 	RecentlyClosedErrandService(final FinancialAssistanceRepository financialAssistanceRepository,
 		final ErrandQueryService errandQueryService,
-		@Value("${financial-assistance.eligibility.recently-closed-window-days:30}") final int windowDays) {
+		@Value("${financial-assistance.eligibility.recently-closed-window-days:30}") final int windowDays,
+		@Value("${financial-assistance.eligibility.recently-closed-enabled:false}") final boolean enabled) {
 		this.financialAssistanceRepository = financialAssistanceRepository;
 		this.errandQueryService = errandQueryService;
 		this.windowDays = windowDays;
+		this.enabled = enabled;
 	}
 
 	/**
@@ -61,6 +70,9 @@ public class RecentlyClosedErrandService {
 	 * Parties are partyIds (applicant + optional co-applicant); blank entries are ignored.
 	 */
 	public Optional<RecentlyClosed> findRecentlyClosed(final String municipalityId, final String namespace, final Collection<String> partyIds) {
+		if (!enabled) {
+			return Optional.empty();
+		}
 		final var cutoff = OffsetDateTime.now(ZoneId.systemDefault()).minusDays(windowDays);
 		final var errandIds = partyIds.stream()
 			.filter(StringUtils::hasText)

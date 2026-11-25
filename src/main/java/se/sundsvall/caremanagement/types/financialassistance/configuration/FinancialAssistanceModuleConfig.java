@@ -61,7 +61,9 @@ public class FinancialAssistanceModuleConfig {
 	// Status codes
 	public static final String STATUS_RECEIVED = "RECEIVED";
 	/**
-	 * A freshly created re-application that hit the recently-closed guard — frozen for a caseworker to reopen + release.
+	 * A freshly created errand held back from automatic preparation — a party with protected identity (or whose flag could
+	 * not be read), or a re-application that hit the recently-closed guard — frozen for a caseworker to take by hand and
+	 * release. The two reasons deliberately share this one status, so it never tells which one applied.
 	 */
 	public static final String STATUS_NEEDS_MANUAL_REVIEW = "NEEDS_MANUAL_REVIEW";
 	public static final String STATUS_UNDER_REVIEW = "UNDER_REVIEW";
@@ -79,6 +81,28 @@ public class FinancialAssistanceModuleConfig {
 	 * that month. A rejected application is decided but not pending — the citizen may apply for the month again.
 	 */
 	public static final Set<String> TERMINAL_STATUSES = Set.of(STATUS_CLOSED, STATUS_WITHDRAWN, STATUS_REJECTED);
+
+	// Decision outcome codes — the value stored on the PAYMENT Decision row and the Decision-form dropdown
+	public static final String OUTCOME_BIFALL = "BIFALL";
+	public static final String OUTCOME_DELAVSLAG = "DELAVSLAG";
+	public static final String OUTCOME_AVSLAG = "AVSLAG";
+
+	/**
+	 * Every recognised decision outcome. {@code AVVISNING} was dropped 2026-09-21 at verksamheten's request — they do
+	 * not use it for ekonomiskt bistånd, so it is no longer offered or accepted.
+	 */
+	public static final Set<String> OUTCOMES = Set.of(OUTCOME_BIFALL, OUTCOME_DELAVSLAG, OUTCOME_AVSLAG);
+
+	/**
+	 * The outcomes that grant something and therefore carry a belopp and one or more utbetalningar. Avslag implies
+	 * 0 kr, no payment, and takes the process's rejected path.
+	 */
+	public static final Set<String> OUTCOMES_CARRYING_AMOUNT = Set.of(OUTCOME_BIFALL, OUTCOME_DELAVSLAG);
+
+	/** Whether a decision outcome grants an amount — see {@link #OUTCOMES_CARRYING_AMOUNT}. */
+	public static boolean outcomeCarriesAmount(final String outcome) {
+		return outcome != null && OUTCOMES_CARRYING_AMOUNT.contains(outcome);
+	}
 
 	// Status display names (Swedish — the labels Draken shows the caseworker)
 	private static final String DISPLAY_RECEIVED = "Inkommen";
@@ -168,7 +192,7 @@ public class FinancialAssistanceModuleConfig {
 			.allowedTransition(STATUS_RECEIVED, STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW, STATUS_WITHDRAWN)
 			.allowedTransition(STATUS_NEEDS_MANUAL_REVIEW, STATUS_UNDER_REVIEW, STATUS_WITHDRAWN)
 			.allowedTransition(STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_SUPPLEMENT_REQUESTED)
-			.allowedTransition(STATUS_SUPPLEMENT_REQUESTED, STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_WITHDRAWN)
+			.allowedTransition(STATUS_SUPPLEMENT_REQUESTED, STATUS_UNDER_REVIEW, STATUS_AWAITING_DECISION, STATUS_GRANTED, STATUS_REJECTED, STATUS_WITHDRAWN)
 			.allowedTransition(STATUS_AWAITING_DECISION, STATUS_GRANTED, STATUS_REJECTED, STATUS_SUPPLEMENT_REQUESTED)
 			.allowedTransition(STATUS_GRANTED, STATUS_PAID)
 			.allowedTransition(STATUS_PAID, STATUS_CLOSED)

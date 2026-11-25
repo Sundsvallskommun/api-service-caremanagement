@@ -34,9 +34,6 @@ final class ErrandEventDescriber {
 		Map.entry("documents", new String[] {
 			"dokument", "dokument"
 		}),
-		Map.entry("journal-entries", new String[] {
-			"journalanteckning", "journalanteckningar"
-		}),
 		Map.entry("messages", new String[] {
 			"meddelande", "meddelanden"
 		}),
@@ -67,12 +64,6 @@ final class ErrandEventDescriber {
 		Map.entry("warnings", new String[] {
 			"varning", "varningar"
 		}),
-		Map.entry("monitorings", new String[] {
-			"bevakning", "bevakningar"
-		}),
-		Map.entry("sections", new String[] {
-			"sektion", "sektioner"
-		}),
 		Map.entry("status-history", new String[] {
 			"statushistorik", "statushistorik"
 		}),
@@ -84,6 +75,12 @@ final class ErrandEventDescriber {
 		}),
 		Map.entry("draft", new String[] {
 			"utkastberäkning", "utkastberäkning"
+		}),
+		Map.entry("ssbtek", new String[] {
+			"SSBTEK-underlag", "SSBTEK-underlag"
+		}),
+		Map.entry("household-identifiers", new String[] {
+			"hushållets personnummer", "hushållets personnummer"
 		}));
 
 	private ErrandEventDescriber() {}
@@ -109,12 +106,6 @@ final class ErrandEventDescriber {
 				resource = "rad";
 			}
 			return "Återställde " + singular(resource) + calculationContext(tail, resource);
-		}
-		if ("approval".equals(leaf) || "approvals".equals(leaf)) {
-			if ("GET".equals(method)) {
-				return "Visade sektionsgodkännanden";
-			}
-			return "Godkände en sektion";
 		}
 		if ("acknowledged".equals(leaf)) {
 			return "Kvitterade notiser";

@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.core.spi;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import se.sundsvall.caremanagement.core.integration.db.ErrandRepository;
 import se.sundsvall.caremanagement.core.service.mapper.ErrandMapper;
 
 import static se.sundsvall.caremanagement.core.integration.db.specification.ErrandSpecification.selection;
+import static se.sundsvall.caremanagement.core.service.mapper.ErrandMapper.toErrandList;
 
 /**
  * Core-owned, read-side query facade over the errand envelope, exposed via the {@code spi} named interface so other
@@ -60,5 +62,16 @@ public class ErrandQueryService {
 		return errandRepository.findAll(selection(namespace, municipalityId, typeSlug, from, to)).stream()
 			.map(errand -> new ErrandStatusView(errand.getStatus(), errand.getAssignedUserId()))
 			.toList();
+	}
+
+	/**
+	 * The errands of the given types that are still in {@code status} with no process instance linked, created within
+	 * {@code createdFrom}..{@code createdTo} (both inclusive), oldest first. What a type module reads to find the errands
+	 * whose process start did not take, without reaching into core's persistence layer.
+	 */
+	@Transactional(readOnly = true)
+	public List<Errand> findWithoutProcessInstance(final String municipalityId, final String namespace, final Collection<String> typeSlugs,
+		final String status, final OffsetDateTime createdFrom, final OffsetDateTime createdTo) {
+		return toErrandList(errandRepository.findWithoutProcessInstance(municipalityId, namespace, typeSlugs, status, createdFrom, createdTo));
 	}
 }

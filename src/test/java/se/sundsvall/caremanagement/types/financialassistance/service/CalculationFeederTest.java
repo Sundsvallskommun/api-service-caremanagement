@@ -1,7 +1,9 @@
 package se.sundsvall.caremanagement.types.financialassistance.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,15 +13,23 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import se.sundsvall.caremanagement.lifecare.service.model.ApplicationIncome;
 import se.sundsvall.caremanagement.lifecare.service.model.FamilyCareIncomeLine;
+import se.sundsvall.caremanagement.lifecare.service.model.PreviousFamily;
 import se.sundsvall.caremanagement.lifecare.service.model.PreviousHousehold;
+import se.sundsvall.caremanagement.stakeholders.api.model.Stakeholder;
+import se.sundsvall.caremanagement.stakeholders.service.StakeholderService;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaChild;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaCost;
+import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaIncome;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaNormPersonEntity;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FaPerson;
 import se.sundsvall.caremanagement.types.financialassistance.integration.db.model.FinancialAssistanceEntity;
 
+import static java.time.Month.AUGUST;
+import static java.time.Month.SEPTEMBER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -27,11 +37,16 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_SYSTEM;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_CHILD;
+import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ROLE_VISITATION_CHILD;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_COMMON_HOUSEHOLD_COST_CHECK;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_FAMILY_DEVIATING_PERIOD;
+import static se.sundsvall.caremanagement.types.financialassistance.service.WarningService.TYPE_FAMILY_DIFFERS_FROM_APPLICATION;
 
 @ExtendWith(MockitoExtension.class)
 class CalculationFeederTest {
 
 	private static final String MUNICIPALITY_ID = "2281";
+	private static final String NAMESPACE = "FINANCIAL_ASSISTANCE";
 	private static final String ERRAND_ID = "errand-1";
 
 	@Mock
@@ -40,8 +55,38 @@ class CalculationFeederTest {
 	@Mock
 	private RenewalDeltaService renewalDeltaServiceMock;
 
+	@Mock
+	private StakeholderService stakeholderServiceMock;
+
 	@InjectMocks
 	private CalculationFeeder feeder;
+
+	@Test
+	void applicationIncomeRowsAreStampedAsTheApplications() {
+		final var lines = List.of(new FamilyCareIncomeLine(30, "Swish/Insättningar/Överföringar", "APPLICANT", new BigDecimal("599"), null, "Ansökan: Swish/kontoinsättningar"));
+
+		final var rows = feeder.applicationIncomeRows(ERRAND_ID, lines);
+
+		assertThat(rows).singleElement().satisfies(row -> {
+			assertThat(row.getOrigin()).isEqualTo("APPLICATION");
+			assertThat(row.getTypeId()).isEqualTo(30);
+			assertThat(row.getApplicantProcessAmount()).isEqualByComparingTo("599");
+			assertThat(row.getNote()).isEqualTo("Ansökan: Swish/kontoinsättningar");
+		});
+	}
+
+	@Test
+	void applicationIncomesReadsTheDeclaredIncomesWithTheirLabels() {
+		final var errand = FinancialAssistanceEntity.create().withIncomes(Arrays.asList(
+			FaIncome.create().withIncomeType("SWISH_DEPOSITS").withAmount(new BigDecimal("599")).withIncomeDate(LocalDate.of(2026, SEPTEMBER, 24)),
+			null,
+			FaIncome.create().withIncomeType("SALARY").withRecipient("CO_APPLICANT").withAmount(new BigDecimal("6788"))));
+
+		assertThat(feeder.applicationIncomes(errand)).containsExactly(
+			new ApplicationIncome("SWISH_DEPOSITS", null, new BigDecimal("599"), LocalDate.of(2026, SEPTEMBER, 24), "Swish/kontoinsättningar"),
+			new ApplicationIncome("SALARY", "CO_APPLICANT", new BigDecimal("6788"), null, "Lön"));
+		assertThat(feeder.applicationIncomes(FinancialAssistanceEntity.create())).isEmpty();
+	}
 
 	@Test
 	void incomeRowsMapsEachLine() {
@@ -128,11 +173,8 @@ class CalculationFeederTest {
 		assertThat(row.getProcessAmount()).isEqualByComparingTo(new BigDecimal("8500"));
 		assertThat(row.getBucket()).isEqualTo("SPECIAL_EXPENSE");
 
-		// 8500 < 9000 → a cap warning, no review flag
-		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_CAPPED);
-		final var warning = feed.warnings().getFirst();
-		assertThat(warning.sourceKey()).isEqualTo("RENT");
-		assertThat(warning.message()).contains("Kapad kostnad: Hyra").contains("9000").contains("8500");
+		// 8500 < 9000 without a review flag → no warning: the rule's text and the decision tab's delavslag cover a cap
+		assertThat(feed.warnings()).isEmpty();
 	}
 
 	@Test
@@ -149,11 +191,11 @@ class CalculationFeederTest {
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
 		final var warning = feed.warnings().getFirst();
 		assertThat(warning.sourceKey()).isEqualTo("OTHER:BEGRAVNING");
-		assertThat(warning.message()).isEqualTo("Övrigt bistånd (BEGRAVNING): Övrigt bistånd – skälighet bedöms manuellt");
+		assertThat(warning.message()).isEqualTo("Övriga utgifter (BEGRAVNING): Övrigt bistånd – skälighet bedöms manuellt");
 	}
 
 	@Test
-	void expenseFeedFlaggedAndCappedRaisesBothWarnings() {
+	void expenseFeedFlaggedAndCappedRaisesOnlyTheReviewWarning() {
 		final var cost = FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("9000"));
 		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(cost));
 
@@ -163,7 +205,7 @@ class CalculationFeederTest {
 		final var feed = feeder.expenseFeed(MUNICIPALITY_ID, ERRAND_ID, errand, Map.of(), null);
 
 		assertThat(feed.warnings()).extracting(WarningService.WarningInput::type)
-			.containsExactly(WarningService.TYPE_EXPENSE_REVIEW, WarningService.TYPE_EXPENSE_CAPPED);
+			.containsExactly(WarningService.TYPE_EXPENSE_REVIEW);
 	}
 
 	@Test
@@ -266,38 +308,17 @@ class CalculationFeederTest {
 	}
 
 	@Test
-	void applicationExpenseRowsUseAppliedAmountAndStaticBucketWithoutRulesOrWarnings() {
-		final var rent = FaCost.create().withCostType("RENT").withSpecification("spec").withAppliedAmount(new BigDecimal("9000"));
-		final var medicine = FaCost.create().withCostType("MEDICINE").withAppliedAmount(new BigDecimal("400"));
-		final var errand = FinancialAssistanceEntity.create().withCosts(List.of(rent, medicine));
-
-		final var rows = feeder.applicationExpenseRows(ERRAND_ID, errand);
-
-		assertThat(rows).hasSize(2);
-		final var rentRow = rows.getFirst();
-		assertThat(rentRow.getCostType()).isEqualTo("RENT");
-		assertThat(rentRow.getProcessAmount()).isEqualByComparingTo(new BigDecimal("9000"));
-		assertThat(rentRow.getAppliedAmount()).isEqualByComparingTo(new BigDecimal("9000"));
-		assertThat(rentRow.getBucket()).isEqualTo("EXPENSE");
-		assertThat(rows.get(1).getBucket()).isEqualTo("SPECIAL_EXPENSE");
-		verifyNoInteractions(expenseRulesServiceMock);
-	}
-
-	@Test
-	void applicationExpenseRowsHandlesNullCosts() {
-		assertThat(feeder.applicationExpenseRows(ERRAND_ID, FinancialAssistanceEntity.create())).isEmpty();
-	}
-
-	@Test
 	void personRowsMapsPersonsAndChildren() {
 		final var applicant = FaPerson.create().withRole("APPLICANT").withPartyId("p-1");
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Stakeholder.create().withRole("APPLICANT").withFirstName("Karin").withLastName("Nilsson")));
 		final var child = FaChild.create().withPartyId("c-1").withFirstName("Anna").withLastName("Svensson").withDaysInHome(15);
 		final var childNoDays = FaChild.create().withPartyId("c-2").withFirstName("Bo").withLastName(null).withDaysInHome(null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withPersons(List.of(applicant))
 			.withChildren(List.of(child, childNoDays));
 
-		final var rows = feeder.personRows(ERRAND_ID, errand);
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of("p-1", BigDecimal.valueOf(1431.00), "c-1", BigDecimal.valueOf(2100.00)), PreviousFamily.empty());
 
 		assertThat(rows).hasSize(3)
 			.allMatch(r -> ERRAND_ID.equals(r.getErrandId()) && ORIGIN_SYSTEM.equals(r.getOrigin()));
@@ -305,79 +326,210 @@ class CalculationFeederTest {
 		final var personRow = rows.getFirst();
 		assertThat(personRow.getPartyId()).isEqualTo("p-1");
 		assertThat(personRow.getRole()).isEqualTo("APPLICANT");
+		assertThat(personRow.getName()).isEqualTo("Karin Nilsson");
 		assertThat(personRow.getProcessDays()).isEqualTo(30);
+		assertThat(personRow.getAmount()).isEqualByComparingTo("1431.00");
 
 		final var childRow = rows.get(1);
 		assertThat(childRow.getPartyId()).isEqualTo("c-1");
 		assertThat(childRow.getRole()).isEqualTo(ROLE_CHILD);
 		assertThat(childRow.getName()).isEqualTo("Anna Svensson");
 		assertThat(childRow.getProcessDays()).isEqualTo(15);
+		assertThat(childRow.getAmount()).isEqualByComparingTo("2100.00");
 
+		// The previous calculation never covered this child, so the Belopp column stays empty rather than borrowing one.
 		final var childNoDaysRow = rows.get(2);
 		assertThat(childNoDaysRow.getName()).isEqualTo("Bo");
 		assertThat(childNoDaysRow.getProcessDays()).isEqualTo(30);
+		assertThat(childNoDaysRow.getAmount()).isNull();
+	}
+
+	@Test
+	void personRowsLeavesTheAmountNullWithoutPreviousAmounts() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		final var errand = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")))
+			.withChildren(List.of(FaChild.create().withFirstName("Anna").withLastName("Svensson")));
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, null, null);
+
+		assertThat(rows).hasSize(2).allMatch(row -> row.getAmount() == null);
 	}
 
 	@Test
 	void personRowsHandlesNullCollections() {
-		assertThat(feeder.personRows(ERRAND_ID, FinancialAssistanceEntity.create())).isEmpty();
+		assertThat(feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, FinancialAssistanceEntity.create(), Map.of(), PreviousFamily.empty())).isEmpty();
 	}
 
 	@Test
-	void householdDeltaWarningsReturnsEmptyForEmptyPrevious() {
-		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
+	void personRowsToleratesAPersonWithoutARole() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Stakeholder.create().withRole("APPLICANT").withFirstName("Karin").withLastName("Nilsson")));
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withPartyId("p-1")));
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of(), PreviousFamily.empty());
+
+		assertThat(rows).hasSize(1);
+		assertThat(rows.getFirst().getName()).isNull();
+	}
+
+	@Test
+	void personRowsCopyTheFamilyFromThePreviousCalculation() {
+		// NORM-04: the family is the previous calculation's. The application supplies what FamilyCare's read model lacks
+		// for the people it names - the role and a child's days in the home - and adds nobody.
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of(
+			Stakeholder.create().withRole("APPLICANT").withFirstName("Karin").withLastName("Nilsson")));
+		final var errand = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1"), FaPerson.create().withRole("CO_APPLICANT").withPartyId("p-2")))
+			.withChildren(List.of(FaChild.create().withPartyId("c-1").withFirstName("Anna").withLastName("Svensson").withDaysInHome(15).withResidenceExtent("PART_TIME")));
+		final var family = new PreviousFamily(List.of(
+			new PreviousFamily.Member("p-1", "NILSSON KARIN", null, null),
+			new PreviousFamily.Member("c-1", "SVENSSON ANNA", null, null),
+			new PreviousFamily.Member("c-9", "NILSSON OLLE", null, null)), true, BigDecimal.valueOf(1200));
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of("c-9", BigDecimal.valueOf(900)), family);
+
+		assertThat(rows).extracting(FaNormPersonEntity::getPartyId, FaNormPersonEntity::getRole, FaNormPersonEntity::getName, FaNormPersonEntity::getProcessDays)
+			.containsExactly(
+				tuple("p-1", "APPLICANT", "Karin Nilsson", 30),
+				tuple("c-1", ROLE_VISITATION_CHILD, "Anna Svensson", 15),
+				// not in the application: kept, Lifecare's name, no role, the whole month
+				tuple("c-9", null, "NILSSON OLLE", 30));
+		assertThat(rows.get(2).getAmount()).isEqualByComparingTo("900");
+		assertThat(rows).allMatch(row -> ORIGIN_SYSTEM.equals(row.getOrigin()) && row.isIncluded());
+	}
+
+	@Test
+	void personRowsFallBackToTheApplicationWhenThePreviousFamilyIsIncomplete() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
+		final var family = new PreviousFamily(List.of(new PreviousFamily.Member(null, "OKÄND", null, null)), false, null);
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of(), family);
+
+		assertThat(rows).extracting(FaNormPersonEntity::getPartyId).containsExactly("p-1");
+	}
+
+	@Test
+	void familyWarningsFlagWhatCannotBeCopied() {
+		final var errand = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1"), FaPerson.create().withRole("CO_APPLICANT").withPartyId("p-2")))
+			.withChildren(List.of(FaChild.create().withFirstName("Bo").withLastName("Nilsson")));
+		final var family = new PreviousFamily(List.of(
+			new PreviousFamily.Member("p-1", "NILSSON KARIN", null, null),
+			new PreviousFamily.Member("c-9", "NILSSON OLLE", LocalDate.of(2026, AUGUST, 1), LocalDate.of(2026, AUGUST, 15))), true, null);
+
+		final var warnings = feeder.familyWarnings(errand, family);
+
+		assertThat(warnings).extracting(WarningService.WarningInput::type, WarningService.WarningInput::sourceKey, WarningService.WarningInput::message)
+			.containsExactly(
+				tuple(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "not-in-application:c-9",
+					"NILSSON OLLE finns i föregående normberäkning men inte i ansökan – kontrollera om personen ska ingå i beräkningen"),
+				tuple(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "not-in-previous:p-2",
+					"Medsökande finns i ansökan men inte i föregående normberäkning – lägg till personen i beräkningen om den ska ingå"),
+				tuple(TYPE_FAMILY_DIFFERS_FROM_APPLICATION, "not-in-previous:Bo Nilsson",
+					"Bo Nilsson finns i ansökan men inte i föregående normberäkning – lägg till personen i beräkningen om den ska ingå"),
+				tuple(TYPE_FAMILY_DEVIATING_PERIOD, "deviation:c-9",
+					"NILSSON OLLE ingick i föregående normberäkning med avvikande period 2026-08-01–2026-08-15 – kontrollera omfattningen"));
+	}
+
+	@Test
+	void familyWarningsSayWhenTheFamilyCouldNotBeCopied() {
+		final var family = new PreviousFamily(List.of(new PreviousFamily.Member(null, "OKÄND", null, null)), false, null);
+
+		assertThat(feeder.familyWarnings(FinancialAssistanceEntity.create(), family)).singleElement()
+			.satisfies(warning -> assertThat(warning.sourceKey()).isEqualTo("family-not-copied"));
+	}
+
+	@Test
+	void familyWarningsAreSilentWithoutAPreviousCalculation() {
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
+
+		assertThat(feeder.familyWarnings(errand, PreviousFamily.empty())).isEmpty();
+		assertThat(feeder.familyWarnings(errand, null)).isEmpty();
+	}
+
+	@Test
+	void commonHouseholdCostWarningWhenTheApplicationHouseholdDiffersFromTheCompletePreviousFamily() {
+		// The reachable production path: a complete previous family, so the person rows ARE its two members — yet the
+		// application names only the applicant. The warning compares against the application, not the rows.
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenReturn(List.of());
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
+		final var family = new PreviousFamily(List.of(new PreviousFamily.Member("p-1", "A", null, null), new PreviousFamily.Member("c-1", "B", null, null)), true,
+			BigDecimal.valueOf(1234.4));
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of(), family);
+		assertThat(rows).extracting(FaNormPersonEntity::getPartyId).containsExactly("p-1", "c-1");
+
+		assertThat(feeder.commonHouseholdCostWarnings(family, errand)).singleElement().satisfies(warning -> {
+			assertThat(warning.type()).isEqualTo(TYPE_COMMON_HOUSEHOLD_COST_CHECK);
+			assertThat(warning.sourceKey()).isEqualTo("common-household-cost");
+			assertThat(warning.message())
+				.isEqualTo("Föregående normberäkning hade gemensamma hushållskostnader på 1234 kronor för 2 personer, ansökan har 1 – kontrollera hushållsstorleken");
+		});
+	}
+
+	@Test
+	void commonHouseholdCostWarningCountsTheApplicationsChildren() {
+		final var errand = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")))
+			.withChildren(List.of(FaChild.create().withPartyId("c-1"), FaChild.create().withPartyId("c-2")));
+		final var family = new PreviousFamily(List.of(new PreviousFamily.Member("p-1", "A", null, null), new PreviousFamily.Member("c-1", "B", null, null)), true,
+			BigDecimal.valueOf(500));
+
+		assertThat(feeder.commonHouseholdCostWarnings(family, errand)).singleElement()
+			.satisfies(warning -> assertThat(warning.message()).contains("för 2 personer, ansökan har 3"));
+	}
+
+	@Test
+	void commonHouseholdCostWarningIsSilentWhenNothingCanBeSeen() {
+		final var twoMembers = List.of(new PreviousFamily.Member("p-1", "A", null, null), new PreviousFamily.Member("c-1", "B", null, null));
+		final var sameHousehold = FinancialAssistanceEntity.create()
+			.withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")))
+			.withChildren(List.of(FaChild.create().withPartyId("c-1")));
+		final var smallerHousehold = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
+
+		// the same head count
+		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, BigDecimal.TEN), sameHousehold)).isEmpty();
+		// no common costs to compare
+		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, null), smallerHousehold)).isEmpty();
+		assertThat(feeder.commonHouseholdCostWarnings(new PreviousFamily(twoMembers, true, BigDecimal.ZERO), smallerHousehold)).isEmpty();
+		// no previous calculation
+		assertThat(feeder.commonHouseholdCostWarnings(PreviousFamily.empty(), smallerHousehold)).isEmpty();
+		assertThat(feeder.commonHouseholdCostWarnings(null, null)).isEmpty();
+	}
+
+	@Test
+	void personRowsLeavesTheNameNullWhenTheStakeholderReadFails() {
+		when(stakeholderServiceMock.readAll(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID)).thenThrow(new IllegalStateException("boom"));
+		final var errand = FinancialAssistanceEntity.create().withPersons(List.of(FaPerson.create().withRole("APPLICANT").withPartyId("p-1")));
+
+		final var rows = feeder.personRows(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, errand, Map.of(), PreviousFamily.empty());
+
+		assertThat(rows).hasSize(1);
+		assertThat(rows.getFirst().getName()).isNull();
+	}
+
+	@Test
+	void housingDeltaWarningsReturnsEmptyForEmptyPrevious() {
 		final var errand = FinancialAssistanceEntity.create();
 
-		assertThat(feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, PreviousHousehold.empty())).isEmpty();
-		assertThat(feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, null)).isEmpty();
+		assertThat(feeder.housingDeltaWarnings(MUNICIPALITY_ID, errand, PreviousHousehold.empty())).isEmpty();
+		assertThat(feeder.housingDeltaWarnings(MUNICIPALITY_ID, errand, null)).isEmpty();
+
+		verifyNoInteractions(renewalDeltaServiceMock);
 	}
 
 	@Test
-	void householdDeltaWarningsFlagsSizeChangeWhenDmnFlags() {
-		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, null);
-		final var errand = FinancialAssistanceEntity.create();
-
-		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(-1), any()))
-			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Kontrollera hushållets sammansättning"));
-
-		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);
-
-		assertThat(warnings).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_HOUSEHOLD_CHANGE);
-		final var warning = warnings.getFirst();
-		assertThat(warning.sourceKey()).isEqualTo("household-size");
-		assertThat(warning.message())
-			.contains("tidigare 2, nu 1")
-			.contains("saknas nu: p-2")
-			.contains("Kontrollera hushållets sammansättning");
-	}
-
-	@Test
-	void householdDeltaWarningsSkipsSizeChangeWhenDmnDoesNotFlag() {
-		final var current = List.of(
-			FaNormPersonEntity.create().withPartyId("p-1"),
-			FaNormPersonEntity.create().withPartyId("p-2"));
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null);
-		final var errand = FinancialAssistanceEntity.create();
-
-		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(1), any()))
-			.thenReturn(new RenewalDeltaService.DeltaVerdict(false, "Oförändrat"));
-
-		assertThat(feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous)).isEmpty();
-	}
-
-	@Test
-	void householdDeltaWarningsFlagsHousingCostChange() {
-		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, BigDecimal.valueOf(5000.0));
+	void housingDeltaWarningsFlagsHousingCostChange() {
+		final var previous = new PreviousHousehold(Set.of("p-1"), true, 1, null, BigDecimal.valueOf(5000.0), null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6600"))));
 
-		// same household → only the housing delta is consulted; (6600-5000)/5000 = +32%
+		// (6600-5000)/5000 = +32%
 		when(renewalDeltaServiceMock.classify(MUNICIPALITY_ID, "HOUSING_COST", 0, new BigDecimal("32")))
 			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Väsentlig ökning – kontrollera hyresunderlag"));
 
-		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);
+		final var warnings = feeder.housingDeltaWarnings(MUNICIPALITY_ID, errand, previous);
 
 		assertThat(warnings).extracting(WarningService.WarningInput::type).containsExactly(WarningService.TYPE_HOUSING_COST_CHANGE);
 		final var warning = warnings.getFirst();
@@ -389,31 +541,38 @@ class CalculationFeederTest {
 	}
 
 	@Test
-	void householdDeltaWarningsFlagsBothSizeAndHousing() {
-		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), 2, null, BigDecimal.valueOf(5000.0));
+	void housingDeltaWarningsSkipsWhenDmnDoesNotFlag() {
+		final var previous = new PreviousHousehold(Set.of("p-1"), true, 1, null, BigDecimal.valueOf(5000.0), null);
 		final var errand = FinancialAssistanceEntity.create()
-			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("2500"))));
+			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("5100"))));
 
-		when(renewalDeltaServiceMock.classify(eq(MUNICIPALITY_ID), eq("HOUSEHOLD_SIZE"), eq(-1), any()))
-			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Kontrollera"));
-		when(renewalDeltaServiceMock.classify(MUNICIPALITY_ID, "HOUSING_COST", 0, new BigDecimal("-50")))
-			.thenReturn(new RenewalDeltaService.DeltaVerdict(true, "Väsentlig minskning"));
+		when(renewalDeltaServiceMock.classify(MUNICIPALITY_ID, "HOUSING_COST", 0, new BigDecimal("2")))
+			.thenReturn(new RenewalDeltaService.DeltaVerdict(false, "Inom tröskel"));
 
-		final var warnings = feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous);
-
-		assertThat(warnings).extracting(WarningService.WarningInput::type)
-			.containsExactly(WarningService.TYPE_HOUSEHOLD_CHANGE, WarningService.TYPE_HOUSING_COST_CHANGE);
+		assertThat(feeder.housingDeltaWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
 	}
 
 	@Test
-	void householdDeltaWarningsSkipsHousingWhenNoPreviousCost() {
-		final var current = List.of(FaNormPersonEntity.create().withPartyId("p-1"));
-		final var previous = new PreviousHousehold(Set.of("p-1"), 1, null, null);
+	void housingDeltaWarningsIgnoresHouseholdSizeDrift() {
+		// The household-size tiers moved to the återansökan regelverk's exact ANTAL_I_BOSTADEN comparison; a pure
+		// member change no longer consults the delta DMN at all.
+		final var previous = new PreviousHousehold(Set.of("p-1", "p-2"), true, 2, null, null, null);
+		final var errand = FinancialAssistanceEntity.create();
+
+		assertThat(feeder.housingDeltaWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
+
+		verifyNoInteractions(renewalDeltaServiceMock);
+	}
+
+	@Test
+	void housingDeltaWarningsSkipsHousingWhenNoPreviousCost() {
+		final var previous = new PreviousHousehold(Set.of("p-1"), true, 1, null, null, null);
 		final var errand = FinancialAssistanceEntity.create()
 			.withCosts(List.of(FaCost.create().withCostType("RENT").withAppliedAmount(new BigDecimal("6000"))));
 
-		// no size change and no previous housing cost → the delta DMN is never consulted
-		assertThat(feeder.householdDeltaWarnings(MUNICIPALITY_ID, errand, current, previous)).isEmpty();
+		// no previous housing cost → the delta DMN is never consulted
+		assertThat(feeder.housingDeltaWarnings(MUNICIPALITY_ID, errand, previous)).isEmpty();
+
+		verifyNoInteractions(renewalDeltaServiceMock);
 	}
 }

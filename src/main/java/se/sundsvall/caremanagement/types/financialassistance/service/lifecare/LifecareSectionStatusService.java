@@ -1,0 +1,88 @@
+package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
+
+import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareSectionStatus;
+
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.elements;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.integer;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareJson.isTrue;
+import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
+
+/**
+ * Which of the errand's Normberäkning, Beslut and Utbetalning are done, as Lifecare has them: the checks on the tabs,
+ * in place of careM's section approvals. Normberäkning is done once its beräkning is slutlig, Beslut once the beslut is
+ * saved in Lifecare, and Utbetalning once an utbetalning for the errand's month is registered there. Each is read on
+ * its own: one Lifecare read failing leaves that check off, not the others.
+ */
+@Service
+public class LifecareSectionStatusService {
+
+	private static final Logger LOG = LoggerFactory.getLogger(LifecareSectionStatusService.class);
+
+	private final LifecareErrandService errandService;
+	private final ProfessionalWebClient client;
+	private final LifecareAccessRecorder accessRecorder;
+
+	LifecareSectionStatusService(final LifecareErrandService errandService, final ProfessionalWebClient client, final LifecareAccessRecorder accessRecorder) {
+		this.errandService = errandService;
+		this.client = client;
+		this.accessRecorder = accessRecorder;
+	}
+
+	/**
+	 * The errand's section checks.
+	 *
+	 * @param  municipalityId the municipality
+	 * @param  namespace      the namespace
+	 * @param  errandId       the errand
+	 * @return                the checks
+	 */
+	public LifecareSectionStatus read(final String municipalityId, final String namespace, final String errandId) {
+		final var errand = errandService.load(municipalityId, namespace, errandId);
+		return new LifecareSectionStatus(calculationFinalized(errand), errand.decision().isPresent(), paymentRegistered(errand));
+	}
+
+	/** Whether the errand's beräkning is slutlig, from the insats's list: one Lifecare read without any rows. */
+	private boolean calculationFinalized(final LifecareErrand errand) {
+		if (errand.serviceId() == null || errand.calculationId() == null) {
+			return false;
+		}
+		try {
+			final var listed = client.listLatestCalculations(errand.serviceId());
+			accessRecorder.read(errand, "CALCULATION", "Läste insatsens normberäkningar i Lifecare");
+			return elements(listed).stream()
+				.anyMatch(calculation -> Objects.equals(integer(calculation.path("calculationId")).orElse(null), errand.calculationId())
+					&& isTrue(calculation.path("isFinalized")));
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read whether the beräkning of errand {} is slutlig in Lifecare ({})", sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
+			return false;
+		}
+	}
+
+	/**
+	 * Whether an utbetalning for the errand's month is registered on the insats: one concerning that month that is not
+	 * makulerad. False when the errand has no month or insats, or Lifecare could not be read.
+	 */
+	private boolean paymentRegistered(final LifecareErrand errand) {
+		if (errand.periodYear() == null || errand.periodMonth() == null || errand.serviceId() == null) {
+			return false;
+		}
+		final var month = "%04d%02d".formatted(errand.periodYear(), errand.periodMonth());
+		try {
+			final var registered = client.readLatestPayments(errand.serviceId());
+			accessRecorder.read(errand, "PAYMENTS", "Läste utbetalningar i Lifecare");
+			return elements(registered).stream()
+				.filter(payment -> month.equals(LifecarePaymentNodes.text(payment, "concernedMonth")))
+				// The same rule every other payment read uses: standing until Lifecare gives it a cancellationDate, so an
+				// empty, null or missing one all mean not makulerad.
+				.anyMatch(payment -> !LifecarePaymentNodes.cancelled(payment));
+		} catch (final RuntimeException e) {
+			LOG.warn("Could not read the utbetalningar of errand {} in Lifecare ({})", sanitizeForLogging(errand.errandId()), e.getClass().getSimpleName());
+			return false;
+		}
+	}
+}

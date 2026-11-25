@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.types.financialassistance.service.mapper;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -23,6 +24,9 @@ import static java.util.Comparator.comparing;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.nullsLast;
 import static java.util.Optional.ofNullable;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.costDisplayName;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.normTypeDisplayName;
+import static se.sundsvall.caremanagement.types.financialassistance.configuration.FinancialAssistanceLabels.roleDisplayName;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_EXPENSE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.BUCKET_SPECIAL_EXPENSE;
 import static se.sundsvall.caremanagement.types.financialassistance.service.CalculationConstants.ORIGIN_CASEWORKER;
@@ -55,11 +59,13 @@ public final class CalculationDraftMapper {
 		final var persons = personEntities.stream().filter(Objects::nonNull)
 			.sorted(comparing(FaNormPersonEntity::getPosition, nullsLast(naturalOrder()))).map(CalculationDraftMapper::toPersonRow).toList();
 
+		// A copy, not the entity's lazy collection: the draft is written out after the transaction has ended.
 		return CalculationDraft.create()
 			.withErrandId(header.getErrandId())
 			.withApplicationMonth(header.getApplicationMonth())
 			.withNormId(header.getNormId())
-			.withNormType(header.getNormType())
+			.withNormType(ofNullable(header.getNormType()).map(ArrayList::new).orElse(null))
+			.withNormTypeDisplayNames(normTypeDisplayNames(header.getNormType()))
 			.withCalculationFromDate(header.getCalculationFromDate())
 			.withCalculationToDate(header.getCalculationToDate())
 			.withCalculationDate(header.getCalculationDate())
@@ -74,6 +80,13 @@ public final class CalculationDraftMapper {
 			.withSpecialExpenseSum(sum(specialExpenses.stream().filter(row -> !row.isDeleted()).map(NormExpenseRow::getEffectiveAmount)))
 			.withCreated(header.getCreated())
 			.withUpdated(header.getUpdated());
+	}
+
+	/** The selected norm types as labels, in the same order; an unknown code keeps its own value rather than vanishing. */
+	private static List<String> normTypeDisplayNames(final List<String> normTypes) {
+		return ofNullable(normTypes).orElseGet(List::of).stream()
+			.map(normType -> ofNullable(normTypeDisplayName(normType)).orElse(normType))
+			.toList();
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -93,7 +106,7 @@ public final class CalculationDraftMapper {
 	public static NormExpenseRow toExpenseRow(final FaNormExpenseEntity e) {
 		final var effective = effectiveAmount(e.getCaseworkerAmount(), e.getProcessAmount());
 		return NormExpenseRow.create()
-			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withBucket(e.getBucket()).withCostType(e.getCostType()).withOtherSubType(e.getOtherSubType())
+			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withBucket(e.getBucket()).withCostType(e.getCostType()).withCostTypeDisplayName(costDisplayName(e.getCostType())).withOtherSubType(e.getOtherSubType())
 			.withSpecification(e.getSpecification())
 			.withAppliedAmount(e.getAppliedAmount()).withProcessAmount(e.getProcessAmount()).withCaseworkerAmount(e.getCaseworkerAmount())
 			.withEffectiveAmount(effective).withDeleted(e.isDeleted()).withNote(e.getNote())
@@ -103,10 +116,10 @@ public final class CalculationDraftMapper {
 	public static NormPersonRow toPersonRow(final FaNormPersonEntity e) {
 		final var effective = effectiveDays(e.getCaseworkerDays(), e.getProcessDays());
 		return NormPersonRow.create()
-			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withPartyId(e.getPartyId()).withRole(e.getRole()).withName(e.getName())
+			.withId(e.getId()).withOrigin(e.getOrigin()).withPosition(e.getPosition()).withPartyId(e.getPartyId()).withRole(e.getRole()).withRoleDisplayName(roleDisplayName(e.getRole())).withName(e.getName())
 			.withProcessDays(e.getProcessDays()).withCaseworkerDays(e.getCaseworkerDays()).withEffectiveDays(effective)
 			.withIncluded(e.isIncluded()).withDeviationFromDate(e.getDeviationFromDate()).withDeviationToDate(e.getDeviationToDate())
-			.withNormInterval(e.getNormInterval()).withJobStimulusAmount(e.getJobStimulusAmount())
+			.withNormInterval(e.getNormInterval()).withAmount(e.getAmount())
 			.withDeleted(e.isDeleted()).withNote(e.getNote()).withCreated(e.getCreated()).withUpdated(e.getUpdated());
 	}
 
@@ -136,7 +149,7 @@ public final class CalculationDraftMapper {
 			.withPartyId(input.getPartyId()).withRole(input.getRole()).withName(input.getName())
 			.withCaseworkerDays(input.getCaseworkerDays()).withIncluded(input.getIncluded() == null || input.getIncluded())
 			.withDeviationFromDate(input.getDeviationFromDate()).withDeviationToDate(input.getDeviationToDate())
-			.withNormInterval(input.getNormInterval()).withJobStimulusAmount(input.getJobStimulusAmount()).withNote(input.getNote());
+			.withNormInterval(input.getNormInterval()).withNote(input.getNote());
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -159,7 +172,7 @@ public final class CalculationDraftMapper {
 	 * One live income row → its effective FamilyCare income (applicant + co-applicant effective amounts), ready to post.
 	 */
 	public static EffectiveIncome toEffectiveIncome(final FaNormIncomeEntity row) {
-		return new EffectiveIncome(row.getTypeId(),
+		return new EffectiveIncome(row.getTypeId(), row.getTypeName(),
 			effectiveAmount(row.getApplicantCaseworkerAmount(), row.getApplicantProcessAmount()), row.getApplicantAmountDate(),
 			effectiveAmount(row.getCoapplicantCaseworkerAmount(), row.getCoapplicantProcessAmount()), row.getCoapplicantAmountDate(),
 			row.getNote());

@@ -38,6 +38,7 @@ class MessageResourceFailureTest {
 	private static final String NAMESPACE = "my-namespace";
 	private static final String ERRAND_ID = randomUUID().toString();
 	private static final String PATH = "/{municipalityId}/{namespace}/errands/{errandId}/messages";
+	private static final String EXPECTED_MISSING_IDENTIFIER_DETAIL = "Missing or malformed required header 'X-Sent-By' — expected e.g. 'joe001doe; type=adAccount' or '<uuid>; type=partyId'";
 
 	@MockitoBean
 	private MessageService serviceMock;
@@ -104,7 +105,22 @@ class MessageResourceFailureTest {
 			.expectBody()
 			.jsonPath("$.title").isEqualTo("Bad Request")
 			.jsonPath("$.status").isEqualTo(400)
-			.jsonPath("$.detail").isEqualTo("Required header 'X-Sent-By' is not present.");
+			.jsonPath("$.detail").isEqualTo(EXPECTED_MISSING_IDENTIFIER_DETAIL);
+
+		verifyNoInteractions(readServiceMock);
+	}
+
+	@Test
+	void unreadCountMalformedIdentifier() {
+		webTestClient.get()
+			.uri(uri -> uri.path(PATH + "/unread-count").build(Map.of("municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.header(Identifier.HEADER_NAME, "joe001doe")
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody()
+			.jsonPath("$.title").isEqualTo("Bad Request")
+			.jsonPath("$.status").isEqualTo(400)
+			.jsonPath("$.detail").isEqualTo(EXPECTED_MISSING_IDENTIFIER_DETAIL);
 
 		verifyNoInteractions(readServiceMock);
 	}
@@ -120,7 +136,7 @@ class MessageResourceFailureTest {
 			.expectBody()
 			.jsonPath("$.title").isEqualTo("Bad Request")
 			.jsonPath("$.status").isEqualTo(400)
-			.jsonPath("$.detail").isEqualTo("Required header 'X-Sent-By' is not present.");
+			.jsonPath("$.detail").isEqualTo(EXPECTED_MISSING_IDENTIFIER_DETAIL);
 
 		verifyNoInteractions(readServiceMock);
 	}

@@ -24,6 +24,15 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.TypeOptio
  * (Arbete och studier), {@code HEALTH} (Hälsa), {@code OTHER} (Övrigt) — null for income and for handläggare-only
  * types.
  * </p>
+ *
+ * <p>
+ * <strong>Mina sidor does not read this catalogue.</strong> It never calls the metadata endpoint — its income and cost
+ * boxes are a hardcoded list in the frontend, confirmed by Oliver 2026-09-22. Only Draken consumes {@code /metadata}.
+ * Keeping the two in sync is therefore manual: removing a code here does not remove the box from the citizen form, so
+ * every applicant who ticks it keeps submitting a value that {@code Income}/{@code Cost} now reject with a 400 until
+ * the frontend ships a matching change. Treat any removal as a coordinated breaking change across both repos, not as
+ * something that takes effect on deploy.
+ * </p>
  */
 public final class FinancialAssistanceTypes {
 
@@ -73,13 +82,26 @@ public final class FinancialAssistanceTypes {
 		caseworkerOnly("ELDERLY_SUPPORT", "Äldreförsörjningsstöd"),
 		caseworkerOnly("SURPLUS_FROM_PREVIOUS_MONTH", "Överskjutande inkomst från föregående månad"));
 
-	/** Cost types (kostnader) — the citizen Mina-sidor list (grouped), then the handläggare-only Lifecare list. */
+	/**
+	 * Cost types (kostnader) — the citizen Mina-sidor list (grouped), then the handläggare-only Lifecare list.
+	 * <p>
+	 * {@code INTERNET} was dropped on 2026-09-21: the revised regelverk prices no internet cost, and verksamheten
+	 * confirmed it should leave the forms too, because internet is part of riksnormen from 2027. It is removed in all
+	 * three places the invariant tests hold together — here, {@code Cost}'s allowable values and
+	 * {@code ExpenseTypeMapper} — so a cost carrying it is now a 400. {@code Decision_internet} is gone from the
+	 * published DMN in the same change.
+	 * <p>
+	 * The change was written on the assumption that dropping the code here also drops the box from the citizen form.
+	 * It does not — see the class javadoc: Mina sidor hardcodes its cost list and never calls the metadata endpoint.
+	 * The Internet box therefore survived the deploy, and every application that ticked it got a 400 on submit until
+	 * Oliver removed it from the frontend on 2026-09-22. The exposure was every new application in that window, not
+	 * just the ones already in flight.
+	 */
 	public static final List<TypeOption> COST_TYPES = List.of(
 		// Citizen Mina-sidor costs (the "Vilka kostnader söker du bistånd för?" form, grouped)
 		cost("RENT", "Hyra (inte parkering/garage)", "Boendekostnad", GROUP_HOUSING),
 		cost("ELECTRICITY", "Elkostnad (totalsumma)", "El 1", GROUP_HOUSING),
 		cost("HOME_INSURANCE", "Hemförsäkring (månadskostnad)", "Hemförsäkring", GROUP_HOUSING),
-		cost("INTERNET", "Internet", "Bredband/Internet", GROUP_HOUSING),
 		cost("UNEMPLOYMENT_FUND", "A-kassa", "A-kasseavgift", GROUP_WORK_AND_STUDIES),
 		cost("UNION_FEE", "Fackföreningsavgift", "Fackavgift", GROUP_WORK_AND_STUDIES),
 		cost("TRAVEL_APPROVED", "Resor till godkänd planering/aktivitet", "Arbetsresor", GROUP_WORK_AND_STUDIES),
@@ -94,11 +116,35 @@ public final class FinancialAssistanceTypes {
 		caseworkerOnly("VISITATION_COST", "Kostnad i samband med umgänge"),
 		caseworkerOnly("DENTAL_CARE", "Tandvård"));
 
-	/** The assembled metadata response — the income + cost catalogues the metadata endpoint returns. */
+	/**
+	 * Payment money types ({@code Payment.moneyType}). Still a deliberately empty placeholder: verksamheten's answer of
+	 * 2026-09-21 covered betalsätt but not pengatyp, so Lifecare's value set for this one is still unknown and the
+	 * field stays an unconstrained string (see {@code Payment}/{@code PaymentRequest} javadoc).
+	 */
+	public static final List<TypeOption> MONEY_TYPES = List.of();
+
+	/**
+	 * Payment methods ({@code Payment.paymentMethod}) — the value set verksamheten supplied on 2026-09-21 as a
+	 * screenshot of the live Lifecare dropdown (backlog/svar-2026-09-21-betalsatt.png), in the order it shows them.
+	 * <p>
+	 * Still an editable list rather than an enum, per the payments decision already taken: dept44 forbids enums in API
+	 * models, and verksamheten's own answer was hedged („vet ej exakt hur det kommer fungera”), so this is the best
+	 * known starting set and not a contract. Adding or renaming a method is a change here, not a new API version.
+	 */
+	public static final List<TypeOption> PAYMENT_METHODS = List.of(
+		caseworkerOnly("BANKGIRO_VIA_PLUSGIRO", "Bankgiro via Plusgiro"),
+		caseworkerOnly("BANKKONTO_VIA_PLUSGIRO", "Bankkonto via Plusgiro"),
+		caseworkerOnly("MEMORIAL", "Memorial"),
+		caseworkerOnly("PERSONKONTO", "Personkonto"),
+		caseworkerOnly("PLUSGIRO", "Plusgiro"));
+
+	/** The assembled metadata response — the income + cost + payment catalogues the metadata endpoint returns. */
 	public static FinancialAssistanceMetadata metadata() {
 		return FinancialAssistanceMetadata.create()
 			.withIncomeTypes(INCOME_TYPES)
-			.withCostTypes(COST_TYPES);
+			.withCostTypes(COST_TYPES)
+			.withMoneyTypes(MONEY_TYPES)
+			.withPaymentMethods(PAYMENT_METHODS);
 	}
 
 	private static TypeOption income(final String code, final String externalDisplayName, final String internalDisplayName) {

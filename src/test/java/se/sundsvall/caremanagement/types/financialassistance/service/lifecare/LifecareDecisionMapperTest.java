@@ -1,0 +1,141 @@
+package se.sundsvall.caremanagement.types.financialassistance.service.lifecare;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Month;
+import org.junit.jupiter.api.Test;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionReason;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionType;
+import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.LifecareDecisionView;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+import static se.sundsvall.caremanagement.types.financialassistance.service.lifecare.LifecareDecisionBodiesTest.JSON;
+
+class LifecareDecisionMapperTest {
+
+	static final String SAVED = """
+		{
+		  "decisionId": 98, "decisionCode": 153, "decisionType": 0, "date": "2026-09-23",
+		  "fromDate": "2026-09-01", "toDate": "2026-09-30", "reasonCode": 19,
+		  "reason": "Arbetar deltid ofrivilligt, otillräcklig inkomst", "decisionMaker": "TEST",
+		  "decisionMakerName": "Test Handläggare", "amount": 3000,
+		  "decisionPersons": [{"personId": "19880209T050", "name": "Testsson, Test", "coApplicant": false, "personIdFormatted": "880209-T050"}],
+		  "type": {"code": 153}, "message": "<p>Beslut</p>", "lockedMessage": false
+		}""";
+
+	/**
+	 * GetProposalForService?amountType=TotalSum&amp;calculationId=25 on a normberäkning saved as final (capture
+	 * 2026-09-30): Lifecare fills in its period and its result without sign. The rest is the blank beslut.
+	 */
+	static final String PROPOSAL_FROM_FINAL_CALCULATION = """
+		{
+		  "decision": {"decisionId": 0, "date": "2026-09-30", "fromDate": "2026-09-01", "toDate": "2026-09-30", "amount": 2068, "amountToBalance": false,
+		    "decisionPersons": [{"personId": "19880209T050", "name": "Testsson, Test", "coApplicant": false, "personIdFormatted": "880209-T050"}],
+		    "sharedCustody": false},
+		  "decisionMakers": [{"id": "TEST", "name": "Test Handläggare", "title": "Testhandläggare"}],
+		  "decisionTypes": [
+		    {"code": 153, "name": "Ek Ekonomiskt bistånd 12 kap 1, 7 §§ SoL, bifall", "type": 0, "isActive": true, "requiresFromDate": true, "requiresToDate": true}
+		  ]
+		}""";
+
+	static JsonNode tree(final String json) {
+		return JSON.readTree(json);
+	}
+
+	@Test
+	void showsTheSavedBeslutAsLifecareHasItWithoutThePersonnummer() {
+		assertThat(LifecareDecisionMapper.toView(tree(SAVED))).isEqualTo(new LifecareDecisionView(98, 153, "BIFALL", "2026-09-23", "2026-09-01", "2026-09-30",
+			new BigDecimal("3000"), 19, "Arbetar deltid ofrivilligt, otillräcklig inkomst", "<p>Beslut</p>", false, "Test Handläggare", null, null));
+	}
+
+	@Test
+	void showsTheMedsokandesOrsak() {
+		final var saved = (ObjectNode) tree(SAVED);
+		saved.put("reasonCodeCoApplicant", 2).put("reasonCoApplicant", "Arbetslös, väntar på ersättning/stöd");
+
+		final var view = LifecareDecisionMapper.toView(saved);
+
+		assertThat(view.coApplicantReasonCode()).isEqualTo(2);
+		assertThat(view.coApplicantReason()).isEqualTo("Arbetslös, väntar på ersättning/stöd");
+		assertThat(LifecareDecisionMapper.toView(tree(SAVED)).coApplicantReasonCode()).isNull();
+	}
+
+	@Test
+	void readsLifecaresEmptyValuesAsAbsent() {
+		final var view = LifecareDecisionMapper.toView(tree("""
+			{"decisionId": 7, "decisionCode": 161, "decisionType": 9, "date": "", "fromDate": "", "toDate": null,
+			 "reasonCode": 0, "reason": "", "message": null, "decisionMaker": "RPA_031DEV", "decisionMakerName": null, "lockedMessage": true}"""));
+
+		assertThat(view).isEqualTo(new LifecareDecisionView(7, 161, null, "", null, null, BigDecimal.ZERO, null, null, null, true, "RPA_031DEV", null, null));
+		assertThat(LifecareDecisionMapper.toView(tree("{}")).decisionMaker()).isEmpty();
+		assertThat(LifecareDecisionMapper.toView(tree("{\"reasonCode\": \"\"}")).reasonCode()).isNull();
+	}
+
+	@Test
+	void mapsTheCategoriesCaremRegisters() {
+		final var factory = JsonNodeFactory.instance;
+		assertThat(LifecareDecisionMapper.outcomeFor(factory.numberNode(0))).contains("BIFALL");
+		assertThat(LifecareDecisionMapper.outcomeFor(factory.numberNode(10))).contains("AVSLAG");
+		assertThat(LifecareDecisionMapper.outcomeFor(factory.numberNode(9))).isEmpty();
+		assertThat(LifecareDecisionMapper.outcomeFor(factory.missingNode())).isEmpty();
+	}
+
+	@Test
+	void listsTheActiveBeslutstyperMarkingTheOnesCaremRegisters() {
+		final var types = LifecareDecisionMapper.toTypes(tree("""
+			{"decisionTypes": [
+			  {"code": 152, "name": "avslag", "type": 10, "isActive": true, "requiresFromDate": false, "requiresToDate": false},
+			  {"code": 153, "name": "bifall", "type": 0, "isActive": true, "requiresFromDate": true, "requiresToDate": true},
+			  {"code": 161, "name": "EK Återkrav", "type": 9, "isActive": true, "requiresFromDate": false, "requiresToDate": false},
+			  {"code": 9, "name": "Utgången", "type": 9, "isActive": false, "requiresFromDate": false, "requiresToDate": false}
+			]}"""));
+
+		assertThat(types).extracting(LifecareDecisionType::code, LifecareDecisionType::outcome)
+			.containsExactly(tuple(152, "AVSLAG"), tuple(153, "BIFALL"), tuple(161, null));
+		assertThat(types.get(1)).isEqualTo(new LifecareDecisionType(153, "bifall", "BIFALL", true, true));
+		assertThat(LifecareDecisionMapper.toTypes(tree("{}"))).isEmpty();
+	}
+
+	@Test
+	void listsTheOrsakerUnderTheHeadingEachSitsIn() {
+		final var reasons = LifecareDecisionMapper.toReasons(tree("""
+			[
+			  {"header": "Arbetar deltid, ofrivilligt", "name": "Arbetar deltid, ofrivilligt", "reasonCode": null,
+			   "options": [{"header": "", "name": "Arbetar deltid ofrivilligt, otillräcklig inkomst", "reasonCode": 19, "options": []}]},
+			  {"header": "", "name": "Rubrik utan header", "reasonCode": null,
+			   "options": [{"header": "", "name": "Underrubrik", "reasonCode": null,
+			     "options": [{"header": "", "name": "Djup orsak", "reasonCode": 21, "options": []}]}]},
+			  {"header": "Egen", "name": "Orsak med egen header", "reasonCode": 22,
+			   "options": [{"header": "", "name": "Barn", "reasonCode": 23, "options": []}]}
+			]"""));
+
+		assertThat(reasons).containsExactly(
+			new LifecareDecisionReason(19, "Arbetar deltid ofrivilligt, otillräcklig inkomst", "Arbetar deltid, ofrivilligt"),
+			new LifecareDecisionReason(21, "Djup orsak", "Underrubrik"),
+			new LifecareDecisionReason(22, "Orsak med egen header", "Egen"),
+			new LifecareDecisionReason(23, "Barn", "Egen"));
+	}
+
+	@Test
+	void takesThePeriodAndAmountLifecareFilledInFromAFinalNormberakning() {
+		assertThat(LifecareDecisionMapper.toPrefill(tree(PROPOSAL_FROM_FINAL_CALCULATION), 25))
+			.contains(new LifecareDecisionPrefill(25, new BigDecimal("2068"), LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30)));
+	}
+
+	@Test
+	void hasNothingToTakeWhenLifecareFilledNothingIn() {
+		// A preliminary normberäkning: Lifecare answers with the blank beslut, amount 0 and no period.
+		assertThat(LifecareDecisionMapper.toPrefill(tree("{\"decision\": {\"fromDate\": \"\", \"toDate\": \"\", \"amount\": 0}}"), 26)).isEmpty();
+		assertThat(LifecareDecisionMapper.toPrefill(tree("{}"), 26)).isEmpty();
+	}
+
+	@Test
+	void takesAPrefillWithoutEndOrAmount() {
+		assertThat(LifecareDecisionMapper.toPrefill(tree("{\"decision\": {\"fromDate\": \"2026-10-01\", \"toDate\": \"\"}}"), 8))
+			.contains(new LifecareDecisionPrefill(8, BigDecimal.ZERO, LocalDate.of(2026, Month.OCTOBER, 1), null));
+	}
+}

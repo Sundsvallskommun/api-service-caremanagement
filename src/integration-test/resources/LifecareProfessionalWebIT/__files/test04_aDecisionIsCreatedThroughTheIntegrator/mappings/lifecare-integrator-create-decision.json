@@ -1,0 +1,29 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/services/8800/decisions",
+		"bodyPatterns": [
+			{
+				"matchesJsonPath": "$[?(@.serviceId == 8800)]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.decisionCode == 152)]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.decisionMaker == 'JOE01DOE')]"
+			},
+			{
+				"matchesJsonPath": "$[?(@.reasonCode == 16 && @.message == '<p>Avslag</p>')]"
+			}
+		]
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"jsonBody": {
+			"decisionId": 9900
+		},
+		"status": 201
+	}
+}

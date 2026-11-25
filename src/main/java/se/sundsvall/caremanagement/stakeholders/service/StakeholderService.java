@@ -12,6 +12,7 @@ import se.sundsvall.caremanagement.stakeholders.integration.db.model.Stakeholder
 import se.sundsvall.caremanagement.stakeholders.service.event.StakeholderMutated;
 import se.sundsvall.dept44.problem.Problem;
 
+import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static se.sundsvall.caremanagement.stakeholders.service.mapper.StakeholderMapper.toStakeholder;
@@ -59,10 +60,17 @@ public class StakeholderService {
 		return toStakeholderList(stakeholderRepository.findByErrandId(errandId));
 	}
 
+	/**
+	 * Applies a partial update. The body carries PATCH semantics — {@code role} is only {@code @NotBlank} on create —
+	 * so the role that gets validated is the effective one: the incoming role when the body carries it, the stored one
+	 * otherwise. Validating the incoming value alone would reject every update that leaves the role out, on any type
+	 * that declared a role catalogue, since a null role is never a valid one. That is also why the stakeholder is
+	 * loaded before the verdict rather than after.
+	 */
 	public void update(final String municipalityId, final String namespace, final String errandId, final String stakeholderId, final Stakeholder stakeholder) {
 		final var errand = ensureErrandExists(municipalityId, namespace, errandId);
-		validateRole(errand.getTypeSlug(), stakeholder.getRole());
 		final var entity = findStakeholder(municipalityId, namespace, errandId, stakeholderId);
+		validateRole(errand.getTypeSlug(), ofNullable(stakeholder.getRole()).orElseGet(entity::getRole));
 		updateStakeholderEntity(entity, stakeholder);
 		stakeholderRepository.save(entity);
 		publisher.publishEvent(new StakeholderMutated(municipalityId, namespace, errandId));

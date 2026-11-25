@@ -1,0 +1,18 @@
+{
+	"request": {
+		"method": "GET",
+		"urlPath": "/api-lifecare-integrator/2281/professional-web/services/7700/household",
+		"queryParameters": {
+			"date": {
+				"equalTo": "2026-09-21"
+			}
+		}
+	},
+	"response": {
+		"headers": {
+			"Content-Type": "application/json"
+		},
+		"body": "true",
+		"status": 200
+	}
+}

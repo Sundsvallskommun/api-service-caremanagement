@@ -25,21 +25,7 @@ import static se.sundsvall.caremanagement.citizen.integration.configuration.Citi
 public interface CitizenClient {
 
 	/**
-	 * Resolve a citizen's personId (GUID) from their personnummer.
-	 * <p>
-	 * api-service-citizen v3: {@code GET /{municipalityId}/{personNumber}/guid}
-	 *
-	 * @param  municipalityId the id of the municipality (path variable)
-	 * @param  personNumber   the applicant's personnummer (path variable)
-	 * @return                the citizen's personId (GUID), or {@code null} on 204 No Content
-	 */
-	@GetMapping(path = "/{municipalityId}/{personNumber}/guid", produces = APPLICATION_JSON_VALUE)
-	String getGuid(
-		@PathVariable final String municipalityId,
-		@PathVariable final String personNumber);
-
-	/**
-	 * Resolve a citizen's personnummer from their personId (GUID) — the reverse of {@link #getGuid}.
+	 * Resolve a citizen's personnummer from their personId (GUID).
 	 * <p>
 	 * api-service-citizen v3: {@code GET /{municipalityId}/{personId}/personnumber}
 	 *

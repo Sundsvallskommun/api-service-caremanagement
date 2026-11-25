@@ -1,5 +1,6 @@
 package se.sundsvall.caremanagement.types.financialassistance.api.model;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -38,11 +39,27 @@ public class CalculationRequest {
 	@Schema(description = "The incomes classified by the operaton rules (the evaluate-income-rules worker output), as JSON. When present, caremanagement maps these to FamilyCare income rows instead of fetching SSBTEK and evaluating the raw list itself.")
 	private String classifiedIncomes;
 
-	@Schema(description = "The unhandled-income warnings from the operaton rules, recorded on the errand recommendation")
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "The unhandled-income warnings from the operaton rules, recorded on the errand recommendation"))
 	private List<String> unhandledIncomes;
 
-	@Schema(description = "The period-over-period change warnings from the operaton rules, recorded on the errand recommendation")
+	/**
+	 * Not read since 2026-09-25: careM compares the incomes with the previous normberäkning itself (verksamhetens G4).
+	 * Kept so the engine, which still sends it, is not refused.
+	 */
+	@ArraySchema(schema = @Schema(implementation = String.class),
+		arraySchema = @Schema(description = "Ignored. The period-over-period change warnings the operaton rules still send; caremanagement compares against the previous normberäkning itself"))
 	private List<String> changeWarnings;
+
+	@Schema(
+		description = "Whether SSBTEK could not be read for this run. True means the rules were deliberately not evaluated: the calculation is left exactly as it stands and the errand carries the read-failure warning until a later run succeeds. Absent is read as false, so a caller that does not know about the flag behaves as before.",
+		examples = "false")
+	private Boolean ssbtekError;
+
+	@Schema(description = """
+		The SSBTEK facts that gate the dagersättning day check (AF economic decision, FK consumed days). Absent means \
+		the caller did not read them, and the day check is then not made at all.""")
+	private DayCheckBasis dayCheckBasis;
 
 	public static CalculationRequest create() {
 		return new CalculationRequest();
@@ -139,6 +156,32 @@ public class CalculationRequest {
 		return this;
 	}
 
+	public Boolean getSsbtekError() {
+		return ssbtekError;
+	}
+
+	public void setSsbtekError(final Boolean ssbtekError) {
+		this.ssbtekError = ssbtekError;
+	}
+
+	public CalculationRequest withSsbtekError(final Boolean ssbtekError) {
+		this.ssbtekError = ssbtekError;
+		return this;
+	}
+
+	public DayCheckBasis getDayCheckBasis() {
+		return dayCheckBasis;
+	}
+
+	public void setDayCheckBasis(final DayCheckBasis dayCheckBasis) {
+		this.dayCheckBasis = dayCheckBasis;
+	}
+
+	public CalculationRequest withDayCheckBasis(final DayCheckBasis dayCheckBasis) {
+		this.dayCheckBasis = dayCheckBasis;
+		return this;
+	}
+
 	@Override
 	public boolean equals(final Object o) {
 		if (o == null || getClass() != o.getClass())
@@ -146,17 +189,19 @@ public class CalculationRequest {
 		final CalculationRequest that = (CalculationRequest) o;
 		return Objects.equals(applicant, that.applicant) && Objects.equals(coApplicant, that.coApplicant) && Objects.equals(applicationMonth, that.applicationMonth)
 			&& Objects.equals(errandId, that.errandId) && Objects.equals(classifiedIncomes, that.classifiedIncomes) && Objects.equals(unhandledIncomes, that.unhandledIncomes)
-			&& Objects.equals(changeWarnings, that.changeWarnings);
+			&& Objects.equals(changeWarnings, that.changeWarnings) && Objects.equals(ssbtekError, that.ssbtekError)
+			&& Objects.equals(dayCheckBasis, that.dayCheckBasis);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(applicant, coApplicant, applicationMonth, errandId, classifiedIncomes, unhandledIncomes, changeWarnings);
+		return Objects.hash(applicant, coApplicant, applicationMonth, errandId, classifiedIncomes, unhandledIncomes, changeWarnings, ssbtekError, dayCheckBasis);
 	}
 
 	@Override
 	public String toString() {
 		return "CalculationRequest{applicant='" + applicant + "', coApplicant='" + coApplicant + "', applicationMonth='" + applicationMonth + "', errandId='" + errandId
-			+ "', classifiedIncomes='" + classifiedIncomes + "', unhandledIncomes=" + unhandledIncomes + ", changeWarnings=" + changeWarnings + "}";
+			+ "', classifiedIncomes='" + classifiedIncomes + "', unhandledIncomes=" + unhandledIncomes + ", changeWarnings=" + changeWarnings + ", ssbtekError=" + ssbtekError
+			+ ", dayCheckBasis=" + dayCheckBasis + "}";
 	}
 }

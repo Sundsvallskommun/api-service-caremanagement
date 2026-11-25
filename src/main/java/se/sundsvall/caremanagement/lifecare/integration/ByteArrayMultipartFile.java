@@ -17,14 +17,14 @@ import static java.util.Optional.ofNullable;
  * (test-scope)
  * {@code MockMultipartFile}. Read-only: the backing bytes are never mutated.
  */
-class ByteArrayMultipartFile implements MultipartFile {
+public class ByteArrayMultipartFile implements MultipartFile {
 
 	private final String name;
 	private final String originalFilename;
 	private final String contentType;
 	private final byte[] content;
 
-	ByteArrayMultipartFile(final String name, final String originalFilename, final String contentType, final byte[] content) {
+	public ByteArrayMultipartFile(final String name, final String originalFilename, final String contentType, final byte[] content) {
 		this.name = name;
 		this.originalFilename = originalFilename;
 		this.contentType = contentType;

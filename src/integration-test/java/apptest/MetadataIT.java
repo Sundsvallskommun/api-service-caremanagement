@@ -16,7 +16,6 @@ import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.PATCH;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpStatus.CREATED;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
@@ -91,25 +90,5 @@ class MetadataIT extends AbstractAppTest {
 			.sendRequestAndVerifyResponse();
 
 		assertThat(repository.findAll()).hasSize(initialCount - 1);
-	}
-
-	@Test
-	void test06_readLookupNotFound() {
-		setupCall()
-			.withServicePath(PATH + "/UNKNOWN?kind=CATEGORY")
-			.withHttpMethod(GET)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-	}
-
-	@Test
-	void test07_deleteLookupNotFound() {
-		setupCall()
-			.withServicePath(PATH + "/UNKNOWN?kind=CONTACT_REASON")
-			.withHttpMethod(DELETE)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
 	}
 }

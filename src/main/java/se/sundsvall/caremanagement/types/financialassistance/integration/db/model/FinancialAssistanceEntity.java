@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.TimeZoneStorage;
 import org.hibernate.annotations.TimeZoneStorageType;
 import se.sundsvall.caremanagement.shared.Auditable;
@@ -23,8 +24,16 @@ import static org.hibernate.Length.LONG32;
  * ({@code errand_id} is set from the envelope id, not generated). Repeating groups — children, costs, incomes, pending
  * benefits, assets, per-person details, planning, planned activities and job applications — are owned
  * {@code @ElementCollection} value tables ({@code errand_fa_*}) that cascade with the row.
+ *
+ * <p>
+ * {@code @DynamicUpdate}: an update writes only the columns that changed. The row has several writers that hold it
+ * for seconds at a time — the daily prepare loads it, reads Lifecare and SSBTEK, then stamps {@code lastDailyRunAt}
+ * — while the caseworker's saves through the errand's /lifecare routes (or a PATCH of the data) link
+ * {@code lifecareCalculationId} / {@code lifecareDecisionId}. Writing every column would put the stale {@code null}
+ * the prepare loaded back over the id linked in between.
  */
 @Entity
+@DynamicUpdate
 @Table(name = "errand_financial_assistance")
 @EntityListeners(AuditableListener.class)
 public class FinancialAssistanceEntity implements Auditable {
@@ -111,6 +120,65 @@ public class FinancialAssistanceEntity implements Auditable {
 	@Column(name = "last_daily_run_at")
 	@TimeZoneStorage(TimeZoneStorageType.NORMALIZE)
 	private OffsetDateTime lastDailyRunAt;
+
+	/**
+	 * When the Lifecare actualisation step first went to Lifecare for this errand — written, in a transaction of its own,
+	 * before the actualisation is created. A set value with no {@code Decision(ACTUALISATION)} on the errand means an
+	 * attempt may have created the actualisation without getting to record it, so a retry looks for it in Lifecare
+	 * instead of creating another. Set once and never cleared.
+	 */
+	@Column(name = "actualisation_requested_at")
+	@TimeZoneStorage(TimeZoneStorageType.NORMALIZE)
+	private OffsetDateTime actualisationRequestedAt;
+
+	/**
+	 * The applicant's open financial-assistance service (insats) id in Lifecare — the key Lifecare's own case reads take.
+	 * Set at intake from the insats the actualisation was linked to, and filled in later when the errand had none then
+	 * (a nyansökan, whose insats the caseworker opens afterwards). A key, not case data: nothing about the insats itself
+	 * is kept here.
+	 */
+	@Column(name = "lifecare_service_id")
+	private Integer lifecareServiceId;
+
+	/** The Lifecare decision (beslut) id the errand concerns, set by the caseworker. A key only, like the insats id. */
+	@Column(name = "lifecare_decision_id")
+	private Integer lifecareDecisionId;
+
+	/**
+	 * The Lifecare normberäkning (calculation) id the errand concerns, set when the daily prepare or careM's /lifecare
+	 * calculation route creates the calculation in Lifecare. A key only. While set, the Lifecare calculation is the
+	 * truth and prepare no longer refreshes careM's calculation draft.
+	 */
+	@Column(name = "lifecare_calculation_id")
+	private Integer lifecareCalculationId;
+
+	/**
+	 * The Lifecare payment (utbetalning) ids a bifall pays with, set when careM registers each payment in Lifecare
+	 * through the errand's /lifecare/payments route, or when payment-status finds them paid on the errand's insats.
+	 * Keys only: whether a payment is registered or paid out is read from Lifecare, never stored.
+	 */
+	@ElementCollection
+	@CollectionTable(name = "errand_fa_lifecare_payment", joinColumns = @JoinColumn(name = "errand_id"))
+	@Column(name = "lifecare_payment_id", length = 64)
+	private List<String> lifecarePaymentIds;
+
+	// Set by "Besluta och utbetala" (finalize) — null until the caseworker has finalized the errand.
+
+	/**
+	 * Whether the caseworker changed the household size (gemensamma kostnader) — recorded at finalize and served on the
+	 * view; careM itself does not act on it.
+	 */
+	@Column(name = "household_size_changed")
+	private Boolean householdSizeChanged;
+
+	@Column(name = "notify_mina_sidor")
+	private Boolean notifyMinaSidor;
+
+	@Column(name = "notify_digital_mailbox")
+	private Boolean notifyDigitalMailbox;
+
+	@Column(name = "notify_letter")
+	private Boolean notifyLetter;
 
 	@ElementCollection
 	@CollectionTable(name = "errand_fa_child", joinColumns = @JoinColumn(name = "errand_id"))
@@ -368,6 +436,78 @@ public class FinancialAssistanceEntity implements Auditable {
 		this.lastDailyRunAt = lastDailyRunAt;
 	}
 
+	public OffsetDateTime getActualisationRequestedAt() {
+		return actualisationRequestedAt;
+	}
+
+	public void setActualisationRequestedAt(final OffsetDateTime actualisationRequestedAt) {
+		this.actualisationRequestedAt = actualisationRequestedAt;
+	}
+
+	public Integer getLifecareServiceId() {
+		return lifecareServiceId;
+	}
+
+	public void setLifecareServiceId(final Integer lifecareServiceId) {
+		this.lifecareServiceId = lifecareServiceId;
+	}
+
+	public Integer getLifecareDecisionId() {
+		return lifecareDecisionId;
+	}
+
+	public void setLifecareDecisionId(final Integer lifecareDecisionId) {
+		this.lifecareDecisionId = lifecareDecisionId;
+	}
+
+	public Integer getLifecareCalculationId() {
+		return lifecareCalculationId;
+	}
+
+	public void setLifecareCalculationId(final Integer lifecareCalculationId) {
+		this.lifecareCalculationId = lifecareCalculationId;
+	}
+
+	public List<String> getLifecarePaymentIds() {
+		return lifecarePaymentIds;
+	}
+
+	public void setLifecarePaymentIds(final List<String> lifecarePaymentIds) {
+		this.lifecarePaymentIds = lifecarePaymentIds;
+	}
+
+	public Boolean getHouseholdSizeChanged() {
+		return householdSizeChanged;
+	}
+
+	public void setHouseholdSizeChanged(final Boolean householdSizeChanged) {
+		this.householdSizeChanged = householdSizeChanged;
+	}
+
+	public Boolean getNotifyMinaSidor() {
+		return notifyMinaSidor;
+	}
+
+	public void setNotifyMinaSidor(final Boolean notifyMinaSidor) {
+		this.notifyMinaSidor = notifyMinaSidor;
+	}
+
+	public Boolean getNotifyDigitalMailbox() {
+		return notifyDigitalMailbox;
+	}
+
+	public void setNotifyDigitalMailbox(final Boolean notifyDigitalMailbox) {
+		this.notifyDigitalMailbox = notifyDigitalMailbox;
+	}
+
+	public Boolean getNotifyLetter() {
+		return notifyLetter;
+	}
+
+	public void setNotifyLetter(final Boolean notifyLetter) {
+		this.notifyLetter = notifyLetter;
+	}
+
 	public List<FaChild> getChildren() {
 		return children;
 	}
@@ -588,6 +728,51 @@ public class FinancialAssistanceEntity implements Auditable {
 		return this;
 	}
 
+	public FinancialAssistanceEntity withActualisationRequestedAt(final OffsetDateTime actualisationRequestedAt) {
+		this.actualisationRequestedAt = actualisationRequestedAt;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withLifecareServiceId(final Integer lifecareServiceId) {
+		this.lifecareServiceId = lifecareServiceId;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withLifecareDecisionId(final Integer lifecareDecisionId) {
+		this.lifecareDecisionId = lifecareDecisionId;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withLifecareCalculationId(final Integer lifecareCalculationId) {
+		this.lifecareCalculationId = lifecareCalculationId;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withLifecarePaymentIds(final List<String> lifecarePaymentIds) {
+		this.lifecarePaymentIds = lifecarePaymentIds;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withHouseholdSizeChanged(final Boolean householdSizeChanged) {
+		this.householdSizeChanged = householdSizeChanged;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withNotifyMinaSidor(final Boolean notifyMinaSidor) {
+		this.notifyMinaSidor = notifyMinaSidor;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withNotifyDigitalMailbox(final Boolean notifyDigitalMailbox) {
+		this.notifyDigitalMailbox = notifyDigitalMailbox;
+		return this;
+	}
+
+	public FinancialAssistanceEntity withNotifyLetter(final Boolean notifyLetter) {
+		this.notifyLetter = notifyLetter;
+		return this;
+	}
+
 	public FinancialAssistanceEntity withChildren(final List<FaChild> children) {
 		this.children = children;
 		return this;
@@ -663,7 +848,12 @@ public class FinancialAssistanceEntity implements Auditable {
 			&& Objects.equals(hasPendingBenefits, that.hasPendingBenefits) && Objects.equals(hasAssets, that.hasAssets)
 			&& Objects.equals(staysInMunicipality, that.staysInMunicipality)
 			&& Objects.equals(attestation, that.attestation) && Objects.equals(attestedAt, that.attestedAt)
-			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt)
+			&& Objects.equals(lastDailyRunAt, that.lastDailyRunAt) && Objects.equals(actualisationRequestedAt, that.actualisationRequestedAt)
+			&& Objects.equals(lifecareServiceId, that.lifecareServiceId)
+			&& Objects.equals(lifecareDecisionId, that.lifecareDecisionId) && Objects.equals(lifecareCalculationId, that.lifecareCalculationId)
+			&& Objects.equals(lifecarePaymentIds, that.lifecarePaymentIds)
+			&& Objects.equals(householdSizeChanged, that.householdSizeChanged) && Objects.equals(notifyMinaSidor, that.notifyMinaSidor)
+			&& Objects.equals(notifyDigitalMailbox, that.notifyDigitalMailbox) && Objects.equals(notifyLetter, that.notifyLetter)
 			&& Objects.equals(children, that.children) && Objects.equals(costs, that.costs) && Objects.equals(incomes, that.incomes)
 			&& Objects.equals(pendingBenefits, that.pendingBenefits) && Objects.equals(assets, that.assets)
 			&& Objects.equals(persons, that.persons) && Objects.equals(plannings, that.plannings)
@@ -676,7 +866,8 @@ public class FinancialAssistanceEntity implements Auditable {
 		return Objects.hash(errandId, applicationType, maritalStatus, periodMonth, periodYear, periodChoice, normType,
 			hasChildrenUnder21, childrenResidenceChanged, housingForm, housingPersonCount, housingRoomsPlusKitchen, housingChanged,
 			hasIncomes, hasPendingBenefits, hasAssets, staysInMunicipality, attestation,
-			attestedAt, lastDailyRunAt, children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
+			attestedAt, lastDailyRunAt, actualisationRequestedAt, lifecareServiceId, lifecareDecisionId, lifecareCalculationId, lifecarePaymentIds, householdSizeChanged, notifyMinaSidor, notifyDigitalMailbox, notifyLetter,
+			children, costs, incomes, pendingBenefits, assets, persons, plannings, plannedActivities, jobApplications,
 			created, modified);
 	}
 
@@ -685,6 +876,7 @@ public class FinancialAssistanceEntity implements Auditable {
 		return "FinancialAssistanceEntity{errandId='" + errandId + "', applicationType='" + applicationType
 			+ "', maritalStatus='" + maritalStatus + "', periodMonth=" + periodMonth + ", periodYear=" + periodYear
 			+ ", normType=" + normType + ", housingForm='" + housingForm + "', attestation=" + attestation
-			+ ", lastDailyRunAt=" + lastDailyRunAt + ", created=" + created + ", modified=" + modified + '}';
+			+ ", lastDailyRunAt=" + lastDailyRunAt + ", actualisationRequestedAt=" + actualisationRequestedAt + ", lifecareServiceId=" + lifecareServiceId + ", lifecareDecisionId=" + lifecareDecisionId
+			+ ", lifecareCalculationId=" + lifecareCalculationId + ", lifecarePaymentIds=" + lifecarePaymentIds + ", created=" + created + ", modified=" + modified + '}';
 	}
 }

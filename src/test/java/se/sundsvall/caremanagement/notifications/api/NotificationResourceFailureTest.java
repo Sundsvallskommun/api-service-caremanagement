@@ -166,6 +166,34 @@ class NotificationResourceFailureTest {
 	}
 
 	@Test
+	void handleAllBadErrandIdUuid() {
+		webTestClient.put()
+			.uri(uri -> uri.path(ERRAND_BASE + "/handled").build(Map.of(
+				"municipalityId", MUNICIPALITY_ID, "namespace", NAMESPACE, "errandId", "not-a-uuid")))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("handleAll.errandId", "not a valid UUID")));
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
+	void handleAllBadMunicipalityId() {
+		webTestClient.put()
+			.uri(uri -> uri.path(ERRAND_BASE + "/handled").build(Map.of(
+				"municipalityId", "abc", "namespace", NAMESPACE, "errandId", ERRAND_ID)))
+			.exchange()
+			.expectStatus().isBadRequest()
+			.expectBody(ConstraintViolationProblem.class)
+			.consumeWith(result -> assertConstraintViolation(result.getResponseBody(),
+				tuple("handleAll.municipalityId", "not a valid municipality ID")));
+
+		verifyNoInteractions(serviceMock);
+	}
+
+	@Test
 	void updateNotificationInvalidEnumInPatch() {
 		webTestClient.patch()
 			.uri(uri -> uri.path(ERRAND_BASE + "/{notificationId}").build(Map.of(

@@ -16,7 +16,7 @@
  * (APPLICANT, CO_APPLICANT) at startup. Envelope creation and reads go through the exposed {@code core} service. On
  * errand deletion every {@code errand_financial_assistance*} table is removed by its {@code ON DELETE CASCADE} foreign
  * key to {@code errand} — the main row (with its child rows and element collections), the calculation draft (which in
- * turn cascades to its norm person/income/expense rows), and the monitoring, section-approval and warning satellites.
+ * turn cascades to its norm person/income/expense rows), and the monitoring and warning satellites.
  * </p>
  */
 @ApplicationModule(displayName = "Financial Assistance")

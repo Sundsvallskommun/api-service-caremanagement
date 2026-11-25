@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 import se.sundsvall.caremanagement.Application;
 import se.sundsvall.caremanagement.notifications.integration.db.NotificationRepository;
+import se.sundsvall.caremanagement.notifications.integration.db.model.NotificationEntity;
 import se.sundsvall.dept44.test.AbstractAppTest;
 import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
@@ -17,7 +18,6 @@ import static org.springframework.http.HttpMethod.PATCH;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpMethod.PUT;
 import static org.springframework.http.HttpStatus.CREATED;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
@@ -33,9 +33,7 @@ class NotificationIT extends AbstractAppTest {
 	private static final String MUNICIPALITY_ID = "2281";
 	private static final String NAMESPACE = "MY_NAMESPACE";
 	private static final String ERRAND_ID = "11111111-1111-1111-1111-111111111111";
-	private static final String UNKNOWN_ERRAND_ID = "33333333-3333-3333-3333-333333333333";
 	private static final String NOTIFICATION_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
-	private static final String UNKNOWN_NOTIFICATION_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 	private static final String ERRAND_PATH = "/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/%s/notifications";
 	private static final String OWNER_PATH = "/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/notifications";
 
@@ -126,22 +124,15 @@ class NotificationIT extends AbstractAppTest {
 	}
 
 	@Test
-	void test08_readNotificationNotFound() {
+	void test10_handleAll() {
 		setupCall()
-			.withServicePath(ERRAND_PATH.formatted(ERRAND_ID) + "/" + UNKNOWN_NOTIFICATION_ID)
-			.withHttpMethod(GET)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.withExpectedResponse(RESPONSE_FILE)
+			.withServicePath(ERRAND_PATH.formatted(ERRAND_ID) + "/handled")
+			.withHttpMethod(PUT)
+			.withExpectedResponseStatus(NO_CONTENT)
+			.withExpectedResponseBodyIsNull()
 			.sendRequestAndVerifyResponse();
-	}
 
-	@Test
-	void test09_readNotificationInUnknownErrand() {
-		setupCall()
-			.withServicePath(ERRAND_PATH.formatted(UNKNOWN_ERRAND_ID) + "/" + NOTIFICATION_ID)
-			.withHttpMethod(GET)
-			.withExpectedResponseStatus(NOT_FOUND)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
+		assertThat(notificationRepository.findAll()).allMatch(NotificationEntity::isHandled);
+		assertThat(notificationRepository.findAll()).allMatch(NotificationEntity::isAcknowledged);
 	}
 }

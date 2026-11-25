@@ -24,6 +24,9 @@ class NormPersonRowTest {
 	@BeforeAll
 	static void setup() {
 		BeanMatchers.registerValueGenerator(() -> now().plusDays(new Random().nextInt()), OffsetDateTime.class);
+		// BeanMatchers' generators are global static state, so relying on a sibling test class to have registered the
+		// LocalDate one makes this class pass only when it runs after them. Register our own.
+		BeanMatchers.registerValueGenerator(() -> LocalDate.now().plusDays(new Random().nextInt(1_000_000)), LocalDate.class);
 	}
 
 	@Test
@@ -43,6 +46,7 @@ class NormPersonRowTest {
 		final var position = 3;
 		final var partyId = "partyId";
 		final var role = "APPLICANT";
+		final var roleDisplayName = "Sökande";
 		final var name = "name";
 		final var processDays = 30;
 		final var caseworkerDays = 15;
@@ -51,7 +55,7 @@ class NormPersonRowTest {
 		final var deviationFromDate = LocalDate.of(2026, JUNE, 1);
 		final var deviationToDate = LocalDate.of(2026, JUNE, 15);
 		final var normInterval = "MONTH";
-		final var jobStimulusAmount = BigDecimal.valueOf(1000.00);
+		final var amount = BigDecimal.valueOf(1431.00);
 		final var deleted = true;
 		final var note = "note";
 		final var created = now();
@@ -63,6 +67,7 @@ class NormPersonRowTest {
 			.withPosition(position)
 			.withPartyId(partyId)
 			.withRole(role)
+			.withRoleDisplayName(roleDisplayName)
 			.withName(name)
 			.withProcessDays(processDays)
 			.withCaseworkerDays(caseworkerDays)
@@ -71,7 +76,7 @@ class NormPersonRowTest {
 			.withDeviationFromDate(deviationFromDate)
 			.withDeviationToDate(deviationToDate)
 			.withNormInterval(normInterval)
-			.withJobStimulusAmount(jobStimulusAmount)
+			.withAmount(amount)
 			.withDeleted(deleted)
 			.withNote(note)
 			.withCreated(created)
@@ -83,6 +88,7 @@ class NormPersonRowTest {
 		assertThat(result.getPosition()).isEqualTo(position);
 		assertThat(result.getPartyId()).isEqualTo(partyId);
 		assertThat(result.getRole()).isEqualTo(role);
+		assertThat(result.getRoleDisplayName()).isEqualTo(roleDisplayName);
 		assertThat(result.getName()).isEqualTo(name);
 		assertThat(result.getProcessDays()).isEqualTo(processDays);
 		assertThat(result.getCaseworkerDays()).isEqualTo(caseworkerDays);
@@ -91,7 +97,7 @@ class NormPersonRowTest {
 		assertThat(result.getDeviationFromDate()).isEqualTo(deviationFromDate);
 		assertThat(result.getDeviationToDate()).isEqualTo(deviationToDate);
 		assertThat(result.getNormInterval()).isEqualTo(normInterval);
-		assertThat(result.getJobStimulusAmount()).isEqualTo(jobStimulusAmount);
+		assertThat(result.getAmount()).isEqualTo(amount);
 		assertThat(result.isDeleted()).isEqualTo(deleted);
 		assertThat(result.getNote()).isEqualTo(note);
 		assertThat(result.getCreated()).isEqualTo(created);

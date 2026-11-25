@@ -1,0 +1,11 @@
+{
+	"paymentDate": "2026-09-21",
+	"amount": 1,
+	"applicationMonth": "2026-09",
+	"paymentMethod": "Bankgiro via Plusgiro",
+	"payeeName": "Kontoinnehavare A",
+	"payeeCity": "Sundsvall",
+	"clearingNumber": "",
+	"accountNumber": "11111111",
+	"invoiceNumber": "123"
+}

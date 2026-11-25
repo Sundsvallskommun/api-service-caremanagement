@@ -69,7 +69,7 @@ class FinancialAssistanceIntakeResourceTest {
 
 		assertThat(metadata).isNotNull();
 		assertThat(metadata.getIncomeTypes()).hasSize(33);
-		assertThat(metadata.getCostTypes()).hasSize(16);
+		assertThat(metadata.getCostTypes()).hasSize(15);
 		// a citizen Mina-sidor type — external label + group
 		assertThat(metadata.getCostTypes()).anySatisfy(option -> {
 			assertThat(option.getCode()).isEqualTo("RENT");

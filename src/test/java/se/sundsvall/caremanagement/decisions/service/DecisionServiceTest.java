@@ -54,6 +54,17 @@ class DecisionServiceTest {
 	private DecisionService service;
 
 	@Test
+	void existsOnAnotherErrandAsksTheRepository() {
+		when(decisionRepositoryMock.existsByDecisionTypeAndValueAndErrandIdNot("ACTUALISATION", "5012", ERRAND_ID)).thenReturn(true);
+		when(decisionRepositoryMock.existsByDecisionTypeAndValueAndErrandIdNot("ACTUALISATION", "5013", ERRAND_ID)).thenReturn(false);
+
+		assertThat(service.existsOnAnotherErrand("ACTUALISATION", "5012", ERRAND_ID)).isTrue();
+		assertThat(service.existsOnAnotherErrand("ACTUALISATION", "5013", ERRAND_ID)).isFalse();
+		// Not tenant-scoped: what it is asked about belongs to no municipality or namespace.
+		verifyNoInteractions(errandQueryServiceMock, errandGuardMock);
+	}
+
+	@Test
 	void createPublishesNotificationsAndReturnsId() {
 		final var errand = Errand.create().withId(ERRAND_ID).withReporterUserId("reporter").withAssignedUserId("assignee");
 		final var saved = DecisionEntity.create().withId(DECISION_ID);
@@ -75,7 +86,7 @@ class DecisionServiceTest {
 		assertThat(notifications).allSatisfy(req -> {
 			assertThat(req.type()).isEqualTo("CREATE");
 			assertThat(req.subType()).isEqualTo("DECISION");
-			assertThat(req.description()).contains("PAYMENT").contains("APPROVED");
+			assertThat(req.description()).isEqualTo("Utbetalningsbeslut: beviljat");
 		});
 	}
 
@@ -161,5 +172,38 @@ class DecisionServiceTest {
 		service.delete(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID);
 
 		verify(decisionRepositoryMock).delete(entity);
+	}
+
+	@Test
+	void markSyncedInLifecareStoresLifecaresId() {
+		final var entity = DecisionEntity.create().withId(DECISION_ID).withErrandId(ERRAND_ID).withLifecareStatus("PENDING");
+		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.of(entity));
+		when(decisionRepositoryMock.save(entity)).thenReturn(entity);
+
+		final var result = service.markSyncedInLifecare(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID, "88123");
+
+		verify(errandGuardMock).verifyExistingErrand(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID);
+		assertThat(result.getLifecareStatus()).isEqualTo("SYNCED");
+		assertThat(result.getLifecareId()).isEqualTo("88123");
+	}
+
+	@Test
+	void markSyncedInLifecareWithoutIdKeepsTheKnownId() {
+		final var entity = DecisionEntity.create().withId(DECISION_ID).withLifecareStatus("PENDING").withLifecareId("88123");
+		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.of(entity));
+		when(decisionRepositoryMock.save(entity)).thenReturn(entity);
+
+		final var result = service.markSyncedInLifecare(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID, null);
+
+		assertThat(result.getLifecareStatus()).isEqualTo("SYNCED");
+		assertThat(result.getLifecareId()).isEqualTo("88123");
+	}
+
+	@Test
+	void markSyncedInLifecareOnUnknownDecisionIsNotFound() {
+		when(decisionRepositoryMock.findByErrandIdAndId(ERRAND_ID, DECISION_ID)).thenReturn(Optional.empty());
+		assertThatThrownBy(() -> service.markSyncedInLifecare(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, DECISION_ID, "88123"))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND);
 	}
 }
