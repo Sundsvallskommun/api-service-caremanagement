@@ -152,5 +152,7 @@ module's own tables.
 | `…/fa/{errandId}/lifecare/section-status`                                                | `FinancialAssistanceLifecareSectionStatusResource.java`                                   | ProfessionalWeb                                                                                      |
 
 The financial assistance resources are in `types/financialassistance/api/`. Every `…/fa/{errandId}/lifecare/…`
-endpoint takes its Lifecare keys from the errand through `LifecareErrandService`, never from the caller. Only a new
-reminder asks Citizen for the applicant's personnummer, which Lifecare wants in the reminder's body.
+endpoint takes its Lifecare keys from the errand through `LifecareErrandService`, never from the caller. Citizen is
+asked for personnummer in two places: `NormberakningDraftReader` resolves those of the draft's persons for
+`…/lifecare/calculation/**` and `…/lifecare/normberakning/**`, which match Lifecare's household members on them, and
+a new reminder resolves the applicant's, which Lifecare wants in the reminder's body.

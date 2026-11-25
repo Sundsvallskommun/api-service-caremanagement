@@ -8077,7 +8077,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/LifecareRecordBody"
         "409":
-          description: Conflict - the applicant's personnummer could not be resolved
+          description: Conflict - the errand has no applicant
           content:
             application/problem+json:
               schema:
@@ -8143,7 +8143,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/LifecareRecords"
         "409":
-          description: Conflict - the applicant's personnummer could not be resolved
+          description: Conflict - the errand has no applicant
           content:
             application/problem+json:
               schema:
@@ -8424,7 +8424,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/LifecareRecordBody"
         "409":
-          description: Conflict - the applicant's personnummer could not be resolved
+          description: Conflict - the errand has no applicant
           content:
             application/problem+json:
               schema:

@@ -4,12 +4,10 @@ Paths are under `src/main/java/se/sundsvall/caremanagement/`.
 
 ## Code that points at documents that do not exist
 
-`types/README.md` points at `docs/architecture/proposal-modulith.md` and
-`migration-plan.md`. The Javadoc of `lifecare/professionalweb/ParameterQueryForm.java` cites
-`architecture/lifecare-beslutsutskrift-parametrar.md`. None of them exist in this repo, and pointing from code into
-`docs/` breaks the one-way rule anyway.
+`types/README.md` points at `docs/architecture/proposal-modulith.md` and `migration-plan.md`. Neither exists in this
+repo, and pointing from code into `docs/` breaks the one-way rule anyway.
 
-Done when both say what they need in their own words and name no docs file.
+Done when it says what it needs in its own words and names no docs file.
 
 ## Comments that point at another repository
 

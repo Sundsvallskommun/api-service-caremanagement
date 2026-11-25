@@ -75,7 +75,7 @@ class FinancialAssistanceLifecareRecordResource {
 		description = "The applicant's Lifecare record, split into journalanteckningar and documents, read live from Lifecare. Lifecare's list is person-wide, so it spans all of the applicant's akter, not only this errand. The applicant is resolved from the errand. The read is logged in the errand's access log.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "409", description = "Conflict - the applicant's personnummer could not be resolved", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+			@ApiResponse(responseCode = "409", description = "Conflict - the errand has no applicant", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
 	ResponseEntity<LifecareRecords> listRecords(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -90,7 +90,7 @@ class FinancialAssistanceLifecareRecordResource {
 		description = "Each journalanteckning's body, read in view mode, so the list can show its text without opening it. A body Lifecare will not hand over is returned without content rather than failing the rest.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "409", description = "Conflict - the applicant's personnummer could not be resolved", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+			@ApiResponse(responseCode = "409", description = "Conflict - the errand has no applicant", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
 	ResponseEntity<List<LifecareRecordBody>> listJournalNoteBodies(
 		@ValidMunicipalityId @PathVariable final String municipalityId,
@@ -105,7 +105,7 @@ class FinancialAssistanceLifecareRecordResource {
 		description = "Each written document's body (blanketter and PDF files have none), read in view mode. A body Lifecare will not hand over is returned without content rather than failing the rest.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Successful Operation", useReturnTypeSchema = true),
-			@ApiResponse(responseCode = "409", description = "Conflict - the applicant's personnummer could not be resolved", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
+			@ApiResponse(responseCode = "409", description = "Conflict - the errand has no applicant", content = @Content(mediaType = APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = Problem.class)))
 		})
 	ResponseEntity<List<LifecareRecordBody>> listDocumentBodies(
 		@ValidMunicipalityId @PathVariable final String municipalityId,

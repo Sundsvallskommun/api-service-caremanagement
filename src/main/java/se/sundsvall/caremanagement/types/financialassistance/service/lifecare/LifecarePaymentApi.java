@@ -4,8 +4,7 @@ import org.springframework.stereotype.Component;
 import se.sundsvall.caremanagement.lifecare.professionalweb.ProfessionalWebClient;
 
 /**
- * Lifecare's hushåll check, through lifecare-integrator's resources. The answers carry personnummer; nothing here is
- * logged.
+ * Lifecare's hushåll check, through lifecare-integrator's resources.
  */
 @Component
 class LifecarePaymentApi {

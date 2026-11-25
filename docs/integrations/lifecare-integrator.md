@@ -44,8 +44,9 @@ uses no generated types.
 
 ## Authentication
 
-OAuth2 client credentials, registration `lifecare-integrator`. See `LifecareIntegratorConfiguration` for the FamilyCare client and
-`ProfessionalWebIntegratorConfiguration` for the ProfessionalWeb client, which differ only in their error decoder. The url, client id, client secret and token uri have no defaults. The application does not start without
+OAuth2 client credentials, registration `lifecare-integrator`. See `LifecareIntegratorConfiguration` for the FamilyCare
+client and `ProfessionalWebIntegratorConfiguration` for the ProfessionalWeb client, which differ only in their error
+decoder. The url, client id, client secret and token uri have no defaults. The application does not start without
 `INTEGRATION_LIFECARE_INTEGRATOR_URL`, `_CLIENT_ID`, `_CLIENT_SECRET` and `_TOKEN_URI`.
 
 ## Code and configuration
@@ -57,8 +58,10 @@ OAuth2 client credentials, registration `lifecare-integrator`. See `LifecareInte
 
 ## Behaviour worth knowing
 
-- **The integrator takes partyIds.** Arguments pass straight through, and responses carry partyIds. careM never passes
-  it a personnummer as an argument. The body of a new reminder carries one, because Lifecare reads it from there.
+- **The integrator takes partyIds.** Arguments pass straight through, and FamilyCare responses carry partyIds. careM
+  never passes it a personnummer as an argument. ProfessionalWeb bodies and answers are Lifecare's own objects and
+  carry Lifecare's personnummer, and the body of a new reminder carries the applicant's, because Lifecare reads it
+  from there.
 - **Responses are mapped back to FamilyCare's types.** The `Integrator*Mapper` classes turn the integrator's model
   into the generated FamilyCare DTOs. Amounts lose `BigDecimal` precision on the way, and an id that is not a number
   becomes `null` rather than failing the page. See `IntegratorValues`.
@@ -70,7 +73,7 @@ OAuth2 client credentials, registration `lifecare-integrator`. See `LifecareInte
   decoder reads it, which it does twice. Without it the detail came back as `Unknown error`.
 - **An unknown person is `null` only for the right 404.** `getPerson` answers `null` when the integrator says
   `No person found for partyId`. Its other 404, when Party cannot resolve the partyId, stays a failure.
-- **The ProfessionalWeb calls always name municipality 2281.** It is hard-coded in `ProfessionalWebClient`. careM holds no Lifecare session and registers no health indicator for
-  Lifecare or the integrator.
+- **The ProfessionalWeb calls always name municipality 2281.** It is hard-coded in `ProfessionalWebClient`. careM
+  holds no Lifecare session and registers no health indicator for Lifecare or the integrator.
 - **Nothing is logged.** Feign logging is pinned to `NONE` for both clients.
 

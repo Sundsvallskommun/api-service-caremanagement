@@ -68,7 +68,7 @@ public class LifecareErrandService {
 	}
 
 	/**
-	 * The applicant's personnummer, which the few client-scoped Lifecare calls (the document list) are keyed on.
+	 * The applicant's personnummer, which the body of a new bevakning carries because Lifecare reads it from there.
 	 *
 	 * @param  errand the errand
 	 * @return        the personnummer, 12 digits

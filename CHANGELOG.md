@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-25
 
+- Correct stale texts about the applicant lookups, the 409 of the record lists and the personnummer the integrator sees.
 - Check in the ProfessionalWeb contract test that each required parameter and each request body in the integrator's spec is on the client.
 - Refuse a payment without a payment date before the household check instead of asking it with an empty date.
 - Pass the integrator's 403 and 404 on unchanged on Create of a decision, payment or calculation, as 400 and 422 are.

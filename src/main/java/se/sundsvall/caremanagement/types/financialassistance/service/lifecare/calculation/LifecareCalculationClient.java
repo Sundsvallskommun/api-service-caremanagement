@@ -7,8 +7,7 @@ import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
  * The normberäkning counts Lifecare makes from bodies careM builds, through lifecare-integrator's resources. Nothing
- * here
- * changes anything in Lifecare.
+ * here changes anything in Lifecare.
  */
 @Component
 class LifecareCalculationClient {
