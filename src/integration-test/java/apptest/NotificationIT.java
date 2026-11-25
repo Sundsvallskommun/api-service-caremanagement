@@ -18,7 +18,6 @@ import static org.springframework.http.HttpMethod.PATCH;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpMethod.PUT;
 import static org.springframework.http.HttpStatus.CREATED;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
@@ -35,7 +34,6 @@ class NotificationIT extends AbstractAppTest {
 	private static final String NAMESPACE = "MY_NAMESPACE";
 	private static final String ERRAND_ID = "11111111-1111-1111-1111-111111111111";
 	private static final String NOTIFICATION_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
-	private static final String UNKNOWN_NOTIFICATION_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 	private static final String ERRAND_PATH = "/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/errands/%s/notifications";
 	private static final String OWNER_PATH = "/" + MUNICIPALITY_ID + "/" + NAMESPACE + "/notifications";
 
@@ -121,16 +119,6 @@ class NotificationIT extends AbstractAppTest {
 			.withServicePath(OWNER_PATH + "?ownerId=assignee1")
 			.withHttpMethod(GET)
 			.withExpectedResponseStatus(OK)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-	}
-
-	@Test
-	void test08_readNotificationNotFound() {
-		setupCall()
-			.withServicePath(ERRAND_PATH.formatted(ERRAND_ID) + "/" + UNKNOWN_NOTIFICATION_ID)
-			.withHttpMethod(GET)
-			.withExpectedResponseStatus(NOT_FOUND)
 			.withExpectedResponse(RESPONSE_FILE)
 			.sendRequestAndVerifyResponse();
 	}

@@ -401,6 +401,17 @@ class AttachmentServiceTest {
 	}
 
 	@Test
+	void readAttachmentNotFound() {
+		when(attachmentRepositoryMock.findByNamespaceAndMunicipalityIdAndErrandIdAndId(NAMESPACE, MUNICIPALITY_ID, ERRAND_ID, ATTACHMENT_ID))
+			.thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.readAttachment(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID, ATTACHMENT_ID))
+			.isInstanceOf(ThrowableProblem.class)
+			.hasFieldOrPropertyWithValue("status", NOT_FOUND)
+			.hasMessage("Not Found: No attachment with id 'dddddddd-dddd-dddd-dddd-dddddddddddd' found on errand '11111111-1111-1111-1111-111111111111' in namespace 'MY_NAMESPACE' for municipality id '2281'");
+	}
+
+	@Test
 	void regenerateClientAttachmentPdfInsertsWhenAbsent() {
 		when(conversationAttachmentQueryServiceMock.clientAttachmentContentsForErrand(ERRAND_ID)).thenReturn(List.of(
 			new SourceFile("intyg.pdf", "application/pdf", "%PDF-1.4 minimal".getBytes())));

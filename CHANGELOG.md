@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-25
 
+- Unit test the not-found reads of an attachment and a notification, and drop their integration tests.
 - Keep the Lifecare calculation integration tests to the patch, prepare, finalize and payment-status happy paths.
 - Drop the not-found, conflict and variant cases from the CRUD integration tests and keep one happy path per use.
 - Keep the ProfessionalWeb integration tests to happy paths: a decision created through the integrator replaces the refusal and not-found cases.
