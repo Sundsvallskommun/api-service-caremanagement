@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-25
 
+- Truncate the calculation sync table between integration tests and drop two stubs an integration test never calls.
 - Correct stale comments in the integration tests and verify the stubs of the Lifecare bifall finalize test.
 - Switch the process message retry schedule off in the integration-test profile, where the tests call the retry worker themselves.
 - Check in the errand delete integration test that the errand's child rows and its calculation draft's rows go with it.

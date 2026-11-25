@@ -10,6 +10,7 @@ TRUNCATE TABLE errand_event;
 -- The financial-assistance child tables have to be listed too: with the foreign key checks off, truncating the parent
 -- does not cascade, so a seed that inserts persons or costs would otherwise pile up duplicates run after run.
 TRUNCATE TABLE errand_fa_asset;
+TRUNCATE TABLE errand_fa_calculation_sync;
 TRUNCATE TABLE errand_fa_calculation_draft_norm_type;
 TRUNCATE TABLE errand_fa_child;
 TRUNCATE TABLE errand_fa_cost;
