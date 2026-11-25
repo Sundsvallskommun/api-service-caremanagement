@@ -10,9 +10,7 @@ import se.sundsvall.caremanagement.types.financialassistance.api.model.lifecare.
 import se.sundsvall.dept44.problem.Problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -141,6 +139,6 @@ class LifecareSectionStatusServiceTest {
 		errand(1, null, null, 2026, null);
 
 		assertThat(service.read(MUNICIPALITY_ID, NAMESPACE, ERRAND_ID).paymentRegistered()).isFalse();
-		verify(clientMock, never()).readLatestPayments(anyInt());
+		verifyNoInteractions(clientMock);
 	}
 }

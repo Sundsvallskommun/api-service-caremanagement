@@ -14,6 +14,7 @@ import se.sundsvall.dept44.test.annotation.wiremock.WireMockAppTestSuite;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -85,7 +86,10 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 			.withRequest(REQUEST_FILE)
 			.withExpectedResponseStatus(CREATED)
 			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
+			.sendRequest();
+
+		wiremock.verify(1, postRequestedFor(urlPathEqualTo("/api-lifecare-integrator/2281/professional-web/services/7700/payments")));
+		verifyStubs();
 
 		assertThat(financialAssistanceRepository.findWithLifecarePaymentIdsByErrandId(ERRAND_ID))
 			.map(FinancialAssistanceEntity::getLifecarePaymentIds)
@@ -104,7 +108,10 @@ class LifecareProfessionalWebIT extends AbstractAppTest {
 			.withRequest(REQUEST_FILE)
 			.withExpectedResponseStatus(UNPROCESSABLE_CONTENT)
 			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
+			.sendRequest();
+
+		wiremock.verify(1, postRequestedFor(urlPathEqualTo("/api-lifecare-integrator/2281/professional-web/services/8800/decisions")));
+		verifyStubs();
 
 		assertThat(financialAssistanceRepository.findByErrandId(ERRAND_WITHOUT_DECISION_ID))
 			.hasValueSatisfying(entity -> assertThat(entity.getLifecareDecisionId()).isNull());

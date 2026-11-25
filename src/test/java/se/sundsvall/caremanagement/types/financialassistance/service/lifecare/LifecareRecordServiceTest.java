@@ -465,7 +465,7 @@ class LifecareRecordServiceTest {
 	}
 
 	@Test
-	void readDocumentPdfPrintsAWrittenDocumentWithTheTemplate() {
+	void readDocumentPdfPrintsAWrittenDocument() {
 		final var pdf = "%PDF-1.7".getBytes();
 		givenClientList();
 		when(client.printDocument(3)).thenReturn(pdf);
@@ -485,7 +485,7 @@ class LifecareRecordServiceTest {
 	}
 
 	@Test
-	void readDocumentPdfPrintsABlankettWithTheTemplate() {
+	void readDocumentPdfPrintsABlankett() {
 		final var pdf = "%PDF-1.7".getBytes();
 		givenClientList();
 		when(client.printDocument(5)).thenReturn(pdf);

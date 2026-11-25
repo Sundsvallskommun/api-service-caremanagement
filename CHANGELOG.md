@@ -4,6 +4,7 @@ Every change to the service, newest date first. One short line per change.
 
 ## 2026-11-25
 
+- Tighten the ProfessionalWeb tests: creates sent exactly once, a 201 payment stub, no client reads without a month, sharper route wiring.
 - Read the underlag for a beslut without a normberäkning through LifecareDecisionClient, and name the ProfessionalWeb client fields alike.
 - Correct stale texts about the applicant lookups, the 409 of the record lists and the personnummer the integrator sees.
 - Check in the ProfessionalWeb contract test that each required parameter and each request body in the integrator's spec is on the client.

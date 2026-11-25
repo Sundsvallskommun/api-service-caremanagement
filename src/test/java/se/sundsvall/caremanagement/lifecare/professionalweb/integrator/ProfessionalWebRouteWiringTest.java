@@ -1,6 +1,7 @@
 package se.sundsvall.caremanagement.lifecare.professionalweb.integrator;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,23 +27,21 @@ class ProfessionalWebRouteWiringTest {
 	private ApplicationContext context;
 
 	@Test
-	void theProfessionalWebClientIsTheIntegratorsResources() {
-		assertThat(context.getBeansOfType(ProfessionalWebIntegratorClient.class)).hasSize(1);
-	}
-
-	@Test
 	void noClientCallsTheExchange() {
-		final var paths = Arrays.stream(context.getBeanNamesForAnnotation(FeignClient.class))
+		final var feignClients = Arrays.stream(context.getBeanNamesForAnnotation(FeignClient.class))
 			.map(context::getType)
 			.flatMap(type -> Stream.concat(Stream.of(type), Arrays.stream(type.getInterfaces())))
 			.filter(type -> type.isAnnotationPresent(FeignClient.class))
 			.distinct()
+			.toList();
+		final var paths = feignClients.stream()
 			.flatMap(type -> Arrays.stream(type.getMethods()))
 			.map(method -> AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class))
-			.filter(mapping -> mapping != null)
+			.filter(Objects::nonNull)
 			.flatMap(mapping -> Arrays.stream(mapping.path()))
 			.toList();
 
-		assertThat(paths).isNotEmpty().noneMatch(path -> path.contains("/professional-web/exchange"));
+		assertThat(feignClients).contains(ProfessionalWebIntegratorClient.class);
+		assertThat(paths).noneMatch(path -> path.contains("/professional-web/exchange"));
 	}
 }
