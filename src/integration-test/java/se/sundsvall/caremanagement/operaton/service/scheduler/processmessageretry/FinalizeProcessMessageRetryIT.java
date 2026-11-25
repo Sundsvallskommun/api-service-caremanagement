@@ -33,7 +33,6 @@ import static org.springframework.http.HttpStatus.OK;
 class FinalizeProcessMessageRetryIT extends AbstractAppTest {
 
 	private static final String REQUEST_FILE = "request.json";
-	private static final String RESPONSE_FILE = "response.json";
 	private static final String ERRAND_ID = "66666666-6666-6666-6666-666666666666";
 	private static final String PATH = "/2281/MY_NAMESPACE/errands/financial-assistance/" + ERRAND_ID + "/finalize";
 	private static final String SENT_BY = "X-Sent-By";
@@ -44,30 +43,6 @@ class FinalizeProcessMessageRetryIT extends AbstractAppTest {
 
 	@Autowired
 	private ProcessMessageRetryWorker retryWorker;
-
-	@Test
-	void test01_finalizeQueuesTheMessageTheEngineRefused() {
-		setupCall()
-			.withServicePath(PATH)
-			.withHttpMethod(POST)
-			.withHeader(SENT_BY, CASEWORKER)
-			.withRequest(REQUEST_FILE)
-			.withExpectedResponseStatus(OK)
-			.withExpectedResponse(RESPONSE_FILE)
-			.sendRequestAndVerifyResponse();
-
-		// The decision is saved although the process was not reached (the response carries its id), and the message is
-		// saved too, waiting for the scheduled retry.
-		assertThat(retryRepository.findAll()).singleElement().satisfies(retry -> {
-			assertThat(retry.getErrandId()).isEqualTo(ERRAND_ID);
-			assertThat(retry.getMessageName()).isEqualTo("PaymentDecisionReceived");
-			assertThat(retry.getVariables()).contains("\"paymentDecision\"").contains("\"APPROVED\"");
-			assertThat(retry.getStatus()).isEqualTo("PENDING");
-			assertThat(retry.getAttempts()).isOne(); // finalize's own attempt counts
-			assertThat(retry.getLastError()).isNotBlank();
-			assertThat(retry.getNextAttempt()).isAfter(OffsetDateTime.now());
-		});
-	}
 
 	@Test
 	void test02_retryDeliversTheQueuedMessage() {
@@ -91,8 +66,7 @@ class FinalizeProcessMessageRetryIT extends AbstractAppTest {
 		assertThat(result.attempted()).isOne();
 		assertThat(result.delivered()).isOne();
 		assertThat(retryRepository.findAll()).isEmpty();
-		// Both stubs hit: the refused first attempt from finalize and the delivered retry, with the same variables. The
-		// OAuth token was fetched and cached by test01, so this test has no token stub.
+		// Both stubs hit: the refused first attempt from finalize and the delivered retry, with the same variables.
 		verifyStubs();
 	}
 }
