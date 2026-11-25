@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.yaml.snakeyaml.Yaml;
 
@@ -24,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Every call the ProfessionalWeb client makes is one of lifecare-integrator's resources, as its OpenAPI spec in the
- * repo describes them: the method, the path and the parameter names.
+ * repo describes them: the method, the path, the parameters and whether it takes a body.
  */
 class ProfessionalWebIntegratorContractTest {
 
@@ -118,6 +119,19 @@ class ProfessionalWebIntegratorContractTest {
 		});
 	}
 
+	@Test
+	void eachParameterTheSpecRequiresIsOnTheMethod() {
+		resourceMethods().forEach(method -> assertThat(methodParameters(method)).as(method.getName()).containsAllEntriesOf(requiredParameters(operation(method))));
+	}
+
+	@Test
+	void aMethodSendsABodyExactlyWhereTheSpecTakesOne() {
+		resourceMethods().forEach(method -> {
+			final var sendsBody = Arrays.stream(method.getParameters()).anyMatch(parameter -> parameter.isAnnotationPresent(RequestBody.class));
+			assertThat(sendsBody).as(method.getName()).isEqualTo(operation(method).containsKey("requestBody"));
+		});
+	}
+
 	private static List<Method> resourceMethods() {
 		return Arrays.stream(ProfessionalWebIntegratorClient.class.getDeclaredMethods()).toList();
 	}
@@ -136,6 +150,24 @@ class ProfessionalWebIntegratorContractTest {
 		final var result = new TreeMap<String, String>();
 		((List<Map<String, Object>>) operation.getOrDefault("parameters", List.of()))
 			.forEach(parameter -> result.put((String) parameter.get("name"), (String) parameter.get("in")));
+		return result;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<String, String> requiredParameters(final Map<String, Object> operation) {
+		final var result = new TreeMap<String, String>();
+		((List<Map<String, Object>>) operation.getOrDefault("parameters", List.of())).stream()
+			.filter(parameter -> Boolean.TRUE.equals(parameter.get("required")))
+			.forEach(parameter -> result.put((String) parameter.get("name"), (String) parameter.get("in")));
+		return result;
+	}
+
+	private static Map<String, String> methodParameters(final Method method) {
+		final var result = new TreeMap<String, String>();
+		for (final var parameter : method.getParameters()) {
+			parameterName(parameter, PathVariable.class).ifPresent(name -> result.put(name, "path"));
+			parameterName(parameter, RequestParam.class).ifPresent(name -> result.put(name, "query"));
+		}
 		return result;
 	}
 
