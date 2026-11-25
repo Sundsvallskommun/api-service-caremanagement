@@ -45,7 +45,7 @@ import static se.sundsvall.dept44.util.LogUtils.sanitizeForLogging;
  * </p>
  */
 @Component
-class ProcessMessageRetryWorker {
+public class ProcessMessageRetryWorker {
 
 	static final long GIVE_UP_AFTER_DAYS = 3;
 	static final long MAX_BACKOFF_MINUTES = 60;
@@ -54,7 +54,7 @@ class ProcessMessageRetryWorker {
 	private static final String STATUS_PENDING = "PENDING";
 	private static final String STATUS_GAVE_UP = "GAVE_UP";
 
-	record Result(int attempted, int delivered, int gaveUp) {}
+	public record Result(int attempted, int delivered, int gaveUp) {}
 
 	private final ProcessMessageRetryRepository repository;
 	private final ProcessService processService;
@@ -64,7 +64,7 @@ class ProcessMessageRetryWorker {
 		this.processService = processService;
 	}
 
-	Result retryDue() {
+	public Result retryDue() {
 		final var now = OffsetDateTime.now(ZoneId.systemDefault());
 		var delivered = 0;
 		var gaveUp = 0;
